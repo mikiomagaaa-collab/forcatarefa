@@ -1,3 +1,4 @@
+import {initAdminCentral} from './admin-central.js';
 import { initAdminNavigation } from './admin-navigation.js';
 import { initAdminPlatform } from './admin-platform.js';
 import { backendReady, isLocalPreview, status, renderText } from './api.js';
@@ -28,11 +29,12 @@ async function loadVotes() {
 }
 function renderMembers() {
   $('#members-editor').replaceChildren();
-  members.forEach((name, index) => {
+  members.forEach((member, index) => {
     const row = document.createElement('div'); row.className = 'admin-member';
-    const input = document.createElement('input'); input.value = name; input.maxLength = 60; input.setAttribute('aria-label', `Nome do integrante ${index + 1}`);
-    input.addEventListener('input', () => { members[index] = input.value; status($('#team-admin-status'), 'Há alterações ainda não salvas.'); });
-    row.append(input);
+    const input = document.createElement('input'); input.value = member.name; input.maxLength = 60; input.setAttribute('aria-label', `Nome do integrante ${index + 1}`);
+    input.addEventListener('input', () => { members[index].name = input.value; status($('#team-admin-status'), 'Há alterações ainda não salvas.'); });
+    const role=document.createElement("input");role.value=member.role||"";role.maxLength=100;role.placeholder="Função autorizada, opcional";role.setAttribute("aria-label",`Função do integrante ${index+1}`);role.addEventListener("input",()=>{members[index].role=role.value;status($("#team-admin-status"),"Há alterações ainda não salvas.");});
+    row.append(input,role);
     for (const [label, delta] of [['Subir', -1], ['Descer', 1]]) {
       const button = renderText('button', label); button.type = 'button'; button.disabled = index + delta < 0 || index + delta >= members.length;
       button.addEventListener('click', () => { [members[index], members[index + delta]] = [members[index + delta], members[index]]; renderMembers(); status($('#team-admin-status'), 'Ordem alterada. Salve para publicar.'); }); row.append(button);
@@ -40,7 +42,7 @@ function renderMembers() {
     const remove = renderText('button', 'Remover'); remove.type = 'button'; remove.addEventListener('click', () => { members.splice(index, 1); renderMembers(); status($('#team-admin-status'), 'Integrante removido da edição. Salve para publicar.'); }); row.append(remove); $('#members-editor').append(row);
   });
 }
-async function loadTeam() { const data = await adminRequest('/rest/v1/team_members?select=name,position&order=position.asc'); members = data.map(member => member.name); renderMembers(); }
+async function loadTeam() { const data = await adminRequest('/rest/v1/team_members?select=name,role,position&order=position.asc'); members = data.map(member => ({name:member.name,role:member.role||''})); renderMembers(); }
 async function loadSuggestions(append = false) {
   if (!append) { suggestionOffset = 0; $('#suggestions-list').replaceChildren(); }
   const filter = $('#suggestion-filter').value;
@@ -126,6 +128,8 @@ async function init() {
     const response = await fetch('../assets/data/proposals.json'); if (!response.ok) throw new Error('Não foi possível carregar as propostas.');
     ({ proposals } = await response.json());
     for (const p of proposals) { const option = renderText('option', `${p.id}. ${p.title}`); option.value = p.id; $('#progress-proposal').append(option); }
+    initAdminCentral().catch(error=>status($('#editorial-status'),error.message,'error'));
+    document.addEventListener('catalogue-updated',event=>{proposals=event.detail;const selected=$('#progress-proposal').value;$('#progress-proposal').replaceChildren();for(const p of proposals){const o=renderText('option',`${p.id}. ${p.title}`);o.value=p.id;$('#progress-proposal').append(o);}$('#progress-proposal').value=selected||'1';showProgress();});
     initAdminPlatform().catch(error => status($('#classification-status'), error.message, 'error'));
     const jobs = [loadVotes(), loadTeam(), loadSuggestions(), loadProgress(), loadUpdates(), loadSecurity(isOwner)];
     const outputs = ['#vote-metrics-status','#team-admin-status','#suggestions-admin-status','#progress-admin-status','#update-admin-status','#suspension-status'];
@@ -141,12 +145,12 @@ $('#suggestion-filter').addEventListener('change', event => work(event.target, $
 $('#team-add-form').addEventListener('submit', event => {
   event.preventDefault(); const name = $('#new-member').value.trim();
   if (!name || !textValid(name) || members.length >= 100) { status($('#team-admin-status'), 'Informe um nome válido. O limite é de 100 integrantes.', 'error'); return; }
-  members.push(name); $('#new-member').value = ''; renderMembers(); status($('#team-admin-status'), 'Integrante adicionado à edição. Salve para publicar.');
+  members.push({name,role:''}); $('#new-member').value = ''; renderMembers(); status($('#team-admin-status'), 'Integrante adicionado à edição. Salve para publicar.');
 });
 $('#save-team').addEventListener('click', event => work(event.target, $('#team-admin-status'), async () => {
-  if (members.some(name => !name.trim() || name.trim().length > 60 || !textValid(name))) throw new Error('Confira todos os nomes antes de salvar.');
+  if (members.some(m => !m.name.trim() || m.name.trim().length > 60 || !textValid(m.name) || m.role.length>100 || !textValid(m.role))) throw new Error('Confira todos os nomes antes de salvar.');
   status($('#team-admin-status'), 'Salvando a equipe…');
-  await adminRequest('/rest/v1/rpc/replace_team', { method: 'POST', body: { members: members.map(name => name.trim()) } }); await loadTeam();
+  await adminRequest('/rest/v1/rpc/replace_team', { method: 'POST', body: { members: members.map(m => ({name:m.name.trim(),role:m.role.trim()})) } }); await loadTeam();
 }, 'Equipe salva online. Os visitantes verão os nomes ao recarregar o site.'));
 $('#progress-proposal').addEventListener('change', showProgress);
 $('#progress-form').addEventListener('submit', event => {

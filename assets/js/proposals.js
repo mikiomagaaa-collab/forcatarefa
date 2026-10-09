@@ -1,3 +1,4 @@
+import {loadCatalogue, publicMetrics, stageOf} from './catalogue.js';
 import { backendReady, request, renderText } from './api.js';
 import { loadClassifications, appendLabels } from './classifications.js';
 const icons = [
@@ -9,9 +10,9 @@ const icons = [
   '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2M18 3l3 3"/>'
 ];
 export async function initProposals() {
-  const response = await fetch('assets/data/proposals.json');
-  if (!response.ok) throw new Error('Não foi possível carregar as propostas. Recarregue a página.');
-  const { proposals, categories } = await response.json();
+  const data = await loadCatalogue();
+  const {proposals,categories}=data; publicMetrics(data);
+  if(document.querySelector('#ft-priorities'))document.querySelector('#ft-priorities').textContent='…';
   const { items: classifications } = await loadClassifications();
   let progress = new Map();
   const categoryMap = new Map(categories.map(c => [c.id, c.title]));
@@ -24,7 +25,8 @@ export async function initProposals() {
     'Ajudar os clubes diretamente com materiais, planejamento e ideias para seus projetos e atividades.',
     'Organizar o rodízio semanal já aprovado: uma turma poderá sair cinco minutos mais cedo. Implementação a organizar.'
   ];
-  priorities.forEach((id, i) => {
+  if(document.querySelector('#ft-priorities'))document.querySelector('#ft-priorities').textContent=proposals.filter(p=>classifications.get(p.id)?.priority).length;
+  if(document.querySelector('#priority-grid'))priorities.forEach((id, i) => {
     const proposal = proposals.find(p => p.id === id);
     const card = document.createElement('article'); card.className = 'priority-card';
     const top = document.createElement('div'); top.className = 'priority-top';
@@ -32,12 +34,12 @@ export async function initProposals() {
     icon.innerHTML = `<svg class="icon" aria-hidden="true" viewBox="0 0 24 24">${icons[i]}</svg>`;
     top.append(icon, renderText('span', `PROPOSTA ${String(id).padStart(2, '0')}`));
     card.append(top); appendLabels(card, classifications.get(id));
-    card.append(renderText('h3', proposal.title), renderText('span', categoryMap.get(proposal.category), 'category-label'), renderText('p', summaries[i]));
+    card.append(renderText('h3', proposal.title), renderText('span', categoryMap.get(proposal.category), 'category-label'), renderText('p',data.online?proposal.description:summaries[i],'proposal-summary'));
     if (id === 8) card.append(renderText('span', 'Aprovada pela gestão', 'badge approved'));
     const link = renderText('a', 'Saiba mais', 'text-link'); link.href = `#proposta-${id}`; card.append(link);
     document.querySelector('#priority-grid').append(card);
   });
-  let category = 0; let expanded = false; let priorityOnly = false; let earlyOnly = false;
+  let category = 0; let expanded = false; let priorityOnly = false; let earlyOnly = false; let selectedStage='';
   const search = document.querySelector('#proposal-search');
   const grid = document.querySelector('#proposal-grid');
   const catalogue = document.querySelector('#catalogue-details');
@@ -50,20 +52,22 @@ export async function initProposals() {
     button.addEventListener('click', () => { category = c.id; expanded = true; render(); });
     filterContainer.append(button);
   });
+  const stageSelect=document.querySelector('#proposal-stage');
+  stageSelect?.addEventListener('change',()=>{selectedStage=stageSelect.value;expanded=true;render();});
   function render() {
     const query = normalize(search.value.trim());
-    const matches = proposals.filter(p => (!category || p.category === category) && (!priorityOnly || classifications.get(p.id)?.priority) && (!earlyOnly || classifications.get(p.id)?.early) && normalize(`${p.id} ${p.title} ${p.description} ${categoryMap.get(p.category)}`).includes(query));
-    const visible = expanded || query || category ? matches : matches.slice(0, 9);
+    const matches = proposals.filter(p => (!category || p.category === category) && (!priorityOnly || classifications.get(p.id)?.priority) && (!earlyOnly || classifications.get(p.id)?.early) && (!selectedStage || stageOf(p,progress)===selectedStage) && normalize(`${p.id} ${p.title} ${p.description} ${categoryMap.get(p.category)}`).includes(query));
+    const visible = expanded || query || category || selectedStage || priorityOnly || earlyOnly ? matches : matches.slice(0, 9);
     grid.replaceChildren();
     for (const p of visible) {
       const classification = classifications.get(p.id);
       const card = document.createElement('article'); card.className = `proposal-card${classification?.priority ? ' priority' : ''}`; card.id = `proposta-${p.id}`;
       const meta = document.createElement('div'); meta.className = 'proposal-meta'; meta.append(renderText('span', `PROPOSTA ${String(p.id).padStart(2, '0')}`, 'proposal-number'));
       card.append(meta); appendLabels(card, classification);
-      card.append(renderText('span', categoryMap.get(p.category), 'category-label'), renderText('h3', p.title), renderText('p', p.description));
+      card.append(renderText('span', categoryMap.get(p.category), 'category-label'), renderText('h3', p.title), renderText('p', p.description, 'proposal-summary'));
       if (p.approved) card.append(renderText('span', 'Aprovada pela gestão', 'badge approved'));
       const update = progress.get(p.id);
-      if (update) card.append(renderText('p', `${update.stage}. ${update.note}`, 'confirmed-progress'));
+      card.append(renderText('p',update?.stage||'Apresentada','record-stage')); if(update?.note) card.append(renderText('p',update.note,'confirmed-progress proposal-summary'));
       const link = renderText('a', 'Ver detalhes da proposta', 'proposal-link'); link.href = `proposta.html?id=${p.id}`;
       card.append(link); grid.append(card);
     }
@@ -75,11 +79,11 @@ export async function initProposals() {
     document.querySelector('#filter-early').setAttribute('aria-pressed', String(earlyOnly));
     filterContainer.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.category) === category)));
   }
-  function reset() { category = 0; search.value = ''; priorityOnly = false; earlyOnly = false; expanded = true; catalogue.open = true; render(); }
+  function reset() { category = 0; search.value = ''; priorityOnly = false; earlyOnly = false; selectedStage='';if(stageSelect)stageSelect.value=''; expanded = true; catalogue.open = true; render(); }
   function directLink() {
     const hash = window.location.hash;
-    if (hash === '#propostas') { catalogue.open = true; return; }
-    if (!/^#proposta-([1-9]|[12]\d|3[0-5])$/.test(hash)) return;
+    if (hash === '#propostas' || (location.pathname.endsWith('catalogo.html')&&!hash.startsWith('#proposta-'))) { catalogue.open = true; return; }
+    if (!/^#proposta-([1-9]|[1-3]\d|4[0-5])$/.test(hash)) return;
     reset();
     requestAnimationFrame(() => document.querySelector(hash)?.scrollIntoView({ block: 'start' }));
   }
@@ -89,12 +93,13 @@ export async function initProposals() {
   document.querySelector('#filter-priority').addEventListener('click', () => { priorityOnly = !priorityOnly; expanded = true; render(); });
   document.querySelector('#filter-early').addEventListener('click', () => { earlyOnly = !earlyOnly; expanded = true; render(); });
   document.querySelector('#clear-filters').addEventListener('click', reset);
-  document.querySelector('#all-proposals-link').addEventListener('click', reset);
+  document.querySelector('#all-proposals-link')?.addEventListener('click', reset);
   window.addEventListener('hashchange', directLink);
   document.addEventListener('click', event => {
     const link = event.target.closest('a[href^="#proposta-"]');
     if (link) { reset(); if (window.location.hash === link.getAttribute('href')) directLink(); }
   });
+  const categoryParam=Number(new URLSearchParams(location.search).get('categoria'));if(categories.some(c=>c.id===categoryParam)){category=categoryParam;expanded=true;}
   render(); directLink();
   if (backendReady) {
     try { const updates = await request('/rest/v1/proposal_progress?select=proposal_id,stage,note'); progress = new Map(updates.map(update => [update.proposal_id, update])); render(); directLink(); }

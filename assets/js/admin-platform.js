@@ -8,9 +8,10 @@ const categories={laboratorio:['Ideias estudantis'],talentos:['Artes e desenhos'
 async function save(event,out,action){event.preventDefault();event.submitter.disabled=true;out.textContent='Salvando…';try{await action();out.textContent='Informações salvas no banco de dados.';}catch(e){out.textContent=e.message;}finally{event.submitter.disabled=false;}}
 function option(select,value,label){const o=renderText('option',label);o.value=value;select.append(o);}
 export async function initAdminPlatform(){
-  const proposals=(await(await fetch('../assets/data/proposals.json')).json()).proposals;
-  let {items:labels}=await loadClassifications();
+  const proposals=await adminRequest('/rest/v1/proposal_catalogue?select=*&order=id.asc');
+  let {items:labels}=await loadClassifications();for(const row of await adminRequest('/rest/v1/proposal_classifications?select=*'))labels.set(row.proposal_id,row);
   for(const p of proposals)option($('#classification-proposal'),p.id,`${p.id}. ${p.title}`);
+  document.addEventListener('catalogue-updated',event=>{const selected=$('#classification-proposal').value;$('#classification-proposal').replaceChildren();for(const p of event.detail)option($('#classification-proposal'),p.id,`${p.id}. ${p.title}`);$('#classification-proposal').value=selected||'1';});
   const showLabel=()=>{const row=labels.get(Number($('#classification-proposal').value));$('#classification-priority').checked=Boolean(row?.priority);$('#classification-early').checked=Boolean(row?.early);$('#classification-sport').checked=Boolean(row?.sport);$('#classification-action').value=row?.initial_action||'';};
   $('#classification-proposal').addEventListener('change',showLabel);showLabel();
   $('#classification-form').addEventListener('submit',e=>save(e,$('#classification-status'),async()=>{const row={proposal_id:Number($('#classification-proposal').value),priority:$('#classification-priority').checked,early:$('#classification-early').checked,sport:$('#classification-sport').checked,initial_action:$('#classification-action').value.trim()};await adminRequest('/rest/v1/proposal_classifications?on_conflict=proposal_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:row});labels.set(row.proposal_id,row);}));

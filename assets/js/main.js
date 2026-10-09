@@ -74,7 +74,7 @@ suggestionForm.addEventListener('submit', async event => {
   button.disabled = true; button.textContent = 'Enviando…';
   try {
     const form = new FormData(suggestionForm);
-    const data = await request('/functions/v1/submit-suggestion', { method: 'POST', body: { name: String(form.get('name')).trim(), classroom: String(form.get('classroom')).trim(), category: form.get('category'), message: String(form.get('message')).trim(), website: form.get('website'), session: sessionId(), captcha: captchaToken('suggestion-captcha') } });
+    const data = await request('/functions/v1/submit-suggestion', { method: 'POST', body: { name: String(form.get('name')).trim(), classroom: '', category: form.get('category'), message: String(form.get('message')).trim(), website: form.get('website'), session: sessionId(), captcha: captchaToken('suggestion-captcha') } });
     if (!data?.received) throw new Error('O servidor não confirmou o recebimento. Tente novamente.');
     lastSuggestion = Date.now(); suggestionForm.reset(); showName(); document.querySelector('#char-count').textContent = '0 / 2.000 caracteres';
     status(output, 'Sua sugestão foi recebida. Obrigado por participar!', 'success');
@@ -98,9 +98,9 @@ document.querySelector('#vote-form').addEventListener('submit', async event => {
 async function loadPublic() {
   if (!backendReady) return;
   try {
-    const team = await request('/rest/v1/team_members?select=id,name,position&order=position.asc');
+    const team = await request('/rest/v1/team_members?select=id,name,role,position&order=position.asc');
     const grid = document.querySelector('#team-grid'); grid.replaceChildren();
-    for (const member of team) grid.append(renderText('div', member.name, 'member'));
+    for (const member of team){const card=renderText('div','','member');card.append(renderText('strong',member.name));if(member.role)card.append(renderText('p',member.role,'category-label'));grid.append(card);}
     document.querySelector('#team-empty').hidden = team.length > 0;
   } catch { status(document.querySelector('#team-status'), 'Não foi possível carregar os nomes da equipe. Tente recarregar a página.', 'error'); }
   try {
@@ -160,3 +160,5 @@ menu?.addEventListener('click', event => {
 initElection().catch(() => {});
 setInterval(() => { if(document.visibilityState==='visible')initElection().catch(() => {}); },60000);
 document.querySelectorAll('.timeline-step').forEach(item => item.addEventListener('toggle', () => { if(item.open) document.querySelectorAll('.timeline-step').forEach(other => { if(other!==item)other.open=false; }); }));
+
+if(backendReady)request('/rest/v1/management_records?select=title,body&kind=eq.home&published=eq.true&limit=1').then(rows=>{if(rows[0]){document.querySelector('.hero h1').textContent=rows[0].title;document.querySelector('.hero-description').textContent=rows[0].body;}}).catch(()=>{});

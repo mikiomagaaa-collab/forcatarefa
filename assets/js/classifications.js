@@ -1,6 +1,6 @@
 import { backendReady, request, renderText } from './api.js';
 export const explanations = {
-  priority: 'Uma das cinco propostas centrais do programa da chapa. A etiqueta não informa aprovação ou execução.',
+  priority: 'Uma das propostas centrais do programa da chapa. A etiqueta não informa aprovação ou execução.',
   sport: 'Proposta que inclui jogos, torneios, campeonatos ou atividades esportivas. Esta etiqueta identifica o tema, sem indicar aprovação ou execução.',
   early: 'Primeiras ações planejadas para um eventual mandato, caso a chapa seja eleita. Não significa que a proposta já começou ou que será concluída imediatamente.'
 };
@@ -12,7 +12,7 @@ export async function loadClassifications() {
   if (backendReady) {
     try {
       const online = await request('/rest/v1/proposal_classifications?select=proposal_id,priority,early,sport,initial_action');
-      for (const item of online) if (Number.isInteger(item.proposal_id) && item.proposal_id >= 1 && item.proposal_id <= 35 && typeof item.priority === 'boolean' && typeof item.early === 'boolean') items.set(item.proposal_id, { ...items.get(item.proposal_id), ...item });
+      for (const item of online) if (Number.isInteger(item.proposal_id) && item.proposal_id >= 1 && item.proposal_id <= 45 && typeof item.priority === 'boolean' && typeof item.early === 'boolean') items.set(item.proposal_id, { ...items.get(item.proposal_id), ...item });
       return { items, online: true };
     } catch { return { items, online: false }; }
   }
