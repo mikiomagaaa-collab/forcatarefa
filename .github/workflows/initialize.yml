@@ -21,9 +21,11 @@ jobs:
                   target = (root / item.filename).resolve()
                   if not target.is_relative_to(root) or '.git' in target.relative_to(root).parts:
                       raise ValueError('Invalid archive path')
-              archive.extractall(root)
+              for item in archive.infolist():
+                  if not item.filename.startswith(".github/workflows/"):
+                      archive.extract(item,root)
           Path('source.zip').unlink()
-          Path('.github/workflows/initialize.yml').unlink()
+          pass
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
