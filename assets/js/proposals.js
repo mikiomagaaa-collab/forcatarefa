@@ -10,6 +10,10 @@ const icons = [
   '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2M18 3l3 3"/>'
 ];
 export async function initProposals() {
+  const loadingControls=[...document.querySelectorAll('#filter-all,#filter-priority,#filter-early,#clear-filters,#show-more,#proposal-stage')];
+  loadingControls.forEach(control=>control.disabled=true);
+  document.querySelector('#proposal-grid')?.setAttribute('aria-busy','true');
+  document.querySelector('#proposal-count').textContent='Carregando propostas…';
   const data = await loadCatalogue();
   const {proposals,categories}=data; publicMetrics(data);
   if(document.querySelector('#ft-priorities'))document.querySelector('#ft-priorities').textContent='…';
@@ -101,8 +105,10 @@ export async function initProposals() {
   });
   const categoryParam=Number(new URLSearchParams(location.search).get('categoria'));if(categories.some(c=>c.id===categoryParam)){category=categoryParam;expanded=true;}
   render(); directLink();
+  loadingControls.forEach(control=>control.disabled=false);
+  grid.setAttribute('aria-busy','false');
   if (backendReady) {
-    try { const updates = await request('/rest/v1/proposal_progress?select=proposal_id,stage,note'); progress = new Map(updates.map(update => [update.proposal_id, update])); render(); directLink(); }
+    try { const updates = await request('/rest/v1/proposal_progress?select=proposal_id,stage,note'); progress = new Map(updates.map(update => [update.proposal_id, update])); render(); }
     catch { document.querySelector('#proposal-count').textContent += ' · acompanhamento online temporariamente indisponível'; }
   }
 }
