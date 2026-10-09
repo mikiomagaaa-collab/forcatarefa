@@ -11,6 +11,8 @@ await db.exec(`create role anon; create role authenticated; create role service_
 await db.exec(await readFile(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
 await db.exec(await readFile(new URL('../supabase/migrations/20261009_platform.sql', import.meta.url), 'utf8'));
 await db.exec(await readFile(new URL('../supabase/migrations/20261009_privacy.sql', import.meta.url), 'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/20261009_sports.sql', import.meta.url), 'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/20261009_team_save.sql', import.meta.url), 'utf8'));
 await db.exec(`insert into auth.users values('${owner}'),('${admin}'),('${student}'); insert into public.account_controls(user_id,is_admin,is_owner) values('${owner}',true,true),('${admin}',true,false); insert into public.suggestions(category,message,session_hash) values('Outro','Mensagem de teste privada','${hash}');`);
 async function as(role, id = '') { await db.exec(`reset role; set role ${role}; select set_config('request.jwt.claim.sub','${id}',false);`); }
 async function rejects(sql, params = []) { await assert.rejects(db.query(sql, params)); checks++; }
@@ -61,9 +63,12 @@ await rejects("insert into public.proposal_progress(proposal_id,stage) values(36
 await as('anon');
 assert.equal(await scalar('select count(*) from public.proposal_classifications where priority'), 5); checks++;
 assert.equal(await scalar('select count(*) from public.proposal_classifications where early'), 8); checks++;
+assert.equal(await scalar('select count(*) from public.proposal_classifications where sport'), 2); checks++;
 await rejects('select * from public.election_2026');
 await rejects('select public.save_election($1,true)', ['{"status":"eleita"}']);
 await as('authenticated',student);
+await db.query('update public.proposal_classifications set sport=true where proposal_id=1');
+assert.equal(await scalar('select sport from public.proposal_classifications where proposal_id=1'),false);checks++;
 await db.query('update public.proposal_classifications set priority=true where proposal_id=31');
 assert.equal(await scalar('select priority from public.proposal_classifications where proposal_id=31'),false);checks++;
 await rejects("insert into public.project_records(kind,category,title,description) values('talentos','Música','Teste','Trabalho privado de teste')");
