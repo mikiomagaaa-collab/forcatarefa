@@ -8,7 +8,7 @@ const runtime = resolve(root, '.test-runtime');
 await mkdir(runtime, { recursive: true });
 const env = {
   SUPABASE_URL: 'https://test-only.supabase.co', SUPABASE_ANON_KEY: 'TEST_ONLY_PUBLIC_KEY',
-  SUPABASE_SERVICE_ROLE_KEY: 'TEST_ONLY_SERVER_KEY', ALLOWED_ORIGINS: 'https://test-only.example',
+  SUPABASE_SERVICE_ROLE_KEY: 'TEST_ONLY_SERVER_KEY', PUBLIC_SITE_ANON_KEY: 'TEST_ONLY_SITE_PUBLIC_KEY', ALLOWED_ORIGINS: 'https://test-only.example',
   ADMIN_EMAIL: 'test-only@example.invalid', TURNSTILE_SECRET_KEY: 'TEST_ONLY_CAPTCHA_SECRET', ABUSE_HASH_SECRET: 'TEST_ONLY_HASH_SECRET_NOT_FOR_PRODUCTION_32_BYTES'
 };
 let handler; let counter = 0; let sessionBlocked = false; let authAllowed = true; let insertFailed = false; let userChecks = 0;
@@ -73,6 +73,8 @@ try {
   result=await call(login,{}, {method:'OPTIONS'}); assert.equal(result.code,204); checks++;
   assert.equal(suggestions.every(row=>!row.session_hash.includes('192.0.2.1')&&row.session_hash.length===64),true); checks++;
   result=await call(vote,input('intention'),{authorization:`Bearer ${env.SUPABASE_ANON_KEY}`}); assert.equal(result.code,200); assert.equal(userChecks,0); checks+=2;
+  result=await call(vote,input('intention'),{authorization:`Bearer ${env.PUBLIC_SITE_ANON_KEY}`}); assert.equal(result.code,200); assert.equal(userChecks,0); checks+=2;
+  result=await call(login,input('admin_login',{password:'TEST_ONLY_STRONG_PASSWORD'}),{authorization:`Bearer ${env.PUBLIC_SITE_ANON_KEY}`}); assert.equal(result.code,200); assert.equal(userChecks,0); checks+=2;
   result=await call(vote,input('intention'),{authorization:'Bearer INVALID_USER_TOKEN'}); assert.equal(result.code,401); assert.equal(userChecks,1); checks+=2;
   console.log(`${checks} verificações das funções aprovadas, usando serviços simulados: validação, CAPTCHA, falhas, duplicação, limites e login autorizado.`);
 } finally {
