@@ -39,6 +39,8 @@ python -m http.server 4173 --bind 127.0.0.1
 
 Abra http://127.0.0.1:4173/. Não abra index.html diretamente pelo explorador, pois a leitura dos dados precisa de um servidor HTTP.
 
+Na prévia local, o voto e a entrada na gestão abrem o site publicado. O formulário de sugestões apresenta um link para o envio online. Assim, a prévia não tenta usar a proteção de produção em um endereço local nem informa uma sessão expirada por esse motivo.
+
 Verificar e preparar a publicação
 --------------------------------
 
@@ -83,6 +85,7 @@ supabase link --project-ref SEU_PROJECT_REF
 9. Copie supabase/.env.example para supabase/.env.local e preencha no seu computador:
    - ALLOWED_ORIGINS: origens exatas, separadas por vírgula. No GitHub Pages é https://mikiomagaaa-collab.github.io, sem /forcatarefa. Remova localhost quando não houver teste local.
    - ADMIN_EMAIL: e-mail da conta padrão autorizada, mantido no servidor.
+   - PUBLIC_SITE_ANON_KEY: a mesma chave pública anon de assets/js/config.js. O servidor reconhece essa chave como acesso de visitante, sem confundi-la com uma sessão administrativa. A chave pública pode diferir da chave legado fornecida automaticamente pelo ambiente.
    - TURNSTILE_SECRET_KEY: segredo do widget, somente no servidor.
    - ABUSE_HASH_SECRET: segredo aleatório forte, com pelo menos 32 bytes de entropia, somente no servidor. Preserve esse segredo; alterá-lo muda os identificadores de deduplicação.
 10. Envie os segredos e as funções:
@@ -111,6 +114,8 @@ Digite a senha forte da conta padrão autorizada. Para outra conta já autorizad
 Para atualizar a equipe: abra Equipe, adicione ou edite os nomes, use Subir/Descer para ordenar, Remover para excluir da edição e “Salvar equipe online” para gravar. Os nomes são salvos em uma transação e ficam públicos para todos ao recarregar. Obtenha autorização para publicar nomes de menores de idade. Não cadastre funções, cargos ou fotografias.
 
 Somente a conta proprietária pode autorizar ou bloquear outras contas. Novas contas devem ser criadas no serviço de autenticação antes de cadastrar seu UUID no painel. A conta proprietária é protegida contra remoção de privilégios pelo próprio painel. Para situações de perda de acesso, use os controles da conta do projeto Supabase.
+
+Em Propostas, selecione a proposta e clique em “Marcar proposta como realizada” quando ela já tiver sido concluída. O botão salva o status real no banco e preserva as observações. Para corrigir um registro, escolha outra etapa e clique em “Salvar andamento”. As etiquetas de prioridade e início planejado permanecem independentes desse status.
 
 Intenção de voto
 ----------------
@@ -213,3 +218,7 @@ Site: https://mikiomagaaa-collab.github.io/forcatarefa/
 O banco e as três funções estão instalados no projeto Supabase uiqmftvdtryuhmrlvdxr. O widget Turnstile está restrito ao hostname público. Os segredos permanecem no Supabase; somente as chaves públicas entram em assets/js/config.js. O proprietário criou sua senha pessoal e autorizou o acesso de gestão. O agendamento forcatarefa-security-retention está ativo, com execução a cada hora, após autorização do proprietário.
 
 A migração 20261009_privacy.sql permite que a gestão exclua uma sugestão após validar a necessidade de remoção e confirmar a exclusão no painel. Nenhuma sugestão ou intenção foi criada para demonstrar contagens de produção.
+
+O painel mostra uma área por vez: visão geral, propostas, equipe, sugestões, projetos, transparência, perguntas frequentes, eleição e segurança. A navegação preserva os campos ainda não salvos.
+
+A etiqueta Desportivo usa uma bola em SVG e identifica inicialmente as propostas 17 e 24. Pode ser editada pela gestão, junto às demais etiquetas, sem mudar o andamento. Em projetos existentes, aplique `supabase/migrations/20261009_sports.sql` uma vez. A correção de gravação da equipe está em `supabase/migrations/20261009_team_save.sql` e mantém a proteção contra operações sem condição.
