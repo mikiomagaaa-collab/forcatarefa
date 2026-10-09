@@ -12,7 +12,7 @@ export async function loadClassifications() {
   if (backendReady) {
     try {
       const online = await request('/rest/v1/proposal_classifications?select=proposal_id,priority,early,sport,initial_action');
-      for (const item of online) if (Number.isInteger(item.proposal_id) && item.proposal_id >= 1 && item.proposal_id <= 45 && typeof item.priority === 'boolean' && typeof item.early === 'boolean') items.set(item.proposal_id, { ...items.get(item.proposal_id), ...item });
+      for (const item of online) if (Number.isInteger(item.proposal_id) && item.proposal_id >= 1 && item.proposal_id <= 100000 && typeof item.priority === 'boolean' && typeof item.early === 'boolean') items.set(item.proposal_id, { ...items.get(item.proposal_id), ...item });
       return { items, online: true };
     } catch { return { items, online: false }; }
   }

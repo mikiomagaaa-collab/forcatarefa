@@ -87,7 +87,7 @@ export async function initProposals() {
   function directLink() {
     const hash = window.location.hash;
     if (hash === '#propostas' || (location.pathname.endsWith('catalogo.html')&&!hash.startsWith('#proposta-'))) { catalogue.open = true; return; }
-    if (!/^#proposta-([1-9]|[1-3]\d|4[0-5])$/.test(hash)) return;
+    if (!/^#proposta-([1-9]\d{0,5})$/.test(hash)) return;
     reset();
     requestAnimationFrame(() => document.querySelector(hash)?.scrollIntoView({ block: 'start' }));
   }

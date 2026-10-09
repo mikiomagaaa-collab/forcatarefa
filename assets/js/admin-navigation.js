@@ -3,7 +3,7 @@ export function initAdminNavigation() {
   const panels = [...document.querySelectorAll('[data-admin-area]')];
   function showArea() {
     const requested = location.hash.slice(1);
-    const area = requested === 'admin-classifications' ? 'admin-proposals' : requested;
+    const area = ['admin-classifications','admin-editorial'].includes(requested) ? 'admin-proposals' : requested;
     const selected = links.some(link => link.hash === '#' + area) ? area : 'admin-intentions';
     for (const panel of panels) panel.hidden = panel.dataset.adminArea !== selected;
     for (const link of links) {

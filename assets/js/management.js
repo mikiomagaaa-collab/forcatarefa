@@ -1,3 +1,4 @@
+import {applyFtAvailability} from './ft-visibility.js';
 import {request,backendReady,renderText} from './api.js';
 import {loadCatalogue,publicMetrics} from './catalogue.js';
 import {loadClassifications} from './classifications.js';
@@ -10,7 +11,7 @@ function empty(root,title='Aguardando os primeiros registros',body='Aguardando i
 function field(root,label,value){const d=renderText('div','','ft-detail-field');d.append(renderText('dt',label),renderText('dd',value));root.append(d);}
 function recordCard(r){const card=renderText('article','','ft-record');card.append(renderText('p',r.stage,'record-stage'),renderText('h3',r.title),renderText('p',r.body));if(r.period)card.append(renderText('p',r.period,'badge'));if(r.reference_date)card.append(renderText('p',`Data do registro: ${date(r.reference_date+'T12:00:00Z')}.`));card.append(renderText('p',`Atualizado em ${date(r.updated_at)}.`,'category-label'));return card;}
 function renderRecords(root,rows){if(!root)return;if(!rows.length){empty(root);return;}root.replaceChildren(...rows.map(recordCard));}
-function navigation(){const panels=[...document.querySelectorAll('.ft-panel')];if(!panels.length)return;const links=[...document.querySelectorAll('.ft-navigation a')];function show(){const selected=panels.some(p=>'#'+p.id===location.hash)?location.hash:'#ft-overview';panels.forEach(p=>p.hidden='#'+p.id!==selected);links.forEach(a=>{if(a.hash===selected)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});}window.addEventListener('hashchange',show);window.addEventListener('popstate',show);show();}
+function navigation(){const panels=[...document.querySelectorAll('.ft-panel')];if(!panels.length)return;const links=[...document.querySelectorAll('.ft-navigation a')];function show(){const selected=panels.some(p=>'#'+p.id===location.hash&&p.dataset.available!=='false')?location.hash:'#ft-overview';panels.forEach(p=>p.hidden='#'+p.id!==selected);links.forEach(a=>{if(a.hash===selected)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});}document.addEventListener('ft-availability-ready',show);window.addEventListener('hashchange',show);window.addEventListener('popstate',show);show();}
 async function init(){
   navigation();
   if($('#workflow-detail')){const steps=await(await fetch('assets/data/workflow.json')).json();document.querySelectorAll('[data-workflow]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-workflow]').forEach(other=>other.setAttribute('aria-pressed',String(other===b)));const [title,,body]=steps[Number(b.dataset.workflow)];$('#workflow-detail').replaceChildren(renderText('h3',title),renderText('p',body));}));}
@@ -20,6 +21,7 @@ async function init(){
   const results=await Promise.allSettled(endpoints.map(([,url])=>backendReady?request('/rest/v1'+url):Promise.resolve([])));
   results.forEach((r,i)=>{data[endpoints[i][0]]=r.status==='fulfilled'?r.value:[];if(r.status==='rejected')failures.add(endpoints[i][0]);});
   const rows=kind=>data.records.filter(r=>r.kind===kind);
+  applyFtAvailability(data);
   if($('#history-records')){if(rows('timeline').length){const originals=[...$('#history-records').children];for(const r of rows('timeline')){const card=recordCard(r);if(r.position>=1&&r.position<=originals.length)originals[r.position-1].replaceWith(card);else $('#history-records').append(card);}}else if(failures.has('records'))$('#history-records').after(renderText('p','As atualizações da equipe estão temporariamente indisponíveis. A trajetória original permanece disponível.','notice'));}
   renderRecords($('#planning-goals'),rows('goal'));
   if($('#planning-goals')&&failures.has('records'))empty($('#planning-goals'),'Não foi possível consultar as metas','Confira sua conexão e recarregue a página.');

@@ -1,0 +1,11 @@
+const paths={overview:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',proposals:'M5 3h14v18H5zM8 7h8M8 11h8M8 15h5',calendar:'M4 5h16v16H4zM8 3v4m8-4v4M4 10h16',ft:'M3 17 9 11l4 3 8-10M3 21v-2m6 2v-5m6 5v-3m6 3V10',site:'M4 4h16v16H4zM4 9h16M9 9v11',team:'M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6M3 21v-3a6 6 0 0 1 12 0v3m3-16a3 3 0 0 1 0 6m0 4a5 5 0 0 1 3 5',suggestions:'M21 11a9 9 0 0 1-9 9H3l2-5a9 9 0 1 1 16-4z',records:'M4 5h16v15H4zM4 10h16M9 10v10',transparency:'M6 3h9l5 5v13H6zM15 3v6h5M9 13h8m-8 4h8',faq:'M12 16v1m-3-8a3 3 0 1 1 4 3v1M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18',election:'M4 10h16v11H4zM8 10V5h8v5M9 16l2 2 4-4',security:'M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6zM8 12l3 3 5-6'};
+export function initAdminWorkspace(){
+ const $=s=>document.querySelector(s);const menu=$('#admin-rail');const toggle=$('#admin-nav-toggle');
+ function close(){menu.classList.remove('rail-open');toggle.setAttribute('aria-expanded','false');}
+ toggle.addEventListener('click',()=>{const open=toggle.getAttribute('aria-expanded')!=='true';menu.classList.toggle('rail-open',open);toggle.setAttribute('aria-expanded',String(open));});
+ menu.addEventListener('click',e=>{if(e.target.closest('a'))close();});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&menu.classList.contains('rail-open')){close();toggle.focus();}});
+ for(const a of document.querySelectorAll('.admin-tabs a')){const key=a.hash.replace('#admin-','').replace('intentions','overview');const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','1.7');svg.setAttribute('aria-hidden','true');const p=document.createElementNS(svg.namespaceURI,'path');p.setAttribute('d',paths[key]||paths.overview);svg.append(p);a.prepend(svg);}
+ document.addEventListener('admin-catalogue-metrics',e=>{for(const [id,value] of Object.entries(e.detail)){const target=$(`#workspace-${id}`);if(target)target.textContent=value;}});
+ document.addEventListener('admin-calendar-metrics',e=>$('#workspace-calendar').textContent=e.detail);
+ document.addEventListener('admin-team-metrics',e=>$('#workspace-team').textContent=e.detail);
+}

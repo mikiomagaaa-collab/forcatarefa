@@ -1,3 +1,5 @@
+import {initAdminWorkspace} from './admin-workspace.js';
+import {initAdminCalendar} from './admin-calendar.js';
 import {initAdminCentral} from './admin-central.js';
 import { initAdminNavigation } from './admin-navigation.js';
 import { initAdminPlatform } from './admin-platform.js';
@@ -42,7 +44,7 @@ function renderMembers() {
     const remove = renderText('button', 'Remover'); remove.type = 'button'; remove.addEventListener('click', () => { members.splice(index, 1); renderMembers(); status($('#team-admin-status'), 'Integrante removido da edição. Salve para publicar.'); }); row.append(remove); $('#members-editor').append(row);
   });
 }
-async function loadTeam() { const data = await adminRequest('/rest/v1/team_members?select=name,role,position&order=position.asc'); members = data.map(member => ({name:member.name,role:member.role||''})); renderMembers(); }
+async function loadTeam() { const data = await adminRequest('/rest/v1/team_members?select=name,role,position&order=position.asc'); members = data.map(member => ({name:member.name,role:member.role||''})); renderMembers(); document.dispatchEvent(new CustomEvent('admin-team-metrics',{detail:members.length})); }
 async function loadSuggestions(append = false) {
   if (!append) { suggestionOffset = 0; $('#suggestions-list').replaceChildren(); }
   const filter = $('#suggestion-filter').value;
@@ -71,7 +73,7 @@ async function loadSuggestions(append = false) {
   suggestionOffset += data.length; $('#older-suggestions').hidden = data.length < 30;
   status($('#suggestions-admin-status'), suggestionOffset ? `${suggestionOffset} mensagens carregadas.` : 'Nenhuma sugestão recebida neste filtro.');
 }
-async function loadProgress() { const data = await adminRequest('/rest/v1/proposal_progress?select=*'); progress = new Map(data.map(row => [row.proposal_id, row])); showProgress(); }
+async function loadProgress() { const data = await adminRequest('/rest/v1/proposal_progress?select=*'); progress = new Map(data.map(row => [row.proposal_id, row])); showProgress(); document.dispatchEvent(new CustomEvent('proposal-progress-updated',{detail:data})); }
 function updateCompletionButton() {
   const completed = progress.get(Number($('#progress-proposal').value))?.stage === 'Realizada';
   $('#progress-complete').disabled = completed;
@@ -124,7 +126,7 @@ async function init() {
     const authorized = await adminRequest('/rest/v1/rpc/is_admin', { method: 'POST', body: {} });
     if (!authorized) throw new Error('Esta conta não tem autorização administrativa.');
     isOwner = await adminRequest('/rest/v1/rpc/is_owner', { method: 'POST', body: {} });
-    $('#admin-content').hidden = false; $('#admin-guard').hidden = true; $('#logout').hidden = false; $('#account-management').hidden = !isOwner; initAdminNavigation();
+    $('#admin-content').hidden = false; $('#admin-guard').hidden = true; $('#logout').hidden = false; $('#account-management').hidden = !isOwner; initAdminNavigation(); initAdminWorkspace(); $('#admin-nav-toggle').hidden=false; initAdminCalendar().catch(error=>status($('#calendar-status'),error.message,'error'));
     const response = await fetch('../assets/data/proposals.json'); if (!response.ok) throw new Error('Não foi possível carregar as propostas.');
     ({ proposals } = await response.json());
     for (const p of proposals) { const option = renderText('option', `${p.id}. ${p.title}`); option.value = p.id; $('#progress-proposal').append(option); }
@@ -152,6 +154,7 @@ $('#save-team').addEventListener('click', event => work(event.target, $('#team-a
   status($('#team-admin-status'), 'Salvando a equipe…');
   await adminRequest('/rest/v1/rpc/replace_team', { method: 'POST', body: { members: members.map(m => ({name:m.name.trim(),role:m.role.trim()})) } }); await loadTeam();
 }, 'Equipe salva online. Os visitantes verão os nomes ao recarregar o site.'));
+document.addEventListener('proposal-selected',event=>{$('#progress-proposal').value=String(event.detail);showProgress();});
 $('#progress-proposal').addEventListener('change', showProgress);
 $('#progress-form').addEventListener('submit', event => {
   event.preventDefault(); work(event.submitter, $('#progress-admin-status'), () => saveProgress($('#progress-stage').value), 'Andamento salvo e disponível no site.');

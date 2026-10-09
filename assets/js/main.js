@@ -1,3 +1,4 @@
+import {initHomeFtAvailability} from './ft-visibility.js';
 import { initElection } from './election.js';
 import { config } from './config.js';
 import { backendReady, participationReady, isLocalPreview, request, status, safeStorage, sessionId, mountCaptcha, captchaToken, resetCaptcha, renderText } from './api.js';
@@ -162,3 +163,5 @@ setInterval(() => { if(document.visibilityState==='visible')initElection().catch
 document.querySelectorAll('.timeline-step').forEach(item => item.addEventListener('toggle', () => { if(item.open) document.querySelectorAll('.timeline-step').forEach(other => { if(other!==item)other.open=false; }); }));
 
 if(backendReady)request('/rest/v1/management_records?select=title,body&kind=eq.home&published=eq.true&limit=1').then(rows=>{if(rows[0]){document.querySelector('.hero h1').textContent=rows[0].title;document.querySelector('.hero-description').textContent=rows[0].body;}}).catch(()=>{});
+
+initHomeFtAvailability().catch(()=>{});
