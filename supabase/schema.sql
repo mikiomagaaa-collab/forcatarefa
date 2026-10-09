@@ -157,8 +157,6 @@ grant execute on function public.replace_team(jsonb),public.suspend_session(text
 create function public.consume_rate(bucket_key text, max_hits integer, window_seconds integer) returns boolean language plpgsql security definer set search_path = '' as $$
 declare new_hits integer;
 begin
-  delete from public.rate_buckets where expires_at < now() - interval '1 day';
-  delete from public.security_events where created_at < now() - interval '7 days';
   insert into public.rate_buckets(bucket,hits,expires_at) values(bucket_key,1,now()+make_interval(secs=>window_seconds))
   on conflict(bucket) do update set hits=case when public.rate_buckets.expires_at<=now() then 1 else public.rate_buckets.hits+1 end,
     expires_at=case when public.rate_buckets.expires_at<=now() then now()+make_interval(secs=>window_seconds) else public.rate_buckets.expires_at end returning hits into new_hits;

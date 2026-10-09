@@ -90,7 +90,7 @@ document.querySelector('#vote-form').addEventListener('submit', async event => {
     recorded = true; storage.set('ft-intention-received', 'true');
     status(output, data.recorded ? 'Sua intenção foi registrada. Obrigado pelo apoio!' : 'Este navegador já tem uma intenção registrada. Obrigado pelo apoio!', 'success');
   } catch (error) { status(output, error.message, 'error'); }
-  finally { resetCaptcha('vote-captcha'); button.disabled = recorded || !participationReady; button.textContent = recorded ? 'INTENÇÃO REGISTRADA' : 'VOU VOTAR NO FORÇA TAREFA!'; }
+  finally { resetCaptcha('vote-captcha'); button.disabled = recorded || !participationReady; button.textContent = recorded ? 'INTENÇÃO REGISTRADA' : 'VOU VOTAR NO FORÇA TAREFA!'; await initElection().catch(() => {}); }
 });
 
 async function loadPublic() {

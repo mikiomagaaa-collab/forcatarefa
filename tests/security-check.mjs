@@ -10,6 +10,7 @@ const hash = 'a'.repeat(64);
 await db.exec(`create role anon; create role authenticated; create role service_role bypassrls; create schema auth; create table auth.users(id uuid primary key); create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$; grant usage on schema auth,public to anon,authenticated,service_role;`);
 await db.exec(await readFile(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
 await db.exec(await readFile(new URL('../supabase/migrations/20261009_platform.sql', import.meta.url), 'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/20261009_privacy.sql', import.meta.url), 'utf8'));
 await db.exec(`insert into auth.users values('${owner}'),('${admin}'),('${student}'); insert into public.account_controls(user_id,is_admin,is_owner) values('${owner}',true,true),('${admin}',true,false); insert into public.suggestions(category,message,session_hash) values('Outro','Mensagem de teste privada','${hash}');`);
 async function as(role, id = '') { await db.exec(`reset role; set role ${role}; select set_config('request.jwt.claim.sub','${id}',false);`); }
 async function rejects(sql, params = []) { await assert.rejects(db.query(sql, params)); checks++; }
@@ -82,5 +83,12 @@ await as('service_role');
 await db.query("update public.election_2026 set status='eleita',confirmed_at=now(),source='Registro de teste da escola',published_at=now()");
 await rejects('select public.record_intention($1)',['b'.repeat(64)]);
 assert.equal(await scalar('select count(*) from public.vote_intentions'),1); checks++;
+await as('anon'); await rejects('select public.erase_suggestion(gen_random_uuid(),true)');
+await as('authenticated',student); await rejects('select public.erase_suggestion(gen_random_uuid(),true)');
+await as('authenticated',owner);
+const suggestionId = await scalar('select id from public.suggestions limit 1');
+await rejects('select public.erase_suggestion($1,false)',[suggestionId]);
+assert.equal(await scalar('select public.erase_suggestion($1,true)',[suggestionId]),true); checks++;
+assert.equal(await scalar('select count(*) from public.suggestions'),0); checks++;
 await db.close();
 console.log(`${checks} verificações de PostgreSQL/RLS aprovadas: privacidade, autorização, bloqueios, equipe atômica, duplicação e contagem.`);

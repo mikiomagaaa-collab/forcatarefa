@@ -52,6 +52,15 @@ async function loadSuggestions(append = false) {
     select.value = suggestion.status;
     select.addEventListener('change', () => work(select, $('#suggestions-admin-status'), async () => { await adminRequest(`/rest/v1/suggestions?id=eq.${suggestion.id}`, { method: 'PATCH', body: { status: select.value } }); }, 'Andamento salvo.'));
     label.append(select); card.append(label);
+    const erase = renderText('button', 'Excluir mensagem', 'button secondary'); erase.type = 'button';
+    erase.addEventListener('click', () => {
+      if (!window.confirm('Confirme que a solicitação de remoção foi validada ou que esta mensagem deixou de ser necessária. Excluir permanentemente esta mensagem e seus dados opcionais?')) return;
+      work(erase, $('#suggestions-admin-status'), async () => {
+        await adminRequest('/rest/v1/rpc/erase_suggestion', { method: 'POST', body: { target_id: suggestion.id, confirmed: true } });
+        await loadSuggestions();
+      }, 'Mensagem excluída.');
+    });
+    card.append(erase);
     const block = renderText('button', 'Suspender envios desta sessão', 'button secondary'); block.type = 'button';
     block.addEventListener('click', () => { $('#suspension-hash').value = suggestion.session_hash; $('#suspension-reason').focus(); $('#admin-security').scrollIntoView(); }); card.append(block); $('#suggestions-list').append(card);
   }

@@ -1,8 +1,8 @@
 [functions.submit-suggestion]
-verify_jwt = false
+verify_jwt = true
 
 [functions.register-intention]
-verify_jwt = false
+verify_jwt = true
 
 [functions.admin-login]
-verify_jwt = false
+verify_jwt = true

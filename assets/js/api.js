@@ -28,9 +28,8 @@ export async function request(path, { token, method = 'GET', body, headers: extr
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const headers = { apikey: config.supabasePublicKey, ...extra };
+    const headers = { apikey: config.supabasePublicKey, Authorization: `Bearer ${token || config.supabasePublicKey}`, ...extra };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
-    if (token) headers.Authorization = `Bearer ${token}`;
     const response = await fetch(`${config.supabaseUrl}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: controller.signal, credentials: 'omit', cache: 'no-store' });
     const text = await response.text();
     let data;
@@ -65,7 +64,7 @@ export async function mountCaptcha(targetId, action) {
   }
   await captchaPromise;
   if (captchaIds.has(targetId)) return;
-  const widget = window.turnstile.render(`#${targetId}`, { sitekey: config.turnstileSiteKey, action, theme: 'light', 'response-field': false });
+  const widget = window.turnstile.render(`#${targetId}`, { sitekey: config.turnstileSiteKey, action, theme: 'light', size: window.matchMedia('(max-width: 380px)').matches ? 'compact' : 'normal', 'response-field': false });
   captchaIds.set(targetId, widget);
 }
 export function captchaToken(targetId) {

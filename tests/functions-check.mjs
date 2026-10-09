@@ -11,7 +11,7 @@ const env = {
   SUPABASE_SERVICE_ROLE_KEY: 'TEST_ONLY_SERVER_KEY', ALLOWED_ORIGINS: 'https://test-only.example',
   ADMIN_EMAIL: 'test-only@example.invalid', TURNSTILE_SECRET_KEY: 'TEST_ONLY_CAPTCHA_SECRET', ABUSE_HASH_SECRET: 'TEST_ONLY_HASH_SECRET_NOT_FOR_PRODUCTION_32_BYTES'
 };
-let handler; let counter = 0; let sessionBlocked = false; let authAllowed = true; let insertFailed = false;
+let handler; let counter = 0; let sessionBlocked = false; let authAllowed = true; let insertFailed = false; let userChecks = 0;
 const buckets = new Map(); const seenCaptcha = new Set(); const intentions = new Set(); const suggestions = [];
 const realFetch = globalThis.fetch;
 globalThis.Deno = { env: { get: key => env[key] }, serve: callback => { handler = callback; } };
@@ -22,7 +22,8 @@ globalThis.fetch = async (url, options = {}) => {
     const success = body.response?.startsWith('VALID:') && !seenCaptcha.has(body.response);
     seenCaptcha.add(body.response);
     value = { success, action: body.response?.split(':')[1], hostname: 'test-only.example' };
-  } else if (url.includes('/auth/v1/token')) value = { access_token: 'TEST_TOKEN', refresh_token: 'TEST_REFRESH', expires_in: 3600 };
+  } else if (url.includes('/auth/v1/user')) { userChecks++; code=401; value={}; }
+  else if (url.includes('/auth/v1/token')) value = { access_token: 'TEST_TOKEN', refresh_token: 'TEST_REFRESH', expires_in: 3600 };
   else if (url.includes('/rpc/is_admin')) value = authAllowed;
   else if (url.includes('/rpc/consume_rate')) { const hits = (buckets.get(body.bucket_key) || 0) + 1; buckets.set(body.bucket_key, hits); value = hits <= body.max_hits; }
   else if (url.includes('/session_suspensions?')) value = sessionBlocked ? [{ session_hash: 'blocked' }] : [];
@@ -45,7 +46,7 @@ function input(action, extra = {}) {
   return { session: String(++counter).padStart(64,'0'), captcha: `VALID:${action}:${counter}`, ...extra };
 }
 async function call(fn, body, options = {}) {
-  const response = await fn(new Request('https://function.example/test', { method: options.method || 'POST', headers: { origin: options.origin || 'https://test-only.example', 'Content-Type': 'application/json', 'x-forwarded-for': '192.0.2.1' }, body: options.method === 'OPTIONS' ? undefined : JSON.stringify(body) }));
+  const response = await fn(new Request('https://function.example/test', { method: options.method || 'POST', headers: { origin: options.origin || 'https://test-only.example', 'Content-Type': 'application/json', 'x-forwarded-for': '192.0.2.1', ...(options.authorization ? {Authorization:options.authorization} : {}) }, body: options.method === 'OPTIONS' ? undefined : JSON.stringify(body) }));
   return { code: response.status, data: response.status === 204 ? null : await response.json() };
 }
 let checks = 0;
@@ -71,6 +72,8 @@ try {
   authAllowed=true; result=await call(login,input('admin_login',{password:'TEST_ONLY_STRONG_PASSWORD'})); assert.equal(result.code,200); assert.equal(result.data.access_token,'TEST_TOKEN'); checks+=2;
   result=await call(login,{}, {method:'OPTIONS'}); assert.equal(result.code,204); checks++;
   assert.equal(suggestions.every(row=>!row.session_hash.includes('192.0.2.1')&&row.session_hash.length===64),true); checks++;
+  result=await call(vote,input('intention'),{authorization:`Bearer ${env.SUPABASE_ANON_KEY}`}); assert.equal(result.code,200); assert.equal(userChecks,0); checks+=2;
+  result=await call(vote,input('intention'),{authorization:'Bearer INVALID_USER_TOKEN'}); assert.equal(result.code,401); assert.equal(userChecks,1); checks+=2;
   console.log(`${checks} verificações das funções aprovadas, usando serviços simulados: validação, CAPTCHA, falhas, duplicação, limites e login autorizado.`);
 } finally {
   globalThis.fetch=realFetch; delete globalThis.Deno;

@@ -61,7 +61,7 @@ Configurar os dados e a autenticação
 -----------------------------------
 
 1. Crie um projeto Supabase sob seu controle.
-2. No SQL Editor, execute supabase/schema.sql uma vez, em um projeto novo. Este arquivo é a inicialização, não uma migração para um banco preexistente.
+2. No SQL Editor, execute supabase/schema.sql uma vez, em um projeto novo, seguido de 20261009_platform.sql e 20261009_privacy.sql, na pasta supabase/migrations. Não reaplique a inicialização em um banco preexistente.
 3. Em Authentication, Users, crie a conta da gestão com uma senha forte de pelo menos 12 caracteres. Ative o requisito de senha forte no serviço de autenticação. Não use senha temporária fraca no ambiente publicado.
 4. Copie o UUID real dessa conta e autorize o primeiro proprietário no SQL Editor:
 
@@ -71,8 +71,8 @@ values ('SUBSTITUA_PELO_UUID_REAL', true, true);
 ```
 
 5. Desabilite cadastros públicos se não forem necessários. Não habilite contas de estudantes apenas para os nomes de exibição.
-6. Crie um widget Cloudflare Turnstile com os hostnames mikiomagaaa-collab.github.io e 127.0.0.1 para os ambientes que serão usados. Não use chaves de teste na publicação.
-7. Preencha assets/js/config.js com supabaseUrl, supabasePublicKey e turnstileSiteKey. Apenas a chave pública/publishable ou anon é permitida nesse arquivo. Nunca coloque a chave service_role ou qualquer segredo no navegador.
+6. O widget Cloudflare Turnstile de produção permite mikiomagaaa-collab.github.io. O ambiente local não está habilitado para os envios online. Não use chaves de teste na publicação.
+7. Preencha assets/js/config.js com supabaseUrl, supabasePublicKey e turnstileSiteKey. Use a chave pública anon para manter a verificação JWT das funções. Nunca coloque a chave service_role ou qualquer segredo no navegador.
 8. Instale e autentique o CLI oficial do Supabase. Vincule o projeto:
 
 ```powershell
@@ -89,16 +89,16 @@ supabase link --project-ref SEU_PROJECT_REF
 
 ```powershell
 supabase secrets set --env-file supabase/.env.local
-supabase functions deploy submit-suggestion --no-verify-jwt
-supabase functions deploy register-intention --no-verify-jwt
-supabase functions deploy admin-login --no-verify-jwt
+supabase functions deploy submit-suggestion
+supabase functions deploy register-intention
+supabase functions deploy admin-login
 ```
 
-Essas três funções aceitam entrada antes de autenticação e validam origem, tamanho, sessão, limites e Turnstile no próprio código. O login ainda valida a senha pelo Supabase Auth e verifica a autorização real. Desativar a verificação automática de JWT dessas funções não concede acesso ao banco. Nenhum visitante pode inserir sugestões ou intenções diretamente pelas tabelas.
+Mantenha “Verify JWT with legacy secret” ligado nas três funções. O site usa a chave pública anon no cabeçalho Authorization para chamadas públicas. As funções também validam origem, tamanho, sessão, limites e Turnstile. O login valida a senha pelo Supabase Auth e verifica a autorização real. Nenhum visitante pode inserir sugestões ou intenções diretamente pelas tabelas.
 
 SUPABASE_URL, SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY são variáveis do ambiente de funções Supabase. Confirme que estão disponíveis. A chave privada de serviço permanece no servidor.
 
-11. Execute supabase/retention.sql uma vez para agendar a limpeza dos registros mínimos de segurança. Se pg_cron não estiver habilitado no projeto, habilite-o no painel do Supabase e execute novamente. Confirme que o agendamento existe e roda. Não agende o mesmo trabalho duas vezes.
+11. A limpeza automática permanece pendente por decisão do proprietário. Não execute supabase/retention.sql sem nova autorização. O arquivo prepara o agendamento futuro dos registros técnicos; sugestões e intenções não fazem parte dessa rotina.
 12. Teste a integração real em um projeto de desenvolvimento antes de publicar as configurações finais.
 
 Acessar o painel
@@ -204,3 +204,12 @@ Em Gerenciamento Eleitoral 2026, edite a retrospectiva e a mensagem e marque a r
 A seção eleitoral usa a hora do banco. Sem backend, verifica o cabeçalho Date do servidor de hospedagem e não apresenta contagens ou resultados. Uma vitória oficialmente publicada ativa detalhes comemorativos por sete dias; depois, o registro histórico permanece. Publicar o resultado encerra novas intenções no servidor com bloqueio transacional.
 
 Fotografia com crédito: os arquivos atuais preservam a marca d'água. Para substituir por fotografia própria ou licenciada, gere as variantes fachada-360.webp, fachada-570.webp e fachada.jpg e atualize o manifesto. Não remova artificialmente os créditos.
+
+Configuração publicada em 09/10/2026
+---------------------------------
+
+Site: https://mikiomagaaa-collab.github.io/forcatarefa/
+
+O banco e as três funções estão instalados no projeto Supabase uiqmftvdtryuhmrlvdxr. O widget Turnstile está restrito ao hostname público. Os segredos permanecem no Supabase; somente as chaves públicas entram em assets/js/config.js. O proprietário criou sua senha pessoal e autorizou o acesso de gestão. A limpeza automática permanece pendente por decisão do proprietário.
+
+A migração 20261009_privacy.sql permite que a gestão exclua uma sugestão após validar a necessidade de remoção e confirmar a exclusão no painel. Nenhuma sugestão ou intenção foi criada para demonstrar contagens de produção.
