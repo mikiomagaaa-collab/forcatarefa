@@ -1,0 +1,11 @@
+begin;
+insert into public.management_records(kind,title,body,period) values('goal','Escutar e organizar','Proposta de etapa inicial: reunir demandas, verificar autorizações e organizar responsabilidades.','30 dias');
+insert into public.management_records(kind,title,body,period) values('goal','Avaliar e priorizar','Proposta de etapa intermediária: analisar viabilidade, recursos e prioridades com os estudantes.','60 dias');
+insert into public.management_records(kind,title,body,period) values('goal','Acompanhar e revisar','Proposta de etapa de revisão: comunicar encaminhamentos, avaliar o planejamento e ajustar as metas.','90 dias');
+insert into public.management_records(kind,title,body,position) values('timeline','O começo entre amigos','Durante uma assembleia escolar, um grupo de amigos decidiu participar das eleições. O primeiro nome marcou um início descontraído, antes da estrutura que seria desenvolvida.',1);
+insert into public.management_records(kind,title,body,position) values('timeline','Uma ideia ganhou responsabilidade','Conhecer o papel do Grêmio trouxe compromisso, objetivos e disposição para organizar o projeto estudantil.',2);
+insert into public.management_records(kind,title,body,position) values('timeline','Um objetivo coletivo','A nova identidade passou a representar a união dos estudantes para enfrentar problemas, apoiar iniciativas e melhorar a escola.',3);
+insert into public.management_records(kind,title,body,position) values('timeline','Da primeira apresentação ao FT+','Depois da primeira apresentação, o grupo aprofundou as propostas e sua forma de organização. O desenvolvimento do FT+ e do site ampliou os meios de participação, planejamento e acompanhamento público. O projeto continua sujeito às normas e autorizações da escola.',4);
+insert into public.management_records(kind,title,body) values('home','Juntos por uma escola melhor.','Propostas para educação, convivência, bem-estar, infraestrutura, participação e gestão estudantil. Juntos, queremos transformar ideias em melhorias reais para nossa escola.');
+notify pgrst,'reload schema';
+commit;
