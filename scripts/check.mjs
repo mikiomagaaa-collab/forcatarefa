@@ -10,6 +10,7 @@ assert.deepEqual(data.proposals.map(p => p.id), Array.from({ length: 35 }, (_, i
 const labels=JSON.parse(await readFile(resolve(root,'assets/data/classifications.json'),'utf8'));
 assert.equal(labels.length,35);
 assert.deepEqual(labels.filter(p=>p.priority).map(p=>p.proposal_id),[5,7,17,19,27]);
+assert.deepEqual(labels.filter(p=>p.sport).map(p=>p.proposal_id),[17,24]);
 assert.deepEqual(labels.filter(p=>p.early).map(p=>p.proposal_id),[5,6,10,13,20,21,22,27]);
 assert.deepEqual(data.proposals.filter(p => p.approved).map(p => p.id), [8]);
 assert.equal(data.categories.length, 6);
