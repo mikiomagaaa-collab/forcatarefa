@@ -116,7 +116,7 @@ begin
   for item in select * from jsonb_array_elements(members) loop
     if jsonb_typeof(item) <> 'string' or char_length(btrim(item #>> '{}')) not between 1 and 60 or (item #>> '{}') ~ '[<>]' then raise exception 'Invalid name'; end if;
   end loop;
-  delete from public.team_members;
+  delete from public.team_members where position between 0 and 99;
   for item in select * from jsonb_array_elements(members) loop
     insert into public.team_members(name, position) values (btrim(item #>> '{}'), n);
     n := n + 1;
