@@ -6,12 +6,12 @@ Site real em HTML, CSS e JavaScript modular. Sem framework no navegador, fotogra
 Conteúdo atual
 --------------
 
-- 35 propostas, em seis categorias, com pesquisa, filtros e links diretos.
+- 35 propostas originais públicas, em seis categorias iniciais. Dez propostas adicionais de bem-estar e infraestrutura aguardam aprovação editorial privada. O total público acompanha as publicações da equipe.
 - As cinco prioridades continuam sendo 5, 7, 17, 19 e 27. A proposta 8 completa os seis destaques, com aprovação da gestão e implementação a organizar.
 - A proposta 19 foi atualizada para apoio direto aos clubes com materiais, planejamento e ideias, complementando os projetos e culminâncias existentes.
 - As propostas 31 a 35 estão em “Agrofloresta (Projeto M.C.A.N): Projeto Marasca Com Amor na Natureza”. Elas não são prioridades nem estão aprovadas.
 - História com quatro etapas expansíveis e narrativa completa, sem datas inventadas.
-- FT+ com cinco compromissos, apresentado como projeto sujeito às normas e autorizações.
+- Central FT+ com sete áreas, acompanhamento de projetos, metas, orçamento, decisões, equipe, transparência e retornos revisados.
 - Identificação opcional no navegador, com saudação, alteração e remoção.
 - Painel administrativo com equipe, sugestões, andamento, atualizações, intenção de voto e controles de segurança.
 - Apenas as duas fotografias externas fornecidas. A imagem com estudantes identificáveis foi excluída da distribuição.
@@ -111,7 +111,7 @@ No início do site, digite exatamente participantechapasixseven e clique em Entr
 
 Digite a senha forte da conta padrão autorizada. Para outra conta já autorizada, expanda “Usar outra conta autorizada” e informe seu e-mail. O painel fica em admin/ e exige uma sessão válida e autorização verificada no banco. O conteúdo do painel é ocultado antes dessa verificação.
 
-Para atualizar a equipe: abra Equipe, adicione ou edite os nomes, use Subir/Descer para ordenar, Remover para excluir da edição e “Salvar equipe online” para gravar. Os nomes são salvos em uma transação e ficam públicos para todos ao recarregar. Obtenha autorização para publicar nomes de menores de idade. Não cadastre funções, cargos ou fotografias.
+Para atualizar a equipe: abra Equipe, adicione ou edite os nomes, use Subir/Descer para ordenar, Remover para excluir da edição e “Salvar equipe online” para gravar. Os nomes são salvos em uma transação e ficam públicos para todos ao recarregar. Obtenha autorização para publicar nomes de menores de idade. As funções reais são editáveis. Cadastre somente nomes e funções autorizados; não publique fotografias ou dados pessoais sem autorização.
 
 Somente a conta proprietária pode autorizar ou bloquear outras contas. Novas contas devem ser criadas no serviço de autenticação antes de cadastrar seu UUID no painel. A conta proprietária é protegida contra remoção de privilégios pelo próprio painel. Para situações de perda de acesso, use os controles da conta do projeto Supabase.
 
@@ -132,7 +132,7 @@ Proteções implementadas
 - RLS e permissões mínimas em todas as tabelas. Sugestões e intenções não têm leitura pública.
 - Texto recebido é validado no servidor e apresentado com textContent. HTML e caracteres de controle são recusados.
 - A equipe só pode ser alterada por uma função com autorização real. O status das sugestões é a única coluna editável dessa tabela por administradores.
-- Conteúdo das propostas é mantido em dados versionados. O painel edita somente o andamento.
+- O programa original de 35 propostas permanece em dados versionados. O catálogo online permite revisão editorial pela gestão; as dez novas propostas começam privadas.
 - Autenticação real, acesso de administrador/proprietário e bloqueios são verificados no banco, inclusive com uma sessão JWT já emitida.
 - Turnstile é validado no servidor, com hostname e ação. Tokens expirados ou reutilizados são recusados.
 - Limites persistentes por sessão: três tentativas de sugestão/intenção e cinco de login por dez minutos. Limite amplo de conexão para participação, para acomodar a rede compartilhada da escola, e mais restrito para login.
@@ -202,7 +202,7 @@ As etiquetas sem backend vêm de assets/data/classifications.json. As cinco prio
 
 O painel autorizado permite editar etiquetas, acompanhamento, publicações de projetos, respostas do FAQ e informações eleitorais. Os registros dos projetos começam privados; publicar exige confirmar as autorizações. Não há armazenamento público de fotografias de estudantes nem envio de arquivos habilitado.
 
-O FAQ tem 15 perguntas em assets/data/faq.json, pesquisa e categorias. Respostas editadas no painel persistem em faq_entries. O painel mostra o total real de intenções em dados agregados, sem percentuais de apoio escolar.
+O FAQ tem 20 perguntas em assets/data/faq.json, pesquisa e categorias. Respostas editadas no painel persistem em faq_entries. O painel mostra o total real de intenções em dados agregados, sem percentuais de apoio escolar.
 
 Em Gerenciamento Eleitoral 2026, edite a retrospectiva e a mensagem e marque a revisão de cada texto. O resultado final exige data, fonte e a confirmação explícita de publicação. Antes de 13/10/2026 às 00h00 de Brasília, o servidor impede sua publicação. A prévia do painel é privada. A data sozinha nunca inicia propostas ou declara vitória.
 
@@ -219,6 +219,34 @@ O banco e as três funções estão instalados no projeto Supabase uiqmftvdtryuh
 
 A migração 20261009_privacy.sql permite que a gestão exclua uma sugestão após validar a necessidade de remoção e confirmar a exclusão no painel. Nenhuma sugestão ou intenção foi criada para demonstrar contagens de produção.
 
-O painel mostra uma área por vez: visão geral, propostas, equipe, sugestões, projetos, transparência, perguntas frequentes, eleição e segurança. A navegação preserva os campos ainda não salvos.
+O painel mostra uma área por vez: visão geral, propostas, Central FT+, conteúdo do site, equipe, sugestões, projetos especiais, transparência, perguntas frequentes, eleição e segurança. A navegação preserva os campos ainda não salvos.
 
 A etiqueta Desportivo usa uma bola em SVG e identifica inicialmente as propostas 17 e 24. Pode ser editada pela gestão, junto às demais etiquetas, sem mudar o andamento. Em projetos existentes, aplique `supabase/migrations/20261009_sports.sql` uma vez. A correção de gravação da equipe está em `supabase/migrations/20261009_team_save.sql` e mantém a proteção contra operações sem condição.
+
+
+Central FT+ e preparação para 13/10/2026
+-------------------------------------
+
+A atualização mantém o login, as funções de participação, as permissões e os dados existentes. As migrações adicionais, em ordem, são `20261009_central.sql` e `20261009_planning_drafts.sql`. Elas foram instaladas no projeto de produção em 09/10/2026. Não reaplique uma migração já instalada.
+
+`proposal_catalogue` contém as 35 propostas originais, com os mesmos títulos e descrições, e as propostas 36 a 45 como “Aguardando aprovação da equipe”. Visitantes só podem ler linhas “Publicada”. Aprovação editorial, autorização da escola e execução são conceitos separados. A publicação exige ação explícita da equipe no painel. As 35 originais não podem ser removidas da publicação pelo painel.
+
+O catálogo público fica em `catalogo.html`. Pesquisa, filtros por categoria, prioridade, início planejado e situação funcionam com os dados publicados. Os totais da página inicial e da Central vêm desse catálogo. Se a consulta falhar, o site informa que está mostrando o programa original. `propostas.html` continua como leitura estática das 35 propostas originais.
+
+`gestao.html` apresenta a Central FT+, inicialmente em planejamento. Projetos têm responsável opcional, prazo estimado, dependências, autorizações, custo e recursos opcionais, andamento e resultado. O histórico é criado no banco quando etapa ou atualização são alteradas, sem evolução automática por data. Os registros e o histórico são públicos somente após revisão e publicação. Revise todo o histórico antes de publicar um projeto.
+
+Metas, orçamento, decisões, retornos gerais, abertura e história persistem em `management_records`. Registros começam privados e só aparecem após revisão e publicação. Campos monetários vazios significam desconhecidos, não zero. Não há somas que possam contar o mesmo recurso duas vezes nem gráficos demonstrativos. Registre cada decisão financeira e os projetos beneficiados com base em informações confirmadas.
+
+O formulário de sugestões pede apenas categoria, texto e nome opcional. A turma deixou de ser coletada pela interface; o servidor mantém compatibilidade com dados anteriores. A mensagem original continua privada. O retorno público é um resumo independente, revisado sem dados pessoais. A moderação de mensagens e os controles de segurança anteriores continuam disponíveis.
+
+Em **Propostas**, use a revisão editorial para editar descrição, categoria e campos de planejamento. Nas propostas 36 a 45, “Aprovada pela equipe” ainda é privado. Selecione “Publicada”, confirme a autorização da equipe e salve para disponibilizar aos visitantes. Etiquetas e andamento têm formulários próprios e continuam independentes.
+
+Em **Central FT+**, cadastre projetos e registros de metas, orçamento, decisões ou retornos. Revise e marque “Publicar” somente quando houver autorização. Desmarcar a publicação permite manter o registro privado. Em **Conteúdo do site**, edite a abertura e a trajetória. As etapas originais permanecem como base; revisões publicadas nas posições 1 a 4 substituem a etapa correspondente.
+
+Os modelos de metas para 30, 60 e 90 dias, quatro etapas da história e abertura inicial estão cadastrados como rascunhos editáveis. A página de planejamento apresenta esses horizontes claramente como modelos sujeitos à aprovação, sem afirmar compromissos iniciados.
+
+A página eleitoral agora oferece informação antes de 13/10. Os registros agregados continuam ocultos no servidor antes dessa data. A votação oficial, a apuração e o resultado permanecem separados das intenções. A confirmação manual exige data e fonte; a vitória só ativa comemoração depois de publicação oficial, por sete dias.
+
+Novas páginas: Bem-estar, Infraestrutura, Nossa História, Como funciona o Grêmio, planejamento inicial e 404. Metadados de compartilhamento usam a fotografia real da fachada. O menu funciona no celular e a navegação interna do FT+ respeita o mesmo espaço da página, sem sobrepor a abertura.
+
+Antes da divulgação, a equipe deve revisar os dez rascunhos, conferir nomes e funções autorizados e aprovar os planos que desejar publicar. Na eleição, registre somente informações oficialmente confirmadas. Não são necessárias novas senhas ou chaves no JavaScript público.
