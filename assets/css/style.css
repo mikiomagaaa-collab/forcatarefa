@@ -120,3 +120,8 @@
 @media(prefers-reduced-motion:reduce){.proposal-tag,.celebration svg{animation:none;transition:none}.proposal-tag:hover{transform:none}}
 
 .celebration{position:relative;overflow:hidden}.confetti{position:absolute;top:0;width:7px;height:12px;animation:confetti-fall 2s ease-in 1 forwards;pointer-events:none}@keyframes confetti-fall{to{transform:translateY(250px) rotate(180deg);opacity:0}}@media(prefers-reduced-motion:reduce){.confetti{display:none}}
+
+@layer components {
+  .hero .eyebrow,.school .eyebrow,.ft-section .eyebrow,.intention-inner .eyebrow{color:#d8e2f4}
+  .catalogue[open]>.button.navy:hover{background:#e6eef9;color:var(--navy)}
+}
