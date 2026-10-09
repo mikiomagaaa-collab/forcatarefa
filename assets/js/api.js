@@ -1,7 +1,8 @@
 import { config } from './config.js';
 
 export const backendReady = /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(config.supabaseUrl) && Boolean(config.supabasePublicKey);
-export const participationReady = backendReady && Boolean(config.turnstileSiteKey);
+export const isLocalPreview = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+export const participationReady = backendReady && Boolean(config.turnstileSiteKey) && !isLocalPreview;
 export function status(element, message, kind = '') {
   element.textContent = message;
   element.className = `form-status ${kind}`.trim();

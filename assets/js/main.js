@@ -1,6 +1,6 @@
 import { initElection } from './election.js';
 import { config } from './config.js';
-import { backendReady, participationReady, request, status, safeStorage, sessionId, mountCaptcha, captchaToken, resetCaptcha, renderText } from './api.js';
+import { backendReady, participationReady, isLocalPreview, request, status, safeStorage, sessionId, mountCaptcha, captchaToken, resetCaptcha, renderText } from './api.js';
 import { saveSession } from './auth.js';
 import { initProposals } from './proposals.js';
 
@@ -33,6 +33,7 @@ function showName() {
   nameInput.value = name;
 }
 async function openLogin() {
+  if (isLocalPreview) { window.location.assign(`${config.publicSiteUrl}#gestao`); return; }
   dialog.showModal();
   if (participationReady) {
     try { await mountCaptcha('login-captcha', 'admin_login'); document.querySelector('#login-submit').disabled = false; status(document.querySelector('#login-status'), 'Acesso permitido somente a contas autorizadas.'); }
@@ -82,6 +83,7 @@ suggestionForm.addEventListener('submit', async event => {
 });
 document.querySelector('#vote-form').addEventListener('submit', async event => {
   event.preventDefault(); const button = document.querySelector('#vote-submit'); if (button.disabled) return;
+  if (isLocalPreview) { window.location.assign(`${config.publicSiteUrl}#intencao`); return; }
   const output = document.querySelector('#vote-status'); let recorded = false;
   button.disabled = true; button.textContent = 'Registrando…';
   try {
@@ -122,6 +124,14 @@ window.addEventListener('pageshow', event => { if (event.persisted) loadPublic()
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && backendReady) loadPublic(); });
 for (const contact of config.contacts) {
   try { const url = new URL(contact.url); if (url.protocol !== 'https:' && url.protocol !== 'mailto:') continue; const link = renderText('a', contact.label, 'text-link'); link.href = url.href; if (url.protocol === 'https:') { link.target = '_blank'; link.rel = 'noopener noreferrer'; } document.querySelector('#contact-links').append(link); } catch {}
+}
+if (isLocalPreview) {
+  document.querySelector('#vote-submit').disabled = false;
+  status(document.querySelector('#vote-status'), 'Você está na prévia local. Este botão abre o site online para registrar sua intenção.');
+  const output = document.querySelector('#suggestion-status');
+  status(output, 'Você está na prévia local. Envie sua mensagem pelo site online.');
+  const link = renderText('a', 'Abrir participação no site online', 'text-link');
+  link.href = `${config.publicSiteUrl}#participacao`; output.append(document.createElement('br'), link);
 }
 if (participationReady) {
   Promise.allSettled([mountCaptcha('suggestion-captcha', 'suggestion'), mountCaptcha('vote-captcha', 'intention')]).then(results => {

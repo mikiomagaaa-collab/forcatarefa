@@ -1,5 +1,6 @@
 import { initAdminPlatform } from './admin-platform.js';
-import { backendReady, status, renderText } from './api.js';
+import { backendReady, isLocalPreview, status, renderText } from './api.js';
+import { config } from './config.js';
 import { adminRequest, signOut, readSession } from './auth.js';
 const $ = selector => document.querySelector(selector);
 let members = []; let proposals = []; let progress = new Map(); let suggestionOffset = 0;
@@ -68,6 +69,11 @@ async function loadSuggestions(append = false) {
   status($('#suggestions-admin-status'), suggestionOffset ? `${suggestionOffset} mensagens carregadas.` : 'Nenhuma sugestão recebida neste filtro.');
 }
 async function loadProgress() { const data = await adminRequest('/rest/v1/proposal_progress?select=*'); progress = new Map(data.map(row => [row.proposal_id, row])); showProgress(); }
+function updateCompletionButton() {
+  const completed = progress.get(Number($('#progress-proposal').value))?.stage === 'Realizada';
+  $('#progress-complete').disabled = completed;
+  $('#progress-complete').textContent = completed ? 'Proposta já realizada' : 'Marcar proposta como realizada';
+}
 function showProgress() {
   const id = Number($('#progress-proposal').value); const proposal = proposals.find(p => p.id === id); if (!proposal) return;
   $('#progress-description').textContent = proposal.description;
@@ -75,6 +81,15 @@ function showProgress() {
   $('#progress-note').value = progress.get(id)?.note || '';
   $('#progress-needs').value = progress.get(id)?.needs || '';
   $('#progress-response').value = progress.get(id)?.official_response || '';
+  updateCompletionButton();
+}
+async function saveProgress(stage) {
+  const note = $('#progress-note').value.trim();
+  const needs = $('#progress-needs').value.trim();
+  const official_response = $('#progress-response').value.trim();
+  if (![note, needs, official_response].every(textValid)) throw new Error('Use somente texto nos campos de acompanhamento.');
+  await adminRequest('/rest/v1/proposal_progress?on_conflict=proposal_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: { proposal_id: Number($('#progress-proposal').value), stage, note, needs, official_response, updated_at: new Date().toISOString() } });
+  await loadProgress();
 }
 async function loadUpdates() {
   const data = await adminRequest('/rest/v1/institutional_updates?select=*&order=published_at.desc&limit=30');
@@ -97,6 +112,7 @@ async function loadSecurity(owner) {
 }
 let isOwner = false;
 async function init() {
+  if (isLocalPreview) { $('#admin-guard').replaceChildren(renderText('p', 'Você está na prévia local. A gestão usa o site online.'), Object.assign(renderText('a', 'Abrir a gestão no site online', 'text-link'), { href: `${config.publicSiteUrl}#gestao` })); return; }
   if (!backendReady) { $('#admin-guard').replaceChildren(renderText('p', 'O painel ainda depende da configuração do serviço seguro de autenticação e dados.'), Object.assign(renderText('a', 'Voltar ao site', 'text-link'), { href: '../' })); return; }
   if (!readSession()) { $('#admin-guard').replaceChildren(renderText('p', 'Entre com uma conta autorizada para acessar o painel.'), Object.assign(renderText('a', 'Abrir autenticação', 'text-link'), { href: '../#gestao' })); return; }
   try {
@@ -130,10 +146,11 @@ $('#save-team').addEventListener('click', event => work(event.target, $('#team-a
 }, 'Equipe salva online. Os visitantes verão os nomes ao recarregar o site.'));
 $('#progress-proposal').addEventListener('change', showProgress);
 $('#progress-form').addEventListener('submit', event => {
-  event.preventDefault(); work(event.submitter, $('#progress-admin-status'), async () => {
-    const note = $('#progress-note').value.trim(); if (!textValid(note)) throw new Error('Use somente texto na observação.');
-    await adminRequest('/rest/v1/proposal_progress?on_conflict=proposal_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: { proposal_id: Number($('#progress-proposal').value), stage: $('#progress-stage').value, note, needs: $('#progress-needs').value.trim(), official_response: $('#progress-response').value.trim(), updated_at: new Date().toISOString() } }); await loadProgress();
-  }, 'Andamento salvo e disponível no site.');
+  event.preventDefault(); work(event.submitter, $('#progress-admin-status'), () => saveProgress($('#progress-stage').value), 'Andamento salvo e disponível no site.');
+});
+$('#progress-complete').addEventListener('click', async event => {
+  await work(event.currentTarget, $('#progress-admin-status'), () => saveProgress('Realizada'), 'Proposta marcada como realizada e disponível no site.');
+  updateCompletionButton();
 });
 $('#update-form').addEventListener('submit', event => {
   event.preventDefault(); work(event.submitter, $('#update-admin-status'), async () => {
