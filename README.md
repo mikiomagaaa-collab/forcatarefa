@@ -24,7 +24,7 @@ Navegação, menu móvel, pesquisa e filtros das 35 propostas, links diretos, ex
 O que depende de configuração externa
 -------------------------------------
 
-Envio persistente de sugestões, registro e contagem de intenções, autenticação, edição compartilhada da equipe, atualização de andamento, publicações e controles de abuso exigem um projeto Supabase e uma verificação Cloudflare Turnstile configurados. A versão entregue mantém esses envios desabilitados e informa o motivo. Não há confirmação simulada.
+Envio persistente de sugestões, registro e contagem de intenções, autenticação, edição compartilhada da equipe, atualização de andamento, publicações e controles de abuso exigem um projeto Supabase e uma verificação Cloudflare Turnstile configurados. Esses serviços estão configurados para o endereço de produção. Envios locais permanecem desabilitados. Não há confirmação simulada.
 
 A publicação usa GitHub Pages. O fluxo em .github/workflows/pages.yml verifica e publica o site a cada alteração na branch main. Os serviços de dados exigem configuração separada e nunca simulam salvamento.
 
@@ -98,7 +98,7 @@ Mantenha “Verify JWT with legacy secret” ligado nas três funções. O site 
 
 SUPABASE_URL, SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY são variáveis do ambiente de funções Supabase. Confirme que estão disponíveis. A chave privada de serviço permanece no servidor.
 
-11. A limpeza automática permanece pendente por decisão do proprietário. Não execute supabase/retention.sql sem nova autorização. O arquivo prepara o agendamento futuro dos registros técnicos; sugestões e intenções não fazem parte dessa rotina.
+11. A limpeza automática foi autorizada e ativada pelo proprietário em 09/10/2026. O agendamento de supabase/retention.sql roda a cada hora: remove eventos técnicos com mais de sete dias, limites de tentativas expirados há mais de um dia e suspensões de sessão expiradas há mais de sete dias. Sugestões, intenções, propostas e contas não fazem parte dessa rotina.
 12. Teste a integração real em um projeto de desenvolvimento antes de publicar as configurações finais.
 
 Acessar o painel
@@ -210,6 +210,6 @@ Configuração publicada em 09/10/2026
 
 Site: https://mikiomagaaa-collab.github.io/forcatarefa/
 
-O banco e as três funções estão instalados no projeto Supabase uiqmftvdtryuhmrlvdxr. O widget Turnstile está restrito ao hostname público. Os segredos permanecem no Supabase; somente as chaves públicas entram em assets/js/config.js. O proprietário criou sua senha pessoal e autorizou o acesso de gestão. A limpeza automática permanece pendente por decisão do proprietário.
+O banco e as três funções estão instalados no projeto Supabase uiqmftvdtryuhmrlvdxr. O widget Turnstile está restrito ao hostname público. Os segredos permanecem no Supabase; somente as chaves públicas entram em assets/js/config.js. O proprietário criou sua senha pessoal e autorizou o acesso de gestão. O agendamento forcatarefa-security-retention está ativo, com execução a cada hora, após autorização do proprietário.
 
 A migração 20261009_privacy.sql permite que a gestão exclua uma sugestão após validar a necessidade de remoção e confirmar a exclusão no painel. Nenhuma sugestão ou intenção foi criada para demonstrar contagens de produção.
