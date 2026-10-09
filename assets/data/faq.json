@@ -23,7 +23,7 @@
   {
     "id": 4,
     "question": "Quantas propostas a FORÇA TAREFA possui?",
-    "answer": "Atualmente, nosso programa reúne 35 propostas divididas em seis categorias: educação, bem-estar, lazer e apoio, cultura e participação, economia e gestão, além de agrofloresta.",
+    "answer": "O total de propostas publicadas e suas categorias aparece no catálogo e na página inicial. Novas propostas só são mostradas depois de revisão, aprovação e publicação pela equipe.",
     "category": "Propostas e projetos",
     "link": "index.html#propostas"
   },
@@ -103,5 +103,40 @@
     "answer": "O site possui uma seção de transparência destinada à publicação de informações confirmadas sobre planejamento, encaminhamentos, aprovações e realizações.",
     "category": "Propostas e projetos",
     "link": "index.html#transparencia"
+  },
+  {
+    "id": 16,
+    "question": "O Grêmio pode mudar a merenda?",
+    "answer": "O Grêmio pode ouvir os estudantes e apresentar solicitações. Mudanças na alimentação dependem da avaliação da direção e dos responsáveis pelo serviço. Não há garantia unilateral de alteração.",
+    "category": "Gestão e responsabilidades",
+    "link": "index.html#ft-plus"
+  },
+  {
+    "id": 17,
+    "question": "Quem autoriza reformas e manutenção?",
+    "answer": "A gestão escolar e os órgãos responsáveis avaliam necessidades, recursos e autorizações. Reparos técnicos devem ser realizados por profissionais adequados, especialmente instalações elétricas.",
+    "category": "Gestão e responsabilidades",
+    "link": "index.html#ft-plus"
+  },
+  {
+    "id": 18,
+    "question": "Como as propostas são escolhidas?",
+    "answer": "As escolhas devem considerar demandas dos estudantes, benefícios, viabilidade, custos e autorizações. A Central FT+ permite publicar consultas, critérios e justificativas das decisões.",
+    "category": "Gestão e responsabilidades",
+    "link": "index.html#ft-plus"
+  },
+  {
+    "id": 19,
+    "question": "De onde vêm os recursos?",
+    "answer": "Recursos devem ter origem e disponibilidade confirmadas. Doações e parcerias precisam respeitar as regras da escola. Verbas da escola e da APM não são automaticamente controladas pelo Grêmio.",
+    "category": "Gestão e responsabilidades",
+    "link": "index.html#ft-plus"
+  },
+  {
+    "id": 20,
+    "question": "O que acontecerá com o site depois da eleição?",
+    "answer": "O site poderá continuar como registro das propostas e, quando autorizado, do andamento das atividades. Resultado e início do mandato dependem de confirmação real; a data não ativa execução automaticamente.",
+    "category": "Gestão e responsabilidades",
+    "link": "index.html#ft-plus"
   }
 ]
