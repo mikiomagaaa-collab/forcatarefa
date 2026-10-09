@@ -249,4 +249,19 @@ A página eleitoral agora oferece informação antes de 13/10. Os registros agre
 
 Novas páginas: Bem-estar, Infraestrutura, Nossa História, Como funciona o Grêmio, planejamento inicial e 404. Metadados de compartilhamento usam a fotografia real da fachada. O menu funciona no celular e a navegação interna do FT+ respeita o mesmo espaço da página, sem sobrepor a abertura.
 
-Antes da divulgação, a equipe deve revisar os dez rascunhos, conferir nomes e funções autorizados e aprovar os planos que desejar publicar. Na eleição, registre somente informações oficialmente confirmadas. Não são necessárias novas senhas ou chaves no JavaScript público.
+Na eleição, registre somente informações oficialmente confirmadas. Não são necessárias novas senhas ou chaves no JavaScript público.
+
+Área de trabalho da gestão e calendário 2027 e 2028
+------------------------------------------------
+
+A migração adicional `20261009_admin_workspace.sql` está instalada no projeto de produção. Ela preserva os registros existentes, amplia os números das propostas e cria a agenda privada. Não reaplique uma migração já instalada.
+
+O painel privado em `admin/` tem navegação lateral no computador e menu recolhido no celular. A visão geral usa os totais reais de propostas, publicações, revisão, andamento, equipe e compromissos. Intenções de voto ficam em uma seção própria recolhida.
+
+Em **Propostas**, busque por número ou texto e filtre categoria e publicação. Clique no título para abrir texto, andamento e etiquetas da mesma proposta. Selecione propostas na lista para aprovar pela equipe, publicar com confirmação explícita ou devolver adicionais ao rascunho. As 35 originais continuam públicas. A ação em conjunto é atômica: uma seleção inválida não altera parcialmente os registros.
+
+**Nova proposta** gera um número único no servidor e sempre cria um rascunho privado. Aprovação editorial permanece independente da autorização escolar e do andamento. O programa original fica preservado nos arquivos versionados, e revisões online autorizadas continuam no banco. As propostas 36 a 45 foram publicadas pelo administrador em 09/10/2026.
+
+Em **Calendário**, cadastre reuniões, atividades e prazos entre 01/01/2027 e 31/12/2028, inclusive intervalos de datas. Horário de Brasília, responsável e vínculo com proposta são opcionais. Proposto, Confirmado, Concluído e Cancelado são registros manuais. O calendário não muda etapas de propostas por chegada de uma data e não é exposto ao público. Somente contas administrativas autorizadas podem consultar e editar a agenda; não há exclusão permanente pelo painel.
+
+Na Central FT+ pública e nos atalhos da página inicial, áreas sem registros públicos não aparecem. Publicar um registro revisado faz a área correspondente aparecer na próxima consulta. Os controles internos permanecem disponíveis para que a equipe possa cadastrar os primeiros dados.
