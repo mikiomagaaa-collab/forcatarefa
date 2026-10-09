@@ -11,9 +11,9 @@ export async function initAdminPlatform(){
   const proposals=(await(await fetch('../assets/data/proposals.json')).json()).proposals;
   let {items:labels}=await loadClassifications();
   for(const p of proposals)option($('#classification-proposal'),p.id,`${p.id}. ${p.title}`);
-  const showLabel=()=>{const row=labels.get(Number($('#classification-proposal').value));$('#classification-priority').checked=Boolean(row?.priority);$('#classification-early').checked=Boolean(row?.early);$('#classification-action').value=row?.initial_action||'';};
+  const showLabel=()=>{const row=labels.get(Number($('#classification-proposal').value));$('#classification-priority').checked=Boolean(row?.priority);$('#classification-early').checked=Boolean(row?.early);$('#classification-sport').checked=Boolean(row?.sport);$('#classification-action').value=row?.initial_action||'';};
   $('#classification-proposal').addEventListener('change',showLabel);showLabel();
-  $('#classification-form').addEventListener('submit',e=>save(e,$('#classification-status'),async()=>{const row={proposal_id:Number($('#classification-proposal').value),priority:$('#classification-priority').checked,early:$('#classification-early').checked,initial_action:$('#classification-action').value.trim()};await adminRequest('/rest/v1/proposal_classifications?on_conflict=proposal_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:row});labels.set(row.proposal_id,row);}));
+  $('#classification-form').addEventListener('submit',e=>save(e,$('#classification-status'),async()=>{const row={proposal_id:Number($('#classification-proposal').value),priority:$('#classification-priority').checked,early:$('#classification-early').checked,sport:$('#classification-sport').checked,initial_action:$('#classification-action').value.trim()};await adminRequest('/rest/v1/proposal_classifications?on_conflict=proposal_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:row});labels.set(row.proposal_id,row);}));
   let records=[];
   const categoryOptions=()=>{$('#record-category').replaceChildren();for(const c of categories[$('#record-kind').value])option($('#record-category'),c,c);};
   $('#record-kind').addEventListener('change',categoryOptions);categoryOptions();

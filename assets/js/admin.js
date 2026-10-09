@@ -1,3 +1,4 @@
+import { initAdminNavigation } from './admin-navigation.js';
 import { initAdminPlatform } from './admin-platform.js';
 import { backendReady, isLocalPreview, status, renderText } from './api.js';
 import { config } from './config.js';
@@ -63,7 +64,7 @@ async function loadSuggestions(append = false) {
     });
     card.append(erase);
     const block = renderText('button', 'Suspender envios desta sessão', 'button secondary'); block.type = 'button';
-    block.addEventListener('click', () => { $('#suspension-hash').value = suggestion.session_hash; $('#suspension-reason').focus(); $('#admin-security').scrollIntoView(); }); card.append(block); $('#suggestions-list').append(card);
+    block.addEventListener('click', () => { $('#suspension-hash').value = suggestion.session_hash; $('#suspension-reason').focus(); location.hash = 'admin-security'; }); card.append(block); $('#suggestions-list').append(card);
   }
   suggestionOffset += data.length; $('#older-suggestions').hidden = data.length < 30;
   status($('#suggestions-admin-status'), suggestionOffset ? `${suggestionOffset} mensagens carregadas.` : 'Nenhuma sugestão recebida neste filtro.');
@@ -110,6 +111,8 @@ async function loadSecurity(owner) {
     for (const row of accounts) { const card = document.createElement('article'); card.className = 'suggestion'; card.append(renderText('p', `${row.user_id} · ${row.is_owner ? 'Proprietário' : row.is_admin ? 'Administrador' : 'Sem administração'} · ${row.blocked ? 'Bloqueado' : 'Permitido'}`)); $('#accounts-list').append(card); }
   }
 }
+
+
 let isOwner = false;
 async function init() {
   if (isLocalPreview) { $('#admin-guard').replaceChildren(renderText('p', 'Você está na prévia local. A gestão usa o site online.'), Object.assign(renderText('a', 'Abrir a gestão no site online', 'text-link'), { href: `${config.publicSiteUrl}#gestao` })); return; }
@@ -119,7 +122,7 @@ async function init() {
     const authorized = await adminRequest('/rest/v1/rpc/is_admin', { method: 'POST', body: {} });
     if (!authorized) throw new Error('Esta conta não tem autorização administrativa.');
     isOwner = await adminRequest('/rest/v1/rpc/is_owner', { method: 'POST', body: {} });
-    $('#admin-content').hidden = false; $('#admin-guard').hidden = true; $('#logout').hidden = false; $('#account-management').hidden = !isOwner;
+    $('#admin-content').hidden = false; $('#admin-guard').hidden = true; $('#logout').hidden = false; $('#account-management').hidden = !isOwner; initAdminNavigation();
     const response = await fetch('../assets/data/proposals.json'); if (!response.ok) throw new Error('Não foi possível carregar as propostas.');
     ({ proposals } = await response.json());
     for (const p of proposals) { const option = renderText('option', `${p.id}. ${p.title}`); option.value = p.id; $('#progress-proposal').append(option); }
@@ -142,6 +145,7 @@ $('#team-add-form').addEventListener('submit', event => {
 });
 $('#save-team').addEventListener('click', event => work(event.target, $('#team-admin-status'), async () => {
   if (members.some(name => !name.trim() || name.trim().length > 60 || !textValid(name))) throw new Error('Confira todos os nomes antes de salvar.');
+  status($('#team-admin-status'), 'Salvando a equipe…');
   await adminRequest('/rest/v1/rpc/replace_team', { method: 'POST', body: { members: members.map(name => name.trim()) } }); await loadTeam();
 }, 'Equipe salva online. Os visitantes verão os nomes ao recarregar o site.'));
 $('#progress-proposal').addEventListener('change', showProgress);
