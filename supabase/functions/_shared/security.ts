@@ -77,7 +77,9 @@ export async function prepare(req: Request, action: string, maxSession: number) 
   if (!verification.success || verification.action !== action || !hosts.includes(verification.hostname)) { await log('invalid_captcha', hash); throw new PublicError(400, 'A verificação expirou ou não é válida. Tente novamente.'); }
   let userId = null;
   const authorization = req.headers.get('authorization');
-  if (authorization && authorization !== `Bearer ${env('SUPABASE_ANON_KEY')}`) {
+  const anonymousKeys = [env('SUPABASE_ANON_KEY'), Deno.env.get('PUBLIC_SITE_ANON_KEY')].filter(Boolean);
+  const isAnonymous = anonymousKeys.some(key => authorization === `Bearer ${key}`);
+  if (authorization && !isAnonymous) {
     const userResponse = await fetch(`${env('SUPABASE_URL')}/auth/v1/user`, { headers: { apikey: env('SUPABASE_ANON_KEY'), Authorization: authorization }, signal: AbortSignal.timeout(10000) });
     if (!userResponse.ok) throw new PublicError(401, 'Sessão expirada. Entre novamente.');
     const user = await userResponse.json(); userId = user.id;
