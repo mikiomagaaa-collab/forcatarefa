@@ -1,0 +1,72 @@
+[
+  {
+    "id": 36,
+    "title": "Rotina sem Sobrecarga",
+    "description": "Criar um calendário colaborativo para identificar semanas com excesso de avaliações e atividades. O Grêmio poderá reunir dificuldades relatadas pelos estudantes e solicitar diálogo com a coordenação para melhorar a distribuição das demandas, respeitando as decisões pedagógicas.",
+    "category": 7,
+    "editorial_state": "Aguardando aprovação da equipe"
+  },
+  {
+    "id": 37,
+    "title": "Ninguém Fica de Fora",
+    "description": "Promover integração voluntária entre estudantes, especialmente novatos e pessoas que têm dificuldade de fazer amizades. Organizar atividades de acolhimento e encontros acompanhados pela escola, sem exposição ou identificação pública de estudantes.",
+    "category": 7,
+    "editorial_state": "Aguardando aprovação da equipe"
+  },
+  {
+    "id": 38,
+    "title": "Dignidade no Dia a Dia",
+    "description": "Acompanhar a disponibilidade de sabonete, papel higiênico, produtos de higiene menstrual e outros itens essenciais. Criar uma maneira discreta de comunicar faltas e encaminhar solicitações à escola.",
+    "category": 7,
+    "editorial_state": "Aguardando aprovação da equipe"
+  },
+  {
+    "id": 39,
+    "title": "Semana do Bem-Estar",
+    "description": "Propor atividades voluntárias sobre convivência, saúde, descanso, movimento, respeito e hábitos saudáveis, com apoio dos profissionais escolares. Não apresentar isso como atendimento médico ou psicológico.",
+    "category": 7,
+    "editorial_state": "Aguardando aprovação da equipe"
+  },
+  {
+    "id": 40,
+    "title": "Merenda com Voz",
+    "description": "Recolher opiniões sobre quantidade das porções, temperatura, qualidade e aceitação das refeições. Organizar os resultados para solicitar avaliação da direção e dos responsáveis pela alimentação. O Grêmio não pode garantir unilateralmente mudanças no cardápio ou nas porções.",
+    "category": 7,
+    "editorial_state": "Aguardando aprovação da equipe"
+  },
+  {
+    "id": 41,
+    "title": "Marasca de Cara Nova",
+    "description": "Propor melhorias na pintura, conservação e aparência dos espaços da escola. Mapear os locais prioritários e apresentar as demandas à gestão. Eventuais intervenções artísticas estudantis devem ter autorização; manutenção técnica deverá ser realizada por profissionais responsáveis.",
+    "category": 8,
+    "editorial_state": "Aguardando aprovação da equipe"
+  },
+  {
+    "id": 42,
+    "title": "Banheiros Dignos",
+    "description": "Levantar problemas em portas, fechaduras, torneiras, descargas, espelhos e instalações sanitárias. Solicitar orçamento, priorização e reparos conforme a disponibilidade de recursos e autorização escolar.",
+    "category": 8,
+    "editorial_state": "Aguardando aprovação da equipe"
+  },
+  {
+    "id": 43,
+    "title": "Salas Mais Frescas",
+    "description": "Identificar salas com ventilação inadequada, calor excessivo ou ventiladores que precisam de reparos. Encaminhar pedidos de manutenção ou melhorias de conforto térmico.",
+    "category": 8,
+    "editorial_state": "Aguardando aprovação da equipe"
+  },
+  {
+    "id": 44,
+    "title": "Iluminação e Segurança dos Espaços",
+    "description": "Mapear espaços mal iluminados e instalações que precisam de avaliação. Encaminhar os problemas à equipe responsável. Estudantes não devem executar reparos elétricos.",
+    "category": 8,
+    "editorial_state": "Aguardando aprovação da equipe"
+  },
+  {
+    "id": 45,
+    "title": "Carteiras e Mobiliário em Ordem",
+    "description": "Organizar um levantamento de carteiras, cadeiras, mesas e outros móveis danificados. Priorizar necessidades junto aos representantes de turma e encaminhar pedidos de reparo ou substituição.",
+    "category": 8,
+    "editorial_state": "Aguardando aprovação da equipe"
+  }
+]
