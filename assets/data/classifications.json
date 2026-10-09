@@ -1,0 +1,212 @@
+[
+  {
+    "proposal_id": 1,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 2,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 3,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 4,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 5,
+    "priority": true,
+    "early": true,
+    "initial_action": "Iniciar a organização e o levantamento de estudantes interessados."
+  },
+  {
+    "proposal_id": 6,
+    "priority": false,
+    "early": true,
+    "initial_action": "Começar a divulgar oportunidades educacionais."
+  },
+  {
+    "proposal_id": 7,
+    "priority": true,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 8,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 9,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 10,
+    "priority": false,
+    "early": true,
+    "initial_action": "Iniciar o levantamento das demandas de infraestrutura."
+  },
+  {
+    "proposal_id": 11,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 12,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 13,
+    "priority": false,
+    "early": true,
+    "initial_action": "Organizar campanhas iniciais de arrecadação."
+  },
+  {
+    "proposal_id": 14,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 15,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 16,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 17,
+    "priority": true,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 18,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 19,
+    "priority": true,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 20,
+    "priority": false,
+    "early": true,
+    "initial_action": "Consultar os estudantes sobre melhorias prioritárias."
+  },
+  {
+    "proposal_id": 21,
+    "priority": false,
+    "early": true,
+    "initial_action": "Iniciar a publicação dos registros de atividades e encaminhamentos."
+  },
+  {
+    "proposal_id": 22,
+    "priority": false,
+    "early": true,
+    "initial_action": "Organizar as primeiras reuniões com representantes."
+  },
+  {
+    "proposal_id": 23,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 24,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 25,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 26,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 27,
+    "priority": true,
+    "early": true,
+    "initial_action": "Estabelecer o planejamento inicial e as metas da gestão."
+  },
+  {
+    "proposal_id": 28,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 29,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 30,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 31,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 32,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 33,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 34,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  },
+  {
+    "proposal_id": 35,
+    "priority": false,
+    "early": false,
+    "initial_action": ""
+  }
+]

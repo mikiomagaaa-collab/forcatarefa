@@ -1,0 +1,107 @@
+[
+  {
+    "id": 1,
+    "question": "O que é a FORÇA TAREFA?",
+    "answer": "A FORÇA TAREFA é uma chapa formada por estudantes que desejam melhorar a escola, ampliar oportunidades e incentivar a participação dos alunos nas decisões e projetos estudantis.",
+    "category": "A chapa",
+    "link": "index.html#historia"
+  },
+  {
+    "id": 2,
+    "question": "Qual é o principal objetivo da chapa?",
+    "answer": "Nossa missão é contribuir para uma escola em que os estudantes possam desenvolver suas habilidades, apresentar ideias, participar de projetos e ter melhores condições de aprendizagem e convivência.",
+    "category": "A chapa",
+    "link": "index.html#historia"
+  },
+  {
+    "id": 3,
+    "question": "O que é o FT+?",
+    "answer": "O FT+, ou Força Tarefa Plus!, é nosso projeto de reformulação da gestão do Grêmio Estudantil, com foco em organização administrativa, transparência, participação, planejamento financeiro e acompanhamento de resultados.",
+    "category": "Propostas e projetos",
+    "link": "index.html#ft-plus"
+  },
+  {
+    "id": 4,
+    "question": "Quantas propostas a FORÇA TAREFA possui?",
+    "answer": "Atualmente, nosso programa reúne 35 propostas divididas em seis categorias: educação, bem-estar, lazer e apoio, cultura e participação, economia e gestão, além de agrofloresta.",
+    "category": "Propostas e projetos",
+    "link": "index.html#propostas"
+  },
+  {
+    "id": 5,
+    "question": "Todas as propostas serão realizadas?",
+    "answer": "A realização depende de recursos, viabilidade, participação dos estudantes e autorização dos responsáveis. Nosso compromisso é apresentar as propostas, acompanhar as decisões e divulgar os resultados, incluindo eventuais impedimentos.",
+    "category": "Propostas e projetos",
+    "link": "index.html#propostas"
+  },
+  {
+    "id": 6,
+    "question": "Alguma proposta já foi aprovada?",
+    "answer": "Sim. Conforme informado pela chapa, a gestão escolar aprovou a proposta de saída antecipada de cinco minutos por rodízio semanal. A organização da implementação ainda será definida.",
+    "category": "Propostas e projetos",
+    "link": "index.html#propostas"
+  },
+  {
+    "id": 7,
+    "question": "O que é a Vitrine de Talentos?",
+    "answer": "É um projeto para oferecer oportunidades de divulgação e apresentação de trabalhos artísticos, literários, tecnológicos e outras habilidades dos estudantes, inclusive daqueles que ainda não participam de projetos escolares.",
+    "category": "Propostas e projetos",
+    "link": "index.html#propostas"
+  },
+  {
+    "id": 8,
+    "question": "Posso apresentar um projeto mesmo sem participar da chapa?",
+    "answer": "A proposta da FORÇA TAREFA é permitir que estudantes e clubes apresentem ideias para análise e possível desenvolvimento. A participação nesses projetos não será limitada aos integrantes da chapa.",
+    "category": "Participação e eleições",
+    "link": "index.html#participacao"
+  },
+  {
+    "id": 9,
+    "question": "O que é o Banco Solidário de Materiais?",
+    "answer": "É uma proposta para criar um estoque comunitário de materiais escolares a partir de doações e parcerias, oferecendo apoio aos estudantes que precisarem, por empréstimo ou doação.",
+    "category": "Propostas e projetos",
+    "link": "index.html#propostas"
+  },
+  {
+    "id": 10,
+    "question": "A FORÇA TAREFA possui propostas para a agrofloresta?",
+    "answer": "Sim. São cinco propostas direcionadas ao Projeto M.C.A.N., envolvendo investimentos, ampliação, arrecadação de recursos, modernização e valorização da produção da agrofloresta.",
+    "category": "Propostas e projetos",
+    "link": "index.html#propostas"
+  },
+  {
+    "id": 11,
+    "question": "O que acontecerá com as sugestões enviadas pelo site?",
+    "answer": "As sugestões recebidas poderão ser analisadas pela equipe autorizada. Ideias viáveis poderão ser encaminhadas à gestão escolar ou desenvolvidas como propostas estudantis. Mensagens privadas não serão publicadas automaticamente.",
+    "category": "Participação e eleições",
+    "link": "index.html#participacao"
+  },
+  {
+    "id": 12,
+    "question": "Posso participar de atividades sem fazer parte do Grêmio?",
+    "answer": "As atividades propostas pretendem incentivar a participação dos estudantes em geral. A disponibilidade e as regras de cada atividade dependerão de sua organização e das autorizações necessárias.",
+    "category": "Participação e eleições",
+    "link": "index.html#participacao"
+  },
+  {
+    "id": 13,
+    "question": "O site pertence à direção da escola?",
+    "answer": "Não. Este é um website da Chapa FORÇA TAREFA, destinado à apresentação de suas propostas e atividades. Não substitui os canais oficiais da escola.",
+    "category": "A chapa",
+    "link": "index.html#propostas"
+  },
+  {
+    "id": 14,
+    "question": "Como funciona a votação para o Grêmio?",
+    "answer": "A votação oficial é organizada pela escola conforme as regras eleitorais aplicáveis. Registros de intenção de voto feitos neste site não substituem a votação oficial nem determinam o resultado.",
+    "category": "Participação e eleições",
+    "link": "index.html#participacao"
+  },
+  {
+    "id": 15,
+    "question": "Como acompanhar os resultados das propostas?",
+    "answer": "O site possui uma seção de transparência destinada à publicação de informações confirmadas sobre planejamento, encaminhamentos, aprovações e realizações.",
+    "category": "Propostas e projetos",
+    "link": "index.html#transparencia"
+  }
+]

@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {electionStart,celebrating} from '../assets/js/election-state.js';
+assert.equal(Date.parse('2026-10-13T02:59:59Z')>=electionStart,false);
+assert.equal(Date.parse('2026-10-13T03:00:00Z')>=electionStart,true);
+const base={visible:true,status:'eleita',published_at:'2026-10-13T15:00:00Z',server_now:'2026-10-13T15:00:00Z'};
+assert.equal(celebrating(base),true);
+assert.equal(celebrating({...base,server_now:'2026-10-20T14:59:59Z'}),true);
+assert.equal(celebrating({...base,server_now:'2026-10-20T15:00:00Z'}),false);
+assert.equal(celebrating({...base,status:'nao_eleita'}),false);
+assert.equal(celebrating({...base,status:'aguardando'}),false);
+assert.equal(celebrating({...base,published_at:null}),false);
+assert.equal(celebrating({...base,visible:false}),false);
+console.log('9 verificações eleitorais aprovadas: horário de Brasília, resultado pendente, derrota e limite exato de sete dias.');

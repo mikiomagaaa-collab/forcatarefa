@@ -1,0 +1,17 @@
+{
+  "name": "forcatarefa",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "build": "node scripts/build.mjs",
+    "test:security": "node tests/security-check.mjs && node tests/election-check.mjs",
+    "test:types": "tsc -p tests/tsconfig.json",
+    "test:functions": "node tests/functions-check.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.3.14",
+    "typescript": "5.9.3"
+  }
+}

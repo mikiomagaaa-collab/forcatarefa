@@ -1,0 +1,16 @@
+[
+  {
+    "name": "fachada",
+    "source_sha256": "5655c520468b66ba58ea7324dbf303a51feca78533fdf476053d5eefa0c062db",
+    "width": 570,
+    "height": 400,
+    "edits": "Somente redimensionamento e compressão; sem alteração visual ou remoção de marca d’água."
+  },
+  {
+    "name": "escola-entardecer",
+    "source_sha256": "89cc1e8604fd086d62102cf21a6e3425240cf8eec5b08cf530cd98f8737e313e",
+    "width": 800,
+    "height": 450,
+    "edits": "Somente redimensionamento e compressão; sem alteração visual ou remoção de marca d’água."
+  }
+]

@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+supabase/.temp/
+node_modules/
+dist/
+.test-runtime/
+.DS_Store
+Thumbs.db
+*.log
+*.zip

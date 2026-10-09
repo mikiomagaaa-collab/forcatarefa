@@ -1,0 +1,275 @@
+{
+  "categories": [
+    {
+      "id": 1,
+      "title": "Educação e oportunidades"
+    },
+    {
+      "id": 2,
+      "title": "Bem-estar e infraestrutura"
+    },
+    {
+      "id": 3,
+      "title": "Lazer e apoio aos estudantes"
+    },
+    {
+      "id": 4,
+      "title": "Cultura e participação estudantil"
+    },
+    {
+      "id": 5,
+      "title": "Economia e gestão responsável"
+    },
+    {
+      "id": 6,
+      "title": "Agrofloresta (Projeto M.C.A.N): Projeto Marasca Com Amor na Natureza"
+    }
+  ],
+  "proposals": [
+    {
+      "id": 1,
+      "title": "Plantão FORÇA TAREFA",
+      "description": "Organizar grupos voluntários de estudo e revisão antes das avaliações, incentivando estudantes a ajudarem colegas com dificuldades em determinadas matérias.",
+      "category": 1,
+      "approved": false
+    },
+    {
+      "id": 2,
+      "title": "Reconhecimento pela Evolução",
+      "description": "Reconhecer as turmas que mais evoluírem na Prova Paulista, propondo recompensas coletivas autorizadas pela gestão, valorizando o esforço e não apenas as maiores notas.",
+      "category": 1,
+      "approved": false
+    },
+    {
+      "id": 3,
+      "title": "Participação nas Eletivas",
+      "description": "Consultar os estudantes sobre temas de interesse e apresentar sugestões à gestão, buscando eletivas mais próximas das preferências dos alunos.",
+      "category": 1,
+      "approved": false
+    },
+    {
+      "id": 4,
+      "title": "Apoio Tecnológico Estudantil",
+      "description": "Organizar estudantes voluntários para ajudar colegas com dificuldades em plataformas escolares, computadores e ferramentas digitais.",
+      "category": 1,
+      "approved": false
+    },
+    {
+      "id": 5,
+      "title": "Vitrine de Talentos",
+      "description": "Criar um programa de apresentações e exposições em música, artes, escrita, tecnologia e outras áreas, valorizando especialmente estudantes que ainda não possuem oportunidades de apresentar suas habilidades.",
+      "category": 1,
+      "approved": false
+    },
+    {
+      "id": 6,
+      "title": "Mural de Oportunidades",
+      "description": "Divulgar olimpíadas acadêmicas, concursos, cursos gratuitos, projetos e outras oportunidades educacionais para ampliar as experiências dos estudantes.",
+      "category": 1,
+      "approved": false
+    },
+    {
+      "id": 7,
+      "title": "Área de Descanso",
+      "description": "Propor a instalação de bancos e assentos próximos à biblioteca, criando um espaço tranquilo e confortável para descansar, ler e conversar.",
+      "category": 2,
+      "approved": false
+    },
+    {
+      "id": 8,
+      "title": "Saída Antecipada por Rodízio",
+      "description": "Implementar a proposta já aprovada pela gestão: a cada semana, uma turma poderá sair cinco minutos mais cedo, seguindo um rodízio organizado.",
+      "category": 2,
+      "approved": true
+    },
+    {
+      "id": 9,
+      "title": "Melhoria do Horário de Almoço",
+      "description": "Ouvir estudantes sobre filas, circulação e dificuldades no refeitório, propondo melhorias para um almoço mais organizado.",
+      "category": 2,
+      "approved": false
+    },
+    {
+      "id": 10,
+      "title": "Mapa de Melhorias da Escola",
+      "description": "Registrar problemas de infraestrutura, como banheiros, bebedouros, ventilação e mobiliário, encaminhando as solicitações à gestão e acompanhando as respostas.",
+      "category": 2,
+      "approved": false
+    },
+    {
+      "id": 11,
+      "title": "Convivência Participativa",
+      "description": "Incentivar acordos de convivência entre estudantes e professores para melhorar o ambiente das salas e diminuir conflitos.",
+      "category": 2,
+      "approved": false
+    },
+    {
+      "id": 12,
+      "title": "Acessibilidade na Prática",
+      "description": "Ouvir estudantes com deficiência sobre dificuldades de acesso e participação, encaminhando propostas de melhorias à gestão.",
+      "category": 2,
+      "approved": false
+    },
+    {
+      "id": 13,
+      "title": "Banco Solidário de Materiais",
+      "description": "Criar um estoque comunitário de materiais escolares por meio de doações e parcerias, permitindo empréstimos ou doações aos estudantes que precisarem, sem exposição ou constrangimento.",
+      "category": 3,
+      "approved": false
+    },
+    {
+      "id": 14,
+      "title": "Feira de Trocas Solidárias",
+      "description": "Organizar eventos para troca e doação de livros, apostilas e materiais escolares em boas condições, incentivando o reaproveitamento.",
+      "category": 3,
+      "approved": false
+    },
+    {
+      "id": 15,
+      "title": "Guia do Estudante",
+      "description": "Criar um guia acessível com informações sobre clubes, espaços, serviços, regras e contatos úteis da escola, especialmente para novos estudantes.",
+      "category": 3,
+      "approved": false
+    },
+    {
+      "id": 16,
+      "title": "Escuta Estudantil",
+      "description": "Facilitar a comunicação dos alunos com o Grêmio, acolhendo sugestões e encaminhando problemas sensíveis aos profissionais responsáveis da escola.",
+      "category": 3,
+      "approved": false
+    },
+    {
+      "id": 17,
+      "title": "Intervalo em Jogo",
+      "description": "Organizar desafios semanais, torneios amistosos e atividades entre turmas utilizando os jogos já disponíveis. Os estudantes também poderão apresentar jogos criados por eles.",
+      "category": 3,
+      "approved": false
+    },
+    {
+      "id": 18,
+      "title": "Acolhimento dos Novos Alunos",
+      "description": "Organizar estudantes voluntários para apresentar a escola, seus clubes e atividades aos recém-chegados, facilitando a adaptação.",
+      "category": 3,
+      "approved": false
+    },
+    {
+      "id": 19,
+      "title": "Programa de Projetos Estudantis",
+      "description": "Permitir que os clubes peçam ajuda diretamente ao Grêmio para obter materiais, planejar atividades e desenvolver ideias, complementando os projetos e culminâncias de clubes e eletivas que já existem na escola.",
+      "category": 4,
+      "approved": false
+    },
+    {
+      "id": 20,
+      "title": "Votação de Prioridades",
+      "description": "Realizar consultas para que os estudantes escolham quais melhorias e projetos viáveis devem receber mais atenção do Grêmio.",
+      "category": 4,
+      "approved": false
+    },
+    {
+      "id": 21,
+      "title": "Grêmio Transparente",
+      "description": "Divulgar periodicamente ações realizadas, propostas encaminhadas, respostas da gestão e utilização dos recursos disponíveis.",
+      "category": 4,
+      "approved": false
+    },
+    {
+      "id": 22,
+      "title": "Representantes Mais Ativos",
+      "description": "Promover reuniões periódicas com representantes de turma para recolher demandas, discutir soluções e informar resultados.",
+      "category": 4,
+      "approved": false
+    },
+    {
+      "id": 23,
+      "title": "Feira de Clubes",
+      "description": "Organizar apresentações dos clubes existentes, permitindo que estudantes conheçam as atividades e descubram novas oportunidades de participação.",
+      "category": 4,
+      "approved": false
+    },
+    {
+      "id": 24,
+      "title": "Eventos Estudantis",
+      "description": "Promover, com autorização, eventos culturais, exposições, campeonatos, gincanas e outras atividades organizadas com participação dos alunos.",
+      "category": 4,
+      "approved": false
+    },
+    {
+      "id": 25,
+      "title": "Plano Escola Econômica",
+      "description": "Propor medidas para reduzir desperdícios de água, energia e papel, incentivando o consumo consciente sem prejudicar as atividades escolares.",
+      "category": 5,
+      "approved": false
+    },
+    {
+      "id": 26,
+      "title": "Reaproveitamento Inteligente",
+      "description": "Priorizar a reutilização de materiais, decorações e equipamentos disponíveis antes de solicitar novas compras para projetos do Grêmio.",
+      "category": 5,
+      "approved": false
+    },
+    {
+      "id": 27,
+      "title": "Gestão por Metas e Orçamento Participativo",
+      "description": "Estabelecer metas para os projetos do Grêmio, consultar estudantes sobre prioridades, comparar preços e divulgar gastos e resultados quando houver recursos disponíveis.",
+      "category": 5,
+      "approved": false
+    },
+    {
+      "id": 28,
+      "title": "Seleção Transparente de Projetos",
+      "description": "Criar critérios públicos para escolher projetos que receberão apoio do Grêmio, considerando viabilidade, benefícios e custos, evitando favoritismos.",
+      "category": 5,
+      "approved": false
+    },
+    {
+      "id": 29,
+      "title": "Educação Financeira na Prática",
+      "description": "Promover oficinas voluntárias sobre planejamento de gastos, consumo consciente, organização financeira e noções básicas de economia.",
+      "category": 5,
+      "approved": false
+    },
+    {
+      "id": 30,
+      "title": "Avaliação de Resultados",
+      "description": "Realizar pesquisas periódicas para avaliar os projetos desenvolvidos pelo Grêmio, identificar problemas e divulgar os resultados.",
+      "category": 5,
+      "approved": false
+    },
+    {
+      "id": 31,
+      "title": "Investimento na Agrofloresta",
+      "description": "Buscar recursos, doações e parcerias para melhorar a infraestrutura da agrofloresta, investindo em ferramentas, equipamentos, irrigação e materiais necessários para sua manutenção.",
+      "category": 6,
+      "approved": false
+    },
+    {
+      "id": 32,
+      "title": "Expansão da Agrofloresta",
+      "description": "Propor investimentos na ampliação do cultivo, com novas mudas, árvores frutíferas e espécies adequadas ao ambiente, respeitando o planejamento e as necessidades da agrofloresta existente.",
+      "category": 6,
+      "approved": false
+    },
+    {
+      "id": 33,
+      "title": "Fundo de Desenvolvimento da Agrofloresta",
+      "description": "Criar campanhas voluntárias de arrecadação e buscar parcerias autorizadas para financiar melhorias na agrofloresta, com planejamento dos investimentos e prestação de contas sobre os recursos utilizados.",
+      "category": 6,
+      "approved": false
+    },
+    {
+      "id": 34,
+      "title": "Modernização e Tecnologia na Agrofloresta",
+      "description": "Propor melhorias tecnológicas, como sistemas de irrigação mais eficientes, monitoramento das condições do solo e ferramentas que facilitem o cultivo, buscando reduzir desperdícios e melhorar a produtividade.",
+      "category": 6,
+      "approved": false
+    },
+    {
+      "id": 35,
+      "title": "Valorização da Produção da Agrofloresta",
+      "description": "Criar, junto aos responsáveis, iniciativas para aproveitar melhor a produção da agrofloresta, como exposições, feiras educativas e projetos de utilização dos alimentos cultivados, respeitando as normas da escola.",
+      "category": 6,
+      "approved": false
+    }
+  ]
+}
