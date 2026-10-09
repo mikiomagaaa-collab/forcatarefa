@@ -19,12 +19,16 @@ assert.equal(JSON.parse(await readFile(resolve(root, 'assets/data/team.json'), '
 const source = await readFile(resolve(root, 'index.html'), 'utf8');
 assert(!source.includes('Portal Marasca'));
 assert(source.includes('VOU VOTAR NO FORÇA TAREFA!'));
-for (const file of ['index.html', 'admin/index.html', 'propostas.html', 'privacidade.html', 'proposta.html', 'projetos.html', 'faq.html', 'eleicoes.html']) {
+for (const file of ['index.html', 'admin/index.html', 'propostas.html', 'privacidade.html', 'proposta.html', 'projetos.html', 'faq.html', 'eleicoes.html', 'gestao.html', 'catalogo.html', 'planejamento.html', 'historia.html', 'gremio.html', 'bem-estar.html', 'infraestrutura.html', '404.html']) {
   const html = await readFile(resolve(root, file), 'utf8');
   for (const [, path] of html.matchAll(/(?:src|href)="([^"#]+)"/g)) {
-    if (/^(?:https?:|mailto:|data:)/.test(path)) continue;
+    if (/^(?:https?:|mailto:|data:)/.test(path) || path==='/forcatarefa/') continue;
     await access(resolve(root, dirname(file), path.split(/[?#]/)[0]));
   }
 }
 for (const file of await readdir(resolve(root, 'assets/js'))) if (file.endsWith('.js')) execFileSync(process.execPath, ['--check', resolve(root, 'assets/js', file)]);
 console.log('Conteúdo, 35 propostas, prioridades, arquivos locais e sintaxe JavaScript verificados.');
+
+const drafts=JSON.parse(await readFile(resolve(root,'supabase/new-proposals.json'),'utf8'));assert.equal(drafts.length,10);assert.deepEqual(drafts.map(p=>p.id),Array.from({length:10},(_,i)=>i+36));assert(drafts.every(p=>p.editorial_state==='Aguardando aprovação da equipe'));
+for(const name of ['catalogo.html','gestao.html','planejamento.html','historia.html','gremio.html','bem-estar.html','infraestrutura.html','404.html']){const html=await readFile(resolve(root,name),'utf8');assert(html.includes('name="viewport"'));assert(html.includes('og:image'));assert(!html.includes('—'));}
+console.log('Novas páginas, compartilhamento e 10 rascunhos privados na distribuição verificados.');
