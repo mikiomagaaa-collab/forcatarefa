@@ -1,3 +1,4 @@
+import {radarMeasurement} from './radar-data.js';
 import {initAdminTraffic} from './admin-traffic.js';
 import {teamRoles,roleIcon,roleDefinition} from './team-roles.js';
 import {initAdminWorkspace} from './admin-workspace.js';
@@ -86,6 +87,8 @@ function showProgress() {
   $('#progress-description').textContent = proposal.description;
   $('#progress-stage').value = progress.get(id)?.stage || 'Apresentada';
   $('#progress-note').value = progress.get(id)?.note || '';
+  $('#progress-percent').value = progress.get(id)?.completion_percent ?? (progress.get(id)?.stage === 'Realizada' ? 100 : '');
+  $('#progress-basis').value = progress.get(id)?.completion_basis || '';
   $('#progress-needs').value = progress.get(id)?.needs || '';
   $('#progress-response').value = progress.get(id)?.official_response || '';
   updateCompletionButton();
@@ -94,8 +97,9 @@ async function saveProgress(stage) {
   const note = $('#progress-note').value.trim();
   const needs = $('#progress-needs').value.trim();
   const official_response = $('#progress-response').value.trim();
+  const measurement = radarMeasurement($('#progress-percent').value, $('#progress-basis').value, stage, note);
   if (![note, needs, official_response].every(textValid)) throw new Error('Use somente texto nos campos de acompanhamento.');
-  await adminRequest('/rest/v1/proposal_progress?on_conflict=proposal_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: { proposal_id: Number($('#progress-proposal').value), stage, note, needs, official_response, updated_at: new Date().toISOString() } });
+  await adminRequest('/rest/v1/proposal_progress?on_conflict=proposal_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: { proposal_id: Number($('#progress-proposal').value), stage, note, needs, official_response, ...measurement, updated_at: new Date().toISOString() } });
   await loadProgress();
 }
 async function loadUpdates() {

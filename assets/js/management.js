@@ -1,4 +1,5 @@
 import {teamCard} from './team-roles.js';
+import {renderRadar} from './radar.js';
 import {applyFtAvailability} from './ft-visibility.js';
 import {request,backendReady,renderText} from './api.js';
 import {loadCatalogue,publicMetrics} from './catalogue.js';
@@ -22,7 +23,8 @@ async function init(){
   const results=await Promise.allSettled(endpoints.map(([,url])=>backendReady?request('/rest/v1'+url):Promise.resolve([])));
   results.forEach((r,i)=>{data[endpoints[i][0]]=r.status==='fulfilled'?r.value:[];if(r.status==='rejected')failures.add(endpoints[i][0]);});
   const rows=kind=>data.records.filter(r=>r.kind===kind);
-  applyFtAvailability({...data,approvals:catalogue.proposals.filter(p=>p.approved)});
+  applyFtAvailability({...data,catalogue:catalogue.proposals,approvals:catalogue.proposals.filter(p=>p.approved)});
+  renderRadar({proposals:catalogue.proposals,progress:data.progress,unavailable:backendReady&&(!catalogue.online||failures.has('progress'))});
   if($('#history-records')){if(rows('timeline').length){const originals=[...$('#history-records').children];for(const r of rows('timeline')){const card=recordCard(r);if(r.position>=1&&r.position<=originals.length)originals[r.position-1].replaceWith(card);else $('#history-records').append(card);}}else if(failures.has('records'))$('#history-records').after(renderText('p','As atualizações da equipe estão temporariamente indisponíveis. A trajetória original permanece disponível.','notice'));}
   renderRecords($('#planning-goals'),rows('goal'));
   if($('#planning-goals')&&failures.has('records'))empty($('#planning-goals'),'Não foi possível consultar as metas','Confira sua conexão e recarregue a página.');

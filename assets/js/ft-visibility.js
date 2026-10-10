@@ -3,6 +3,7 @@ export function applyFtAvailability(data){
  const records=data.records||[];
  const available={
   'ft-overview':true,
+  'ft-radar':Boolean(data.catalogue?.length),
   'ft-projects':Boolean(data.projects?.length||records.some(r=>r.kind==='goal')),
   'ft-budget':records.some(r=>r.kind==='budget'),
   'ft-decisions':records.some(r=>r.kind==='decision'),
