@@ -1,4 +1,5 @@
 import './traffic.js';
+import {loadCatalogue} from './catalogue.js';
 import {teamCard} from './team-roles.js';
 import {initHomeFtAvailability} from './ft-visibility.js';
 import { initElection } from './election.js';
@@ -106,6 +107,16 @@ async function loadPublic() {
     for(const member of team)grid.append(teamCard(member));
     document.querySelector('#team-empty').hidden = team.length > 0;
   } catch { status(document.querySelector('#team-status'), 'Não foi possível carregar os nomes da equipe. Tente recarregar a página.', 'error'); }
+  const approvalList=document.querySelector('#home-approvals');
+  try {
+    const catalogue=await loadCatalogue();approvalList.replaceChildren();
+    if(!catalogue.online)throw new Error('Catálogo indisponível');
+    for(const proposal of catalogue.proposals.filter(p=>p.approved)){
+      const card=renderText('article','','update-card');
+      card.append(renderText('span','Aprovada pela gestão da escola','badge approved'),renderText('h3',proposal.title),renderText('p','Aprovação e realização são etapas diferentes. Consulte os registros de acompanhamento para conhecer a situação atual.'));
+      const link=renderText('a','Acompanhar a proposta','proposal-link');link.href=`proposta.html?id=${proposal.id}`;card.append(link);approvalList.append(card);
+    }
+  } catch { approvalList.replaceChildren(renderText('p','A consulta das aprovações está temporariamente indisponível.','notice')); }
   try {
     const updates = await request('/rest/v1/institutional_updates?select=title,body,published_at&order=published_at.desc&limit=20');
     const list = document.querySelector('#updates-list');
