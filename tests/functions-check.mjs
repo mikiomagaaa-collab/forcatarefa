@@ -28,6 +28,7 @@ globalThis.fetch = async (url, options = {}) => {
   else if (url.includes('/rpc/consume_rate')) { const hits = (buckets.get(body.bucket_key) || 0) + 1; buckets.set(body.bucket_key, hits); value = hits <= body.max_hits; }
   else if (url.includes('/session_suspensions?')) value = sessionBlocked ? [{ session_hash: 'blocked' }] : [];
   else if (url.includes('/rpc/record_intention')) { value = !intentions.has(body.target_hash); intentions.add(body.target_hash); }
+  else if (url.includes('/rpc/record_site_visit')) value=true;
   else if (url.endsWith('/suggestions')) { if (insertFailed) code = 500; else suggestions.push(body); }
   return new Response(value === null ? '' : JSON.stringify(value), { status: code });
 };
@@ -76,6 +77,13 @@ try {
   result=await call(vote,input('intention'),{authorization:`Bearer ${env.PUBLIC_SITE_ANON_KEY}`}); assert.equal(result.code,200); assert.equal(userChecks,0); checks+=2;
   result=await call(login,input('admin_login',{password:'TEST_ONLY_STRONG_PASSWORD'}),{authorization:`Bearer ${env.PUBLIC_SITE_ANON_KEY}`}); assert.equal(result.code,200); assert.equal(userChecks,0); checks+=2;
   result=await call(vote,input('intention'),{authorization:'Bearer INVALID_USER_TOKEN'}); assert.equal(result.code,401); assert.equal(userChecks,1); checks+=2;
+  const visit=await load('record-visit');const visitInput={visit:'00000000-0000-4000-8000-000000000111',browser:'00000000-0000-4000-8000-000000000222',page:'index.html',seconds:0};
+  result=await call(visit,visitInput);assert.equal(result.code,200);assert.equal(result.data.received,true);checks+=2;
+  for(const changes of [{seconds:-1},{seconds:999999},{seconds:1.5},{page:'admin/index.html'},{browser:'private-name'},{visit:'invalid'}]){result=await call(visit,{...visitInput,...changes});assert.equal(result.code,400);checks++;}
+  result=await call(visit,visitInput,{origin:'https://attacker.example'});assert.equal(result.code,403);checks++;
+  result=await call(visit,{}, {method:'OPTIONS'});assert.equal(result.code,204);checks++;
+  result=await call(visit,{...visitInput,extra:'x'.repeat(2100)});assert.equal(result.code,413);checks++;
+  for(let i=0;i<23;i++)await call(visit,visitInput);result=await call(visit,visitInput);assert.equal(result.code,429);checks++;
   console.log(`${checks} verificações das funções aprovadas, usando serviços simulados: validação, CAPTCHA, falhas, duplicação, limites e login autorizado.`);
 } finally {
   globalThis.fetch=realFetch; delete globalThis.Deno;
