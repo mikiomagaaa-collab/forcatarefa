@@ -10,7 +10,7 @@ function card(row) {
   const link = renderText('a', row.title);
   link.href = `proposta.html?id=${row.id}`;
   h3.append(link); title.append(h3);
-  heading.append(title, renderText('strong', row.percent === null ? 'Sem medição' : `${row.percent}%`, 'radar-percent'));
+  heading.append(title, renderText('strong', row.percent === null ? 'Sem medição' : `${row.percent}%`, row.percent === null ? 'radar-percent radar-unmeasured' : 'radar-percent'));
   article.append(heading, renderText('p', row.stage, 'radar-stage'));
   if (row.percent === null) article.append(renderText('div', '', 'radar-track'), renderText('p', 'Percentual ainda não registrado pela gestão.', 'radar-basis'));
   else {
