@@ -1,0 +1,28 @@
+.radar-shell{padding:30px;border:1px solid var(--border-color);border-radius:20px;background:var(--bg-secondary);max-width:940px}
+.radar-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:16px}
+.radar-heading .eyebrow{color:var(--warning-color);margin:0 0 10px}
+.radar-heading h2{font-size:clamp(1.7rem,3vw,2.3rem);margin:0;letter-spacing:-.025em}
+.radar-heading>svg{color:var(--accent-primary);width:36px;height:36px;flex:0 0 36px}
+.radar-intro,.radar-summary,.radar-footnote{color:var(--text-secondary);font-size:.9rem;line-height:1.75}
+.radar-summary{margin:22px 0 18px}
+.radar-list{display:grid;gap:14px}
+.radar-card{padding:22px 24px;border:1px solid var(--border-color);border-radius:14px;background:var(--surface);min-width:0}
+.radar-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.radar-number{display:block;font-size:.68rem;font-weight:800;letter-spacing:.09em;color:var(--warning-color);margin-bottom:7px}
+.radar-card h3{font-size:1.1rem;line-height:1.5;margin:0;overflow-wrap:anywhere}
+.radar-card h3 a{color:var(--text-heading)}
+.radar-card h3 a:hover{text-decoration:underline;text-underline-offset:4px}
+.radar-percent{font-size:1.5rem;color:var(--text-heading);white-space:nowrap;flex-shrink:0;line-height:1.5}
+.radar-card-heading .radar-percent:last-child{max-width:38%}
+.radar-stage{color:var(--text-secondary);font-size:.8rem;margin:12px 0}
+.radar-card progress,.radar-track{display:block;width:100%;height:9px;border:0;border-radius:99px;background:var(--border-color);overflow:hidden;appearance:none}
+.radar-card progress::-webkit-progress-bar{background:var(--border-color);border-radius:99px}
+.radar-card progress::-webkit-progress-value{background:var(--accent-primary);border-radius:99px;transition:width .3s ease}
+.radar-card progress::-moz-progress-bar{background:var(--accent-primary);border-radius:99px}
+.radar-basis{font-size:.85rem;line-height:1.75;color:var(--text-secondary);margin:12px 0 0;white-space:pre-line;overflow-wrap:anywhere}
+.radar-date{color:var(--text-secondary);font-size:.72rem;line-height:1.6;margin:9px 0 0}
+.radar-toggle{margin:18px 0;width:100%;background:var(--surface);color:var(--text-heading);border:1px solid var(--border-interactive);min-height:48px}
+.radar-toggle:hover{background:var(--surface-elevated);border-color:var(--accent-primary)}
+.radar-footnote{border-top:1px solid var(--border-color);padding-top:20px;margin:24px 0 0;font-size:.8rem}
+@media(max-width:600px){.radar-shell{padding:20px 16px;border-radius:16px}.radar-card{padding:20px 16px}.radar-card-heading{gap:12px}.radar-percent{font-size:1.1rem}.radar-card h3{font-size:1rem}.radar-heading>svg{width:28px;height:28px;flex-basis:28px}.radar-list{gap:16px}}
+@media(prefers-reduced-motion:reduce){.radar-card progress::-webkit-progress-value{transition:none}}
