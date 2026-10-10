@@ -50,6 +50,27 @@ export async function request(path, { token, method = 'GET', body, headers: extr
 
 let captchaPromise;
 const captchaIds = new Map();
+const captchaSettings = new Map();
+function renderCaptcha(targetId, action) {
+  const theme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  const widget = window.turnstile.render(`#${targetId}`, { sitekey: config.turnstileSiteKey, action, theme, size: window.matchMedia('(max-width: 380px)').matches ? 'compact' : 'normal', 'response-field': false });
+  captchaIds.set(targetId, widget);
+  captchaSettings.set(targetId, { action, theme });
+}
+document.addEventListener('ft-theme-change', () => {
+  const theme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  for (const [targetId, settings] of captchaSettings) {
+    if (settings.theme === theme || !window.turnstile || !document.getElementById(targetId)) continue;
+    try {
+      window.turnstile.remove(captchaIds.get(targetId));
+      captchaIds.delete(targetId);
+      renderCaptcha(targetId, settings.action);
+    } catch {
+      const target = document.getElementById(targetId);
+      if (target && !captchaIds.has(targetId)) target.textContent = 'Recarregue a página para renovar a verificação de segurança.';
+    }
+  }
+});
 export async function mountCaptcha(targetId, action) {
   if (!participationReady) return;
   if (!captchaPromise) {
@@ -65,8 +86,7 @@ export async function mountCaptcha(targetId, action) {
   }
   await captchaPromise;
   if (captchaIds.has(targetId)) return;
-  const widget = window.turnstile.render(`#${targetId}`, { sitekey: config.turnstileSiteKey, action, theme: 'light', size: window.matchMedia('(max-width: 380px)').matches ? 'compact' : 'normal', 'response-field': false });
-  captchaIds.set(targetId, widget);
+  renderCaptcha(targetId, action);
 }
 export function captchaToken(targetId) {
   const widget = captchaIds.get(targetId);
