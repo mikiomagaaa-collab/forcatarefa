@@ -27,6 +27,7 @@ jobs:
       - run: npm run test:types
       - run: npm run test:functions
       - run: npm run test:theme
+      - run: npm run test:radar
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
