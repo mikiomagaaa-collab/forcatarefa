@@ -6,5 +6,5 @@ const output = resolve(root, 'dist');
 if (output !== resolve(root, 'dist')) throw new Error('Invalid output path');
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
-for (const file of ['index.html', 'propostas.html', 'privacidade.html', 'proposta.html', 'projetos.html', 'faq.html', 'eleicoes.html', 'gestao.html', 'catalogo.html', 'planejamento.html', 'historia.html', 'gremio.html', 'bem-estar.html', 'infraestrutura.html', '404.html', 'assets', 'admin', '.nojekyll']) await cp(resolve(root, file), resolve(output, file), { recursive: true });
+for (const file of ['index.html', 'calendario.html', 'propostas.html', 'privacidade.html', 'proposta.html', 'projetos.html', 'faq.html', 'eleicoes.html', 'gestao.html', 'catalogo.html', 'planejamento.html', 'historia.html', 'gremio.html', 'bem-estar.html', 'infraestrutura.html', '404.html', 'assets', 'admin', '.nojekyll']) await cp(resolve(root, file), resolve(output, file), { recursive: true });
 console.log('Site estático pronto em dist. Dados de servidor e documentação não são publicados no Pages.');

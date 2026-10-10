@@ -19,7 +19,7 @@ assert.equal(JSON.parse(await readFile(resolve(root, 'assets/data/team.json'), '
 const source = await readFile(resolve(root, 'index.html'), 'utf8');
 assert(!source.includes('Portal Marasca'));
 assert(source.includes('VOU VOTAR NO FORÇA TAREFA!'));
-for (const file of ['index.html', 'admin/index.html', 'propostas.html', 'privacidade.html', 'proposta.html', 'projetos.html', 'faq.html', 'eleicoes.html', 'gestao.html', 'catalogo.html', 'planejamento.html', 'historia.html', 'gremio.html', 'bem-estar.html', 'infraestrutura.html', '404.html']) {
+for (const file of ['index.html', 'calendario.html', 'admin/index.html', 'propostas.html', 'privacidade.html', 'proposta.html', 'projetos.html', 'faq.html', 'eleicoes.html', 'gestao.html', 'catalogo.html', 'planejamento.html', 'historia.html', 'gremio.html', 'bem-estar.html', 'infraestrutura.html', '404.html']) {
   const html = await readFile(resolve(root, file), 'utf8');
   for (const [, path] of html.matchAll(/(?:src|href)="([^"#]+)"/g)) {
     if (/^(?:https?:|mailto:|data:)/.test(path) || path==='/forcatarefa/') continue;
