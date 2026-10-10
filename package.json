@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "check": "node scripts/check.mjs",
-    "build": "node scripts/build.mjs",
+    "build": "node scripts/build.mjs && node tests/build-check.mjs",
     "test:security": "node tests/security-check.mjs && node tests/election-check.mjs",
     "test:types": "tsc -p tests/tsconfig.json",
     "test:functions": "node tests/functions-check.mjs",
