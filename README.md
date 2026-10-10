@@ -289,3 +289,14 @@ Publique a função `record-visit`, utilizando os segredos de servidor já confi
 Em Segurança, a gestão pode consultar visitas totais, visitas de hoje, navegadores estimados nos últimos sete dias, tempo médio visível e uma tabela por dia. O histórico começa na ativação; ele não reconstrói acessos anteriores. Bloqueadores, não rastreamento, encerramentos abruptos e falhas de rede podem reduzir a contagem. Ative `traffic-retention.sql` para apagar registros técnicos de visitas após sete dias, preservando os totais diários sem identificadores.
 
 A página Nossa História apresenta a narrativa completa enviada pela equipe, com navegação entre os capítulos. O resumo da página inicial continua direcionando à história completa.
+
+Temas oficiais e conforto visual
+--------------------------------
+
+Use **Aparência** no menu principal ou no cabeçalho da gestão para selecionar **Claro**, **Escuro** ou **Automático**. No celular, a opção fica dentro do menu. A primeira visita começa em Claro. Automático acompanha o sistema somente quando escolhido. A preferência fica no navegador, na chave `ft-theme-preference`, sem alterar contas ou dados de participação.
+
+`assets/js/theme-init.js` aplica a escolha antes dos estilos para evitar uma apresentação clara intermediária. `assets/js/theme.js` cria o seletor acessível, com ícones SVG, seleção indicada, navegação por setas e fechamento com Escape. As cores ficam centralizadas em `assets/css/theme-tokens.css`; `assets/css/theme.css` adapta o seletor e os estados visuais compartilhados.
+
+O tema escuro usa superfícies azul-marinho, texto claro, bordas discretas e laranja com texto escuro nos botões. Formulários, calendário, FT+, equipe, etiquetas, diálogos e painel privado seguem o tema. A verificação Turnstile acompanha a aparência com os parâmetros oficiais; a validação de segurança permanece exigida. Ao mudar entre claro e escuro, um widget existente renova sua verificação. Fotografias e marcas conservam suas cores.
+
+A mudança de cores dura 220 ms e respeita a preferência por movimento reduzido. Execute `npm run test:theme` para verificar a aplicação inicial, persistência, modo automático, contraste dos tokens, inclusão nas 17 páginas e integração visual do Turnstile. Essa verificação também faz parte da publicação pelo GitHub Pages.
