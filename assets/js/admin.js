@@ -1,3 +1,5 @@
+import {initAdminTraffic} from './admin-traffic.js';
+import {teamRoles,roleIcon,roleDefinition} from './team-roles.js';
 import {initAdminWorkspace} from './admin-workspace.js';
 import {initAdminCalendar} from './admin-calendar.js';
 import {initAdminCentral} from './admin-central.js';
@@ -7,6 +9,7 @@ import { backendReady, isLocalPreview, status, renderText } from './api.js';
 import { config } from './config.js';
 import { adminRequest, signOut, readSession } from './auth.js';
 const $ = selector => document.querySelector(selector);
+for(const item of teamRoles){const o=renderText('option',item.title);o.value=item.title;$('#new-member-role').append(o);}
 let members = []; let proposals = []; let progress = new Map(); let suggestionOffset = 0;
 const textValid = text => !/[<>\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(text);
 const date = value => new Date(value).toLocaleString('pt-BR');
@@ -35,8 +38,7 @@ function renderMembers() {
     const row = document.createElement('div'); row.className = 'admin-member';
     const input = document.createElement('input'); input.value = member.name; input.maxLength = 60; input.setAttribute('aria-label', `Nome do integrante ${index + 1}`);
     input.addEventListener('input', () => { members[index].name = input.value; status($('#team-admin-status'), 'Há alterações ainda não salvas.'); });
-    const role=document.createElement("input");role.value=member.role||"";role.maxLength=100;role.placeholder="Função autorizada, opcional";role.setAttribute("aria-label",`Função do integrante ${index+1}`);role.addEventListener("input",()=>{members[index].role=role.value;status($("#team-admin-status"),"Há alterações ainda não salvas.");});
-    row.append(input,role);
+    const role=document.createElement('select');role.setAttribute('aria-label',`Cargo do integrante ${index+1}`);const unset=renderText('option','Selecionar cargo');unset.value='';role.append(unset);for(const item of teamRoles){const o=renderText('option',item.title);o.value=item.title;role.append(o);}if(member.role&&!teamRoles.some(r=>r.title===member.role)){const o=renderText('option',`Cargo atual: ${member.role}`);o.value=member.role;role.append(o);}role.value=member.role||'';const emblem=renderText('span','','role-emblem');function appearance(){row.className='admin-member role-'+roleDefinition(role.value).key;emblem.replaceChildren(roleIcon(role.value));}role.addEventListener('change',()=>{members[index].role=role.value;appearance();status($('#team-admin-status'),'Cargo alterado. Salve a equipe para publicar.');});appearance();row.append(emblem,input,role);
     for (const [label, delta] of [['Subir', -1], ['Descer', 1]]) {
       const button = renderText('button', label); button.type = 'button'; button.disabled = index + delta < 0 || index + delta >= members.length;
       button.addEventListener('click', () => { [members[index], members[index + delta]] = [members[index + delta], members[index]]; renderMembers(); status($('#team-admin-status'), 'Ordem alterada. Salve para publicar.'); }); row.append(button);
@@ -126,7 +128,7 @@ async function init() {
     const authorized = await adminRequest('/rest/v1/rpc/is_admin', { method: 'POST', body: {} });
     if (!authorized) throw new Error('Esta conta não tem autorização administrativa.');
     isOwner = await adminRequest('/rest/v1/rpc/is_owner', { method: 'POST', body: {} });
-    $('#admin-content').hidden = false; $('#admin-guard').hidden = true; $('#logout').hidden = false; $('#account-management').hidden = !isOwner; initAdminNavigation(); initAdminWorkspace(); $('#admin-nav-toggle').hidden=false; initAdminCalendar().catch(error=>status($('#calendar-status'),error.message,'error'));
+    $('#admin-content').hidden = false; $('#admin-guard').hidden = true; $('#logout').hidden = false; $('#account-management').hidden = !isOwner; initAdminNavigation(); initAdminWorkspace(); initAdminTraffic().catch(error=>status($('#traffic-status'),error.message,'error')); $('#admin-nav-toggle').hidden=false; initAdminCalendar().catch(error=>status($('#calendar-status'),error.message,'error'));
     const response = await fetch('../assets/data/proposals.json'); if (!response.ok) throw new Error('Não foi possível carregar as propostas.');
     ({ proposals } = await response.json());
     for (const p of proposals) { const option = renderText('option', `${p.id}. ${p.title}`); option.value = p.id; $('#progress-proposal').append(option); }
@@ -147,7 +149,7 @@ $('#suggestion-filter').addEventListener('change', event => work(event.target, $
 $('#team-add-form').addEventListener('submit', event => {
   event.preventDefault(); const name = $('#new-member').value.trim();
   if (!name || !textValid(name) || members.length >= 100) { status($('#team-admin-status'), 'Informe um nome válido. O limite é de 100 integrantes.', 'error'); return; }
-  members.push({name,role:''}); $('#new-member').value = ''; renderMembers(); status($('#team-admin-status'), 'Integrante adicionado à edição. Salve para publicar.');
+  members.push({name,role:$('#new-member-role').value}); $('#new-member').value = ''; renderMembers(); status($('#team-admin-status'), 'Integrante adicionado à edição. Salve para publicar.');
 });
 $('#save-team').addEventListener('click', event => work(event.target, $('#team-admin-status'), async () => {
   if (members.some(m => !m.name.trim() || m.name.trim().length > 60 || !textValid(m.name) || m.role.length>100 || !textValid(m.role))) throw new Error('Confira todos os nomes antes de salvar.');

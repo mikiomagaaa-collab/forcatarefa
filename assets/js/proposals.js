@@ -31,7 +31,7 @@ export async function initProposals() {
   ];
   if(document.querySelector('#ft-priorities'))document.querySelector('#ft-priorities').textContent=proposals.filter(p=>classifications.get(p.id)?.priority).length;
   if(document.querySelector('#priority-grid'))priorities.forEach((id, i) => {
-    const proposal = proposals.find(p => p.id === id);
+    const proposal = proposals.find(p => p.id === id);if(!proposal)return;
     const card = document.createElement('article'); card.className = 'priority-card';
     const top = document.createElement('div'); top.className = 'priority-top';
     const icon = document.createElement('div'); icon.className = 'icon-box';
@@ -39,7 +39,7 @@ export async function initProposals() {
     top.append(icon, renderText('span', `PROPOSTA ${String(id).padStart(2, '0')}`));
     card.append(top); appendLabels(card, classifications.get(id));
     card.append(renderText('h3', proposal.title), renderText('span', categoryMap.get(proposal.category), 'category-label'), renderText('p',data.online?proposal.description:summaries[i],'proposal-summary'));
-    if (id === 8) card.append(renderText('span', 'Aprovada pela gestão', 'badge approved'));
+    if (proposal.approved) card.append(renderText('span', 'Aprovada pela gestão', 'badge approved'));
     const link = renderText('a', 'Saiba mais', 'text-link'); link.href = `#proposta-${id}`; card.append(link);
     document.querySelector('#priority-grid').append(card);
   });
@@ -75,7 +75,7 @@ export async function initProposals() {
       const link = renderText('a', 'Ver detalhes da proposta', 'proposal-link'); link.href = `proposta.html?id=${p.id}`;
       card.append(link); grid.append(card);
     }
-    document.querySelector('#proposal-count').textContent = `${earlyOnly ? 'Ações iniciais planejadas · ' : ''}${matches.length} ${matches.length === 1 ? 'proposta encontrada' : 'propostas encontradas'}${visible.length < matches.length ? ` · exibindo ${visible.length}` : ''}`;
+    document.querySelector('#proposal-count').textContent = backendReady&&!data.online?'Propostas temporariamente indisponíveis':`${earlyOnly ? 'Ações iniciais planejadas · ' : ''}${matches.length} ${matches.length === 1 ? 'proposta encontrada' : 'propostas encontradas'}${visible.length < matches.length ? ` · exibindo ${visible.length}` : ''}`;
     document.querySelector('#proposal-empty').hidden = matches.length !== 0;
     more.hidden = visible.length === matches.length;
     document.querySelector('#filter-all').setAttribute('aria-pressed', String(!priorityOnly && !earlyOnly));
@@ -86,7 +86,7 @@ export async function initProposals() {
   function reset() { category = 0; search.value = ''; priorityOnly = false; earlyOnly = false; selectedStage='';if(stageSelect)stageSelect.value=''; expanded = true; catalogue.open = true; render(); }
   function directLink() {
     const hash = window.location.hash;
-    if (hash === '#propostas' || (location.pathname.endsWith('catalogo.html')&&!hash.startsWith('#proposta-'))) { catalogue.open = true; return; }
+    if (hash === '#propostas' || (/\/(catalogo|propostas)\.html$/.test(location.pathname)&&!hash.startsWith('#proposta-'))) { catalogue.open = true; return; }
     if (!/^#proposta-([1-9]\d{0,5})$/.test(hash)) return;
     reset();
     requestAnimationFrame(() => document.querySelector(hash)?.scrollIntoView({ block: 'start' }));

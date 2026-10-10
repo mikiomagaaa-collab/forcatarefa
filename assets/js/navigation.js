@@ -1,3 +1,4 @@
+import './traffic.js';
 const toggle = document.querySelector('.menu-toggle');
 const menu = document.querySelector('#menu');
 function closeMenu(){menu?.classList.remove('open');toggle?.setAttribute('aria-expanded','false');toggle?.setAttribute('aria-label','Abrir menu');}

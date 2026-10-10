@@ -1,3 +1,5 @@
+import './traffic.js';
+import {teamCard} from './team-roles.js';
 import {initHomeFtAvailability} from './ft-visibility.js';
 import { initElection } from './election.js';
 import { config } from './config.js';
@@ -101,7 +103,7 @@ async function loadPublic() {
   try {
     const team = await request('/rest/v1/team_members?select=id,name,role,position&order=position.asc');
     const grid = document.querySelector('#team-grid'); grid.replaceChildren();
-    for (const member of team){const card=renderText('div','','member');card.append(renderText('strong',member.name));if(member.role)card.append(renderText('p',member.role,'category-label'));grid.append(card);}
+    for(const member of team)grid.append(teamCard(member));
     document.querySelector('#team-empty').hidden = team.length > 0;
   } catch { status(document.querySelector('#team-status'), 'Não foi possível carregar os nomes da equipe. Tente recarregar a página.', 'error'); }
   try {
