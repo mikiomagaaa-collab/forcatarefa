@@ -6,7 +6,7 @@ Site real em HTML, CSS e JavaScript modular. Sem framework no navegador, fotogra
 Conteúdo atual
 --------------
 
-- 35 propostas originais públicas, em seis categorias iniciais. Dez propostas adicionais de bem-estar e infraestrutura aguardam aprovação editorial privada. O total público acompanha as publicações da equipe.
+- 35 propostas originais preservadas, em seis categorias iniciais. Dez propostas adicionais de bem-estar e infraestrutura começam em revisão editorial privada. A gestão pode ocultar ou republicar qualquer proposta. O total público acompanha as publicações da equipe.
 - As cinco prioridades continuam sendo 5, 7, 17, 19 e 27. A proposta 8 completa os seis destaques, com aprovação da gestão e implementação a organizar.
 - A proposta 19 foi atualizada para apoio direto aos clubes com materiais, planejamento e ideias, complementando os projetos e culminâncias existentes.
 - As propostas 31 a 35 estão em “Agrofloresta (Projeto M.C.A.N): Projeto Marasca Com Amor na Natureza”. Elas não são prioridades nem estão aprovadas.
@@ -19,7 +19,7 @@ Conteúdo atual
 O que funciona sem configuração
 -------------------------------
 
-Navegação, menu móvel, pesquisa e filtros das 35 propostas, links diretos, expansão dos textos, história, FT+ e identificação opcional. A página propostas.html também apresenta todo o conteúdo sem JavaScript.
+Navegação, menu móvel, pesquisa e filtros das propostas publicadas, links diretos, expansão dos textos, história, FT+ e identificação opcional. As páginas catalogo.html e propostas.html consultam o catálogo publicado para respeitar as propostas ocultas.
 
 O que depende de configuração externa
 -------------------------------------
@@ -229,9 +229,9 @@ Central FT+ e preparação para 13/10/2026
 
 A atualização mantém o login, as funções de participação, as permissões e os dados existentes. As migrações adicionais, em ordem, são `20261009_central.sql` e `20261009_planning_drafts.sql`. Elas foram instaladas no projeto de produção em 09/10/2026. Não reaplique uma migração já instalada.
 
-`proposal_catalogue` contém as 35 propostas originais, com os mesmos títulos e descrições, e as propostas 36 a 45 como “Aguardando aprovação da equipe”. Visitantes só podem ler linhas “Publicada”. Aprovação editorial, autorização da escola e execução são conceitos separados. A publicação exige ação explícita da equipe no painel. As 35 originais não podem ser removidas da publicação pelo painel.
+`proposal_catalogue` contém as 35 propostas originais e as propostas 36 a 45, que começam em revisão. Visitantes só podem ler linhas “Publicada”. Aprovação editorial, autorização da escola e execução são conceitos separados. A publicação exige ação explícita da equipe no painel. Todas as propostas podem ser ocultadas e republicadas, preservando seu número e histórico.
 
-O catálogo público fica em `catalogo.html`. Pesquisa, filtros por categoria, prioridade, início planejado e situação funcionam com os dados publicados. Os totais da página inicial e da Central vêm desse catálogo. Se a consulta falhar, o site informa que está mostrando o programa original. `propostas.html` continua como leitura estática das 35 propostas originais.
+O catálogo público fica em `catalogo.html`. Pesquisa, filtros por categoria, prioridade, início planejado e situação funcionam com os dados publicados. Os totais da página inicial e da Central vêm desse catálogo. Se a consulta ao banco configurado falhar, o site informa a indisponibilidade, sem mostrar propostas ocultas a partir dos arquivos de base. `propostas.html` também consulta o catálogo online.
 
 `gestao.html` apresenta a Central FT+, inicialmente em planejamento. Projetos têm responsável opcional, prazo estimado, dependências, autorizações, custo e recursos opcionais, andamento e resultado. O histórico é criado no banco quando etapa ou atualização são alteradas, sem evolução automática por data. Os registros e o histórico são públicos somente após revisão e publicação. Revise todo o histórico antes de publicar um projeto.
 
@@ -258,10 +258,34 @@ A migração adicional `20261009_admin_workspace.sql` está instalada no projeto
 
 O painel privado em `admin/` tem navegação lateral no computador e menu recolhido no celular. A visão geral usa os totais reais de propostas, publicações, revisão, andamento, equipe e compromissos. Intenções de voto ficam em uma seção própria recolhida.
 
-Em **Propostas**, busque por número ou texto e filtre categoria e publicação. Clique no título para abrir texto, andamento e etiquetas da mesma proposta. Selecione propostas na lista para aprovar pela equipe, publicar com confirmação explícita ou devolver adicionais ao rascunho. As 35 originais continuam públicas. A ação em conjunto é atômica: uma seleção inválida não altera parcialmente os registros.
+Em **Propostas**, busque por número ou texto e filtre categoria e publicação. Clique no título para abrir texto, andamento e etiquetas da mesma proposta. Selecione propostas na lista para aprovar pela equipe, publicar com confirmação explícita ou ocultar mantendo em rascunho. Isso vale também para as 35 originais. A ação em conjunto é atômica: uma seleção inválida não altera parcialmente os registros.
 
 **Nova proposta** gera um número único no servidor e sempre cria um rascunho privado. Aprovação editorial permanece independente da autorização escolar e do andamento. O programa original fica preservado nos arquivos versionados, e revisões online autorizadas continuam no banco. As propostas 36 a 45 foram publicadas pelo administrador em 09/10/2026.
 
 Em **Calendário**, cadastre reuniões, atividades e prazos entre 01/01/2027 e 31/12/2028, inclusive intervalos de datas. Horário de Brasília, responsável e vínculo com proposta são opcionais. Proposto, Confirmado, Concluído e Cancelado são registros manuais. O calendário não muda etapas de propostas por chegada de uma data e não é exposto ao público. Somente contas administrativas autorizadas podem consultar e editar a agenda; não há exclusão permanente pelo painel.
 
 Na Central FT+ pública e nos atalhos da página inicial, áreas sem registros públicos não aparecem. Publicar um registro revisado faz a área correspondente aparecer na próxima consulta. Os controles internos permanecem disponíveis para que a equipe possa cadastrar os primeiros dados.
+
+
+Revisão de equipe e publicação reversível
+
+Aplique `supabase/migrations/20261009_reversible_proposals.sql` após a migração do painel. Ela permite ocultar e republicar as propostas originais, preservando texto, número, etiquetas e andamento. Não permite apagar propostas.
+
+No editor, use **Ocultar do site**. Para recuperar, filtre os rascunhos, abra a proposta, marque a confirmação de revisão e use **Republicar no site**. A lista pública ocupa os espaços automaticamente; os identificadores e links continuam estáveis.
+
+Em **Equipe**, escolha uma das oito funções. Os cargos existentes fora dessa lista continuam preservados até uma alteração autorizada. As coordenações geral e vice-geral usam laranja e negrito. As demais frentes têm cores próprias e símbolos em SVG. Após alterar, clique em **Salvar equipe online**.
+
+A equipe aparece em duas fileiras de quatro cartões em telas largas, duas colunas em telas intermediárias e uma coluna no celular. A ordem segue a configuração do painel.
+
+
+Aprovação escolar, calendário público e acessos
+
+O editor de cada proposta permite registrar **Aprovada pela gestão da escola**. Isso atualiza a indicação no catálogo e inclui a proposta publicada na Transparência, sem alterar sua etapa de execução. Novas propostas devem primeiro ser salvas em rascunho. O FT+ apresenta novamente seus cinco compromissos e o modelo de planejamento.
+
+Aplique `20261009_public_calendar.sql` e `20261009_site_traffic.sql`. Os eventos existentes continuam privados. Para publicar um evento, preencha a descrição pública, marque Publicar e confirme a revisão. Anotações internas e responsáveis não fazem parte dos campos públicos. O calendário de 2027 e 2028 fica em `calendario.html`, no menu Mais. A troca de mês usa uma transição suave que respeita a preferência por menos animações.
+
+Publique a função `record-visit`, utilizando os segredos de servidor já configurados. Ela valida origem, formato, limites de requisições e identificadores aleatórios; não precisa de CAPTCHA nem de login para visitas. Os registros e totais não têm leitura anônima. A permanência é limitada ao tempo decorrido no servidor e contabilizada de maneira idempotente. Uma visita acompanha a navegação da mesma aba e se renova após 30 minutos sem atualizações. Prévias locais não contam.
+
+Em Segurança, a gestão pode consultar visitas totais, visitas de hoje, navegadores estimados nos últimos sete dias, tempo médio visível e uma tabela por dia. O histórico começa na ativação; ele não reconstrói acessos anteriores. Bloqueadores, não rastreamento, encerramentos abruptos e falhas de rede podem reduzir a contagem. Ative `traffic-retention.sql` para apagar registros técnicos de visitas após sete dias, preservando os totais diários sem identificadores.
+
+A página Nossa História apresenta a narrativa completa enviada pela equipe, com navegação entre os capítulos. O resumo da página inicial continua direcionando à história completa.
