@@ -302,3 +302,13 @@ O tema escuro usa superfícies azul-marinho, texto claro, bordas discretas e lar
 A mudança de cores dura 220 ms e respeita a preferência por movimento reduzido. Execute `npm run test:theme` para verificar a aplicação inicial, persistência, modo automático, contraste dos tokens, inclusão nas 17 páginas e integração visual do Turnstile. Essa verificação também faz parte da publicação pelo GitHub Pages.
 
 A geração do site inclui uma versão derivada do conteúdo nos endereços de estilos, scripts e importações de módulos. Assim, cada atualização carrega os arquivos correspondentes, sem depender do cache anterior. A preferência de aparência não é apagada. A etapa de geração também verifica os destinos e a consistência dessas referências.
+
+Radar FT+
+
+Aplique `supabase/migrations/20261010_radar.sql`. A migração acrescenta percentual e justificativa ao acompanhamento existente, preservando os registros e as permissões. Nenhum percentual de exemplo é inserido.
+
+Na Central pública, use a aba **Radar FT+**, também disponível na visão geral. Ela apresenta inicialmente três propostas, ordenadas pelo maior percentual registrado, com desempate pelo número. **Mostrar mais propostas** revela todas as publicadas, incluindo futuras propostas. Propostas ocultas permanecem fora do Radar. Sem medição, a barra fica vazia e o estado é explicado; aprovação e planejamento não significam avanço percentual.
+
+No painel, abra **Propostas**, selecione uma proposta e escolha **Andamento**. Preencha **Conclusão da proposta (%)** e explique as entregas confirmadas. Salvar andamento persiste a informação e a justificativa pública. Deixar o percentual em branco retira a medição anterior, preservando a etapa escolhida. **Marcar proposta como realizada** registra conclusão de 100%, pois é uma confirmação manual da equipe. Registros anteriores de realização também aparecem como concluídos. Nenhuma etapa é modificada automaticamente por data ou etiqueta.
+
+Execute `npm run test:radar` para conferir ranking, empates, ausência de medição e validação. Os testes de segurança também verificam os novos campos, as permissões administrativas e a invisibilidade de propostas em rascunho.

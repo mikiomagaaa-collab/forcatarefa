@@ -9,7 +9,8 @@
     "test:security": "node tests/security-check.mjs && node tests/election-check.mjs",
     "test:types": "tsc -p tests/tsconfig.json",
     "test:functions": "node tests/functions-check.mjs",
-    "test:theme": "node tests/theme-check.mjs && node tests/theme-captcha-check.mjs"
+    "test:theme": "node tests/theme-check.mjs && node tests/theme-captcha-check.mjs",
+    "test:radar": "node tests/radar-check.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.14",
