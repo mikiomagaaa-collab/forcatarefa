@@ -198,3 +198,13 @@ Teste pelo menos: WhatsApp, YouTube, Spotify, Google Maps, Chrome, Câmera, um a
 - [ ] Modo de uma mão, temas e fundo da galeria no Keyboard Studio.
 - [ ] Na tela externa (app aberto na tela de fora), o teclado fica compacto. ⚠️
 - [ ] Latência: digitar rápido com dois polegares não perde letras.
+
+## 14. Liquid Island
+
+- [ ] Configurações > Liquid Island > Ativar (com a acessibilidade ligada): "Ver demonstração" mostra carregando, uma notificação e o modo silencioso. ⚠️
+- [ ] A cápsula fica centralizada no furo da câmera; se não ficar, ajuste "Altura".
+- [ ] Com música tocando: capa à esquerda e ondinha à direita; tocar expande com progresso e controles; deslizar para cima recolhe.
+- [ ] Chamada em andamento: telefone verde e contador; tocar abre o app da chamada.
+- [ ] Ligar o carregador mostra "Carregando" por alguns segundos; mudar para vibrar mostra "Silencioso".
+- [ ] Uma notificação nova aparece na ilha; com o aparelho bloqueado, só o nome do app.
+- [ ] A barra de status continua respondendo a toques fora da ilha.

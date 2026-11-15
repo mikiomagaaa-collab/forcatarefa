@@ -545,6 +545,10 @@ class LauncherViewModel @Inject constructor(
 
     fun openSystemQuickSettings(): Boolean = systemBridge.openQuickSettings()
 
+    fun powerDialog() {
+        if (!systemBridge.powerDialog()) message("Ative o serviço de acessibilidade do Cristal para abrir o menu de desligar.")
+    }
+
     /** Deixa o usuário chegar à tela externa original por 20 segundos, sem o Cristal reassumir. */
     fun showStockCoverHome() {
         systemBridge.pauseTakeover(20_000)

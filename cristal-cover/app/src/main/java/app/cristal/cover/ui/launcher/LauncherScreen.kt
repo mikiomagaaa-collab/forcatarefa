@@ -628,6 +628,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                     onRequestNotificationAccess = {
                         openExternalIntent(Intent(SystemSettings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                     },
+                    onPower = viewModel::powerDialog,
                 ),
             )
 

@@ -1,5 +1,6 @@
 package app.cristal.cover.ui.launcher
 
+import androidx.compose.material.icons.rounded.PowerSettingsNew
 import android.text.format.DateFormat
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -169,6 +170,7 @@ class ControlCenterActions(
     val onDismissNotification: (NotificationItem) -> Unit,
     val onClearAll: () -> Unit,
     val onRequestNotificationAccess: () -> Unit,
+    val onPower: () -> Unit = {},
 )
 
 /**
@@ -251,32 +253,20 @@ fun ControlCenter(
                         selectedId = null
                     }
                 } else {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            formatTime(now, is24h),
-                            style = ClockTextStyle.copy(shadow = WallpaperTextShadow),
-                            fontSize = 30.sp,
-                            color = Color.White,
-                            maxLines = 1,
-                        )
-                        Text(
-                            formatDate(now),
-                            color = Color.White.copy(alpha = 0.85f),
-                            fontSize = 12.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    GlassIconButton(Icons.Rounded.Edit, "Editar a central", size = 40.dp) {
+                    // Como no iOS 26: "+" para editar à esquerda, painel do sistema e desligar à direita.
+                    GlassIconButton(Icons.Rounded.Add, "Editar a central", size = 40.dp) {
                         draft = layout.cleaned()
                         selectedId = null
                         editing = true
                         if (pager.currentPage >= draft.pages.size) scope.launch { pager.scrollToPage(0) }
                     }
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.weight(1f))
                     GlassIconButton(Icons.Rounded.Tune, "Painel do sistema", size = 40.dp, onClick = actions.onSystemPanel)
+                    Spacer(Modifier.width(8.dp))
+                    GlassIconButton(Icons.Rounded.PowerSettingsNew, "Desligar ou reiniciar", size = 40.dp, onClick = actions.onPower)
                 }
             }
+            if (!editing) StatusLine(quick, widgetData)
 
             HorizontalPager(
                 state = pager,
@@ -409,6 +399,40 @@ fun ControlCenter(
         }
     }
 }
+
+/** Linha de status do topo: conexão à esquerda, bateria à direita (como na Central do iPhone). */
+@Composable
+private fun StatusLine(quick: QuickState, data: WidgetData) {
+    val connection = when {
+        quick.airplaneOn -> "Modo avião"
+        quick.wifiOn == true && quick.mobileDataOn == true -> "Wi-Fi · Dados"
+        quick.wifiOn == true -> "Wi-Fi"
+        quick.mobileDataOn == true -> "Dados móveis"
+        else -> "Sem conexão"
+    }
+    val style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold, shadow = WallpaperTextShadow)
+    Row(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            if (quick.airplaneOn) Icons.Rounded.AirplanemodeActive else if (quick.wifiOn == true) Icons.Rounded.Wifi else Icons.Rounded.SignalCellularAlt,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(connection, color = Color.White, style = style, maxLines = 1, modifier = Modifier.weight(1f))
+        Text("${data.battery.percent}%", color = Color.White, style = style)
+        Spacer(Modifier.width(6.dp))
+        Icon(
+            if (data.battery.charging) Icons.Rounded.BatteryChargingFull else Icons.Rounded.BatteryStd,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
+
+/** Vidro escuro dos módulos (o material "regular" da Central do iPhone). */
+private val ModuleTint = Color(0f, 0f, 0f, 0.24f)
 
 // --- Grade de módulos ---------------------------------------------------------------------------
 
@@ -593,19 +617,20 @@ private fun ToggleModule(
         GlassSurface(
             modifier = Modifier.fillMaxSize(),
             cornerRadius = cell / 2,
-            tint = if (active) accent.copy(alpha = 0.88f) else Color.Unspecified,
+            tint = if (active) ActiveFill else ModuleTint,
             elevation = 6.dp,
             onClick = onClick,
             onLongClick = onLongClick,
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = kind.label, tint = if (active) onAccent(accent) else LocalGlassSpec.current.contentColor, modifier = Modifier.size(cell * 0.36f))
+            Icon(icon, contentDescription = kind.label, tint = if (active) glyphOn(accent) else Color.White, modifier = Modifier.size(cell * 0.36f))
         }
         return
     }
     GlassSurface(
         modifier = Modifier.fillMaxSize(),
         cornerRadius = cell / 2,
+        tint = ModuleTint,
         elevation = 6.dp,
         onClick = onClick,
         onLongClick = onLongClick,
@@ -616,10 +641,10 @@ private fun ToggleModule(
                 Modifier
                     .size(cell * 0.56f)
                     .clip(CircleShape)
-                    .background(if (active) accent else LocalGlassSpec.current.contentColor.copy(alpha = 0.14f)),
+                    .background(if (active) ActiveFill else Color.White.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, contentDescription = null, tint = if (active) onAccent(accent) else LocalGlassSpec.current.contentColor, modifier = Modifier.size(cell * 0.3f))
+                Icon(icon, contentDescription = null, tint = if (active) glyphOn(accent) else Color.White, modifier = Modifier.size(cell * 0.3f))
             }
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
@@ -636,6 +661,7 @@ private fun ConnectivityModule(size: ModuleSize, cell: Dp, quick: QuickState, en
     GlassSurface(
         modifier = Modifier.fillMaxSize(),
         cornerRadius = if (size == ModuleSize.LARGE) cell * 0.42f else cell / 2,
+        tint = ModuleTint,
         elevation = 8.dp,
         reactToTouch = false,
     ) {
@@ -647,7 +673,7 @@ private fun ConnectivityModule(size: ModuleSize, cell: Dp, quick: QuickState, en
             GlassSurface(
                 modifier = Modifier.size(button),
                 cornerRadius = button / 2,
-                tint = if (active) accent.copy(alpha = 0.9f) else Color.Unspecified,
+                tint = if (active) ActiveFill else Color(1f, 1f, 1f, 0.10f),
                 elevation = 3.dp,
                 onClick = if (enabled) ({ actions.onControl(kind) }) else null,
                 onLongClick = if (enabled) ({ actions.onControlSettings(kind) }) else null,
@@ -656,7 +682,7 @@ private fun ConnectivityModule(size: ModuleSize, cell: Dp, quick: QuickState, en
                 Icon(
                     iconOf(kind, active),
                     contentDescription = kind.label,
-                    tint = if (active) onAccent(accent) else LocalGlassSpec.current.contentColor,
+                    tint = if (active) glyphOn(accent) else Color.White,
                     modifier = Modifier.size(button * 0.46f),
                 )
             }
@@ -713,6 +739,7 @@ private fun SliderModule(
     GlassSurface(
         modifier = Modifier.fillMaxSize(),
         cornerRadius = 30.dp,
+        tint = ModuleTint,
         elevation = 6.dp,
         reactToTouch = false,
         clipContent = true,
@@ -741,7 +768,7 @@ private fun SliderModule(
                 .drawBehind {
                     val fill = size.height * value.coerceIn(0f, 1f)
                     drawRoundRect(
-                        color = spec.contentColor.copy(alpha = 0.85f),
+                        color = Color(0xFFF8F6F0),
                         topLeft = Offset(0f, size.height - fill),
                         size = Size(size.width, fill),
                         cornerRadius = CornerRadius(0f),
@@ -749,7 +776,12 @@ private fun SliderModule(
                 },
             contentAlignment = Alignment.BottomCenter,
         ) {
-            val iconTint = if (value > 0.16f) Color(0xFF16181D) else spec.contentColor
+            // Brilho com sol amarelo, volume com alto-falante azul, como na Central do iPhone.
+            val iconTint = when {
+                value <= 0.16f -> Color.White
+                label == "Brilho" -> Color(0xFFF5B800)
+                else -> Color(0xFF0A84FF)
+            }
             Icon(
                 icon,
                 contentDescription = label,
@@ -1139,6 +1171,13 @@ private fun accentOf(kind: ControlKind): Color = when (kind) {
     ControlKind.DARK_MODE -> Color(0xFFB8A6FF)
     else -> Color.White
 }
+
+/** Preenchimento do controle ligado: branco, como no iOS 26. */
+private val ActiveFill = Color(1f, 1f, 1f, 0.94f)
+
+/** Cor do ícone sobre o branco: a cor do controle (as muito claras viram cinza escuro). */
+private fun glyphOn(accent: Color): Color =
+    if (accent == Color.White || accent == Color(0xFFB8A6FF) || accent == Color(0xFFFFD60A)) Color(0xFF1C1C1E) else accent
 
 private fun onAccent(accent: Color): Color =
     if (accent == Color.White || accent == Color(0xFFFFD60A) || accent == Color(0xFFB8A6FF)) Color(0xFF16181D) else Color.White

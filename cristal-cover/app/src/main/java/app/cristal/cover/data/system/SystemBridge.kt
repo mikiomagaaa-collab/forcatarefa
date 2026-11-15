@@ -60,4 +60,5 @@ class SystemBridge @Inject constructor() {
     fun openRecents(): Boolean = global(AccessibilityService.GLOBAL_ACTION_RECENTS)
     fun goHome(): Boolean = global(AccessibilityService.GLOBAL_ACTION_HOME)
     fun takeScreenshot(): Boolean = global(AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT)
+    fun powerDialog(): Boolean = global(AccessibilityService.GLOBAL_ACTION_POWER_DIALOG)
 }

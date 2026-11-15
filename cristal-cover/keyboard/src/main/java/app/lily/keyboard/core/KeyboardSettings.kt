@@ -107,7 +107,13 @@ object Themes {
         accentColor = 0xFF52FFB0, glass = 0.9f, cornerRadius = 12f,
     )
 
-    val builtIn: List<KeyboardTheme> = listOf(liquid, liquidLight, lavanda, violeta, prata, aurora, oneUi, oneUiDark, minimal, amoled, classic)
+    /** Segue o modo claro/escuro do sistema (vira [liquid] ou [liquidLight]). */
+    val auto = liquid.copy(id = "auto", name = "Automático")
+
+    fun resolve(theme: KeyboardTheme, systemDark: Boolean): KeyboardTheme =
+        if (theme.id == auto.id) (if (systemDark) liquid else liquidLight) else theme
+
+    val builtIn: List<KeyboardTheme> = listOf(auto, liquid, liquidLight, lavanda, violeta, prata, aurora, oneUi, oneUiDark, minimal, amoled, classic)
 }
 
 @Serializable
@@ -150,7 +156,7 @@ enum class ToolbarItem(val label: String) {
 @Serializable
 data class KeyboardSettings(
     // Aparência
-    val themeId: String = Themes.liquid.id,
+    val themeId: String = Themes.auto.id,
     val customThemes: List<KeyboardTheme> = emptyList(),
     val fontScale: Float = 1f,
     val animations: Float = 1f,

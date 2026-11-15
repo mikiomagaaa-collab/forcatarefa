@@ -1,5 +1,10 @@
 package app.lily.keyboard.ui
 
+import app.lily.keyboard.R
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -98,6 +103,13 @@ private class Touch(val id: PointerId, var key: PlacedKey?, val down: Offset, va
 private class AltPopup(val key: PlacedKey, val options: List<String>, val cells: List<Rect>)
 
 fun Long.asColor(): Color = Color(this.toInt())
+
+/** Inter, a fonte das teclas (a mais próxima da San Francisco que pode ser distribuída). */
+val KeyFont = FontFamily(
+    Font(R.font.kb_inter_regular, FontWeight.Normal),
+    Font(R.font.kb_inter_medium, FontWeight.Medium),
+    Font(R.font.kb_inter_semibold, FontWeight.SemiBold),
+)
 
 /**
  * As teclas: desenhadas todas num só Canvas (rápido) e com um único tratador de toques, que cuida
@@ -361,11 +373,11 @@ fun KeysPad(
             }
         }
 
-        val styleKey = TextStyle(color = theme.textColor.asColor(), fontSize = (22 * settings.fontScale).sp, fontWeight = FontWeight.Normal)
-        val styleFn = TextStyle(color = theme.textColor.asColor(), fontSize = (14 * settings.fontScale).sp, fontWeight = FontWeight.Medium)
-        val styleHint = TextStyle(color = theme.symbolColor.asColor(), fontSize = (10 * settings.fontScale).sp)
-        val styleSpace = TextStyle(color = theme.symbolColor.asColor(), fontSize = (12 * settings.fontScale).sp)
-        val stylePreview = TextStyle(color = theme.textColor.asColor(), fontSize = (30 * settings.fontScale).sp, fontWeight = FontWeight.Medium)
+        val styleKey = TextStyle(fontFamily = KeyFont, color = theme.textColor.asColor(), fontSize = (23 * settings.fontScale).sp, fontWeight = FontWeight.Normal)
+        val styleFn = TextStyle(fontFamily = KeyFont, color = theme.textColor.asColor(), fontSize = (15 * settings.fontScale).sp, fontWeight = FontWeight.Medium)
+        val styleHint = TextStyle(fontFamily = KeyFont, color = theme.symbolColor.asColor(), fontSize = (10 * settings.fontScale).sp, fontWeight = FontWeight.Medium)
+        val styleSpace = TextStyle(fontFamily = KeyFont, color = theme.symbolColor.asColor(), fontSize = (13 * settings.fontScale).sp, fontWeight = FontWeight.Medium)
+        val stylePreview = TextStyle(fontFamily = KeyFont, color = theme.textColor.asColor(), fontSize = (32 * settings.fontScale).sp, fontWeight = FontWeight.Normal)
 
         androidx.compose.foundation.layout.Box(
             Modifier
@@ -406,12 +418,13 @@ fun KeysPad(
                         }
                         // Prévia da tecla tocada.
                         preview?.let { p ->
-                            val w = p.rect.width * 1.25f
-                            val h = p.rect.height * 1.3f
-                            val r = Rect(p.rect.center.x - w / 2, p.rect.top - h * 0.78f, p.rect.center.x + w / 2, p.rect.top - h * 0.78f + h)
-                            drawBubble(r, theme, radius)
+                            val w = p.rect.width * 1.32f
+                            val h = p.rect.height * 1.12f
+                            val left = (p.rect.center.x - w / 2).coerceIn(0f, size.width - w)
+                            val r = Rect(left, p.rect.top - h - 4.dp.toPx(), left + w, p.rect.top - 4.dp.toPx())
+                            drawBalloon(r, p.rect, theme, radius)
                             val t = measure(labelOf(p.key), stylePreview)
-                            drawText(t, topLeft = Offset(r.center.x - t.size.width / 2f, r.top + (r.height * 0.62f - t.size.height) / 2f + 4f))
+                            drawText(t, topLeft = Offset(r.center.x - t.size.width / 2f, r.center.y - t.size.height / 2f))
                         }
                         popup?.let { p ->
                             val bounds = Rect(p.cells.first().left, p.cells.first().top, p.cells.last().right, p.cells.last().bottom)
@@ -446,6 +459,25 @@ private fun onAccent(theme: KeyboardTheme): Color {
     val c = theme.accentColor.asColor()
     val lum = 0.2126f * c.red + 0.7152f * c.green + 0.0722f * c.blue
     return if (lum > 0.6f) Color(0xFF15131F) else Color.White
+}
+
+/**
+ * Prévia em balão, como no teclado do iPhone: a parte de cima (mais larga, com a letra) se liga à
+ * tecla por um "pescoço", formando uma peça só.
+ */
+private fun DrawScope.drawBalloon(top: Rect, key: Rect, theme: KeyboardTheme, radius: Float) {
+    val base = if (theme.dark) Color(0xFF3A3846) else Color.White
+    val head = Path().apply { addRoundRect(RoundRect(top, CornerRadius(radius * 1.4f))) }
+    val neck = Path().apply {
+        addRoundRect(RoundRect(Rect(key.left, top.center.y, key.right, key.bottom), CornerRadius(radius)))
+    }
+    val balloon = Path().apply { op(head, neck, PathOperation.Union) }
+    translate(0f, 2.dp.toPx()) { drawPath(balloon, Color.Black.copy(alpha = 0.22f)) }
+    drawPath(balloon, base)
+    drawPath(
+        balloon,
+        Brush.verticalGradient(listOf(Color.White.copy(alpha = if (theme.dark) 0.10f else 0f), Color.Transparent), startY = top.top, endY = key.bottom),
+    )
 }
 
 private fun DrawScope.drawBubble(r: Rect, theme: KeyboardTheme, radius: Float) {
@@ -489,6 +521,9 @@ private fun DrawScope.drawKey(
         val glass = theme.glass.coerceIn(0f, 1f)
         if (glass > 0f && fill.alpha > 0.01f) {
             drawRoundRect(Color.Black.copy(alpha = 0.16f * glass), topLeft = r.topLeft + Offset(0f, 1.5f), size = r.size, cornerRadius = corner)
+        }
+        if (fill.alpha > 0.05f) {
+            drawRoundRect(Color.Black.copy(alpha = if (theme.dark) 0.30f else 0.18f), topLeft = r.topLeft + Offset(0f, 1.dp.toPx()), size = r.size, cornerRadius = corner)
         }
         if (fill.alpha > 0.005f) drawRoundRect(fill, topLeft = r.topLeft, size = r.size, cornerRadius = corner)
         if (glass > 0f && fill.alpha > 0.01f) {

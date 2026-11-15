@@ -1,5 +1,6 @@
 package app.lily.keyboard.ui
 
+import app.lily.keyboard.core.Themes
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -115,7 +116,7 @@ fun KeyboardRoot(
     initialPanel: Panel = Panel.KEYS,
 ) {
     val ui by controller.state.collectAsState()
-    val theme = themeOverride ?: settings.theme
+    val theme = Themes.resolve(themeOverride ?: settings.theme, androidx.compose.foundation.isSystemInDarkTheme())
     val scope = rememberCoroutineScope()
     val config = LocalConfiguration.current
     // Tela externa do Razr (ou janela pequena): teclas mais baixas e sem fileira de números.
@@ -440,6 +441,7 @@ private fun SuggestionStrip(
                         Text(
                             text,
                             color = if (primary && autoCorrection != null) theme.accentColor.asColor().let { if (theme.dark) it else ink } else ink,
+                            fontFamily = KeyFont,
                             fontSize = 16.sp,
                             fontWeight = if (primary) FontWeight.SemiBold else FontWeight.Normal,
                             maxLines = 1,

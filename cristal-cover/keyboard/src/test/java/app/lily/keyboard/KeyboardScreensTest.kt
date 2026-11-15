@@ -149,4 +149,24 @@ class KeyboardScreensTest {
         screen(KeyboardSettings(themeId = Themes.amoled.id, oneHanded = true))
         shot("k07-uma-mao")
     }
+
+    @Test
+    fun `previa em balao ao segurar uma tecla`() {
+        screen(KeyboardSettings())
+        val node = rule.onNodeWithContentDescription("Teclado")
+        val b = node.fetchSemanticsNode().boundsInRoot
+        val unit = b.width / 10f
+        val rowH = (b.height - 8f) / 4f
+        // Segura o "g" (segunda fileira) sem soltar e fotografa o balão.
+        node.performTouchInput { down(Offset((0.5f + 4 + 0.5f) * unit, rowH * 1.5f)) }
+        rule.mainClock.advanceTimeBy(80)
+        shot("k08-balao")
+        node.performTouchInput { up() }
+    }
+
+    @Test
+    fun `tema automatico escuro`() {
+        screen(KeyboardSettings(themeId = Themes.liquid.id))
+        shot("k09-liquid-escuro")
+    }
 }
