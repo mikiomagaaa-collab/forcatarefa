@@ -15,6 +15,11 @@ import app.cristal.cover.data.prefs.WallpaperImages
 import app.cristal.cover.data.prefs.WallpaperKind
 import app.cristal.cover.data.prefs.WallpaperSlot
 import app.cristal.cover.data.system.QuickSettingsRepository
+import app.cristal.cover.data.system.QuickState
+import app.cristal.cover.data.weather.WeatherRepository
+import app.cristal.cover.data.weather.WeatherState
+import app.cristal.cover.data.calendar.AgendaState
+import app.cristal.cover.data.calendar.CalendarRepository
 import app.cristal.cover.data.wallpaper.WallpaperRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -38,6 +43,8 @@ data class LockUiState(
     /** Recorte do objeto principal (efeito de profundidade), quando houver. */
     val subject: ImageBitmap? = null,
     val subjects: WallpaperImages = emptyMap(),
+    val weather: WeatherState = WeatherState(),
+    val agenda: AgendaState = AgendaState(),
 ) {
     /** Este estado "visto" da tela de bloqueio interna ou externa, com o papel de parede dela. */
     fun forDisplay(onCover: Boolean): LockUiState {
@@ -48,6 +55,14 @@ data class LockUiState(
         return copy(settings = view, wallpaper = image, subject = if (depth && image != null) subjects[view.wallpaperSlot] else null)
     }
 }
+
+private class LockExtras(
+    val quick: QuickState,
+    val images: WallpaperImages,
+    val subjects: WallpaperImages,
+    val weather: WeatherState,
+    val agenda: AgendaState,
+)
 
 /**
  * Estado e ações da tela de bloqueio, compartilhados entre a activity e o modo de sobreposição
@@ -61,6 +76,8 @@ class LockPresenter @Inject constructor(
     private val quickSettingsRepository: QuickSettingsRepository,
     batteryRepository: BatteryRepository,
     wallpaperRepository: WallpaperRepository,
+    weatherRepository: WeatherRepository,
+    calendarRepository: CalendarRepository,
     @AppScope scope: CoroutineScope,
 ) {
     val state: StateFlow<LockUiState> = combine(
@@ -68,9 +85,13 @@ class LockPresenter @Inject constructor(
         batteryRepository.state,
         mediaRepository.state,
         notificationRepository.items,
-        combine(quickSettingsRepository.state, wallpaperRepository.images, wallpaperRepository.subjects) { quick, images, subjects ->
-            Triple(quick, images, subjects)
-        },
+        combine(
+            quickSettingsRepository.state,
+            wallpaperRepository.images,
+            wallpaperRepository.subjects,
+            weatherRepository.state,
+            calendarRepository.state,
+        ) { quick, images, subjects, weather, agenda -> LockExtras(quick, images, subjects, weather, agenda) },
     ) { settings, battery, media, notifications, extra ->
         LockUiState(
             settings = settings,
@@ -81,10 +102,12 @@ class LockPresenter @Inject constructor(
             } else {
                 emptyList()
             },
-            torchAvailable = extra.first.torchAvailable,
-            torchOn = extra.first.torchOn,
-            images = extra.second,
-            subjects = extra.third,
+            torchAvailable = extra.quick.torchAvailable,
+            torchOn = extra.quick.torchOn,
+            images = extra.images,
+            subjects = extra.subjects,
+            weather = extra.weather,
+            agenda = extra.agenda,
         )
     }.stateIn(scope, SharingStarted.WhileSubscribed(5_000), LockUiState(settings = settingsRepository.settings.value))
 

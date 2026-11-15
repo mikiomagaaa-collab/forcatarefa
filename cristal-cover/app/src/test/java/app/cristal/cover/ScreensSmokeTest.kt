@@ -1,5 +1,8 @@
 package app.cristal.cover
 
+import org.junit.Assert.assertTrue
+import app.cristal.cover.data.prefs.LockPlacement
+import app.cristal.cover.data.prefs.LockWidget
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -626,5 +629,45 @@ class ScreensSmokeTest {
             }
         }
         shot("21-cover-clock-empilhado")
+    }
+
+    @Test
+    @Config(sdk = [36], qualifiers = "w411dp-h1004dp-420dpi")
+    fun `bloqueio com widgets acima e musica embaixo na pre-visualizacao`() {
+        val settings = Settings().copy(
+            lockClockCard = false,
+            lockClockScale = 1.3f,
+            lockWidgets = listOf(LockWidget.BATTERY, LockWidget.WEATHER, LockWidget.ALARM),
+            lockWidgetsPosition = LockPlacement.ABOVE_CLOCK,
+            lockMediaPosition = LockPlacement.BOTTOM,
+        )
+        val state = LockUiState(
+            settings = settings, battery = BatteryState(percent = 76, charging = true), media = widgetData.media,
+            notifications = notifications.take(1), weather = widgetData.weather,
+        )
+        var saved = -1f
+        rule.setContent {
+            CristalTheme(settings = settings) {
+                LockScreen(
+                    state = state, secure = false, resetKey = 0,
+                    actions = LockActions({}, {}, {}, {}, {}, {}, {}, {}),
+                    onClockScale = { saved = it },
+                )
+            }
+        }
+        shot("22-bloqueio-widgets-e-alca")
+        rule.onNodeWithText("76%").assertExists()
+        rule.onNodeWithText("Arraste para mudar o tamanho").assertExists()
+        rule.onAllNodesWithText("Garota de Ipanema").onFirst().assertExists()
+        // Arrastar a alça para cima diminui o relógio e salva o novo tamanho.
+        rule.onNodeWithText("Arraste para mudar o tamanho").performTouchInput {
+            down(Offset(centerX, top - 20f))
+            moveBy(Offset(0f, -60f))
+            moveBy(Offset(0f, -60f))
+            up()
+        }
+        rule.waitForIdle()
+        assertTrue("tamanho salvo: $saved", saved in 0.6f..1.29f)
+        shot("22b-bloqueio-relogio-menor")
     }
 }

@@ -160,3 +160,13 @@ enum class ClockFont(val label: String, val condensed: Boolean = false, val maxS
 
 /** Forma do relógio: automática (escolhe pelo espaço livre), numa linha ou com as horas sobre os minutos. */
 enum class ClockLayout(val label: String) { AUTO("Automático"), LINE("Uma linha"), STACKED("Empilhado") }
+
+/** Onde ficam os widgets (e o player de música) na tela de bloqueio interna. */
+enum class LockPlacement(val label: String) {
+    ABOVE_CLOCK("Acima do relógio"),
+    BELOW_CLOCK("Abaixo do relógio"),
+    BOTTOM("Embaixo"),
+}
+
+/** Widgets pequenos da tela de bloqueio (como os do iPhone). */
+enum class LockWidget(val label: String) { BATTERY("Bateria"), WEATHER("Clima"), AGENDA("Agenda"), ALARM("Alarme") }

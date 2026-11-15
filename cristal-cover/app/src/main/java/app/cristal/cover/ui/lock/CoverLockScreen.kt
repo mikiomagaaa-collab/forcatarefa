@@ -62,6 +62,8 @@ import app.cristal.cover.ui.components.subjectTopFraction
 import app.cristal.cover.ui.components.wallpaperImageRect
 import app.cristal.cover.ui.theme.clockStyle
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -89,7 +91,13 @@ import kotlinx.coroutines.launch
  * relógio e notificações. Sem widgets, atalhos ou controles; sem notificações, sobra só o relógio.
  */
 @Composable
-fun CoverLockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: LockActions) {
+fun CoverLockScreen(
+    state: LockUiState,
+    secure: Boolean,
+    resetKey: Int,
+    actions: LockActions,
+    onClockScale: ((Float) -> Unit)? = null,
+) {
     val settings = state.settings
     val backdrop = rememberGlassBackdrop()
     val scope = rememberCoroutineScope()
@@ -156,7 +164,9 @@ fun CoverLockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions:
         val density = LocalDensity.current
         // Formato adaptativo: o relógio ocupa o espaço que sobra (e, com o efeito de profundidade e o
         // relógio em cima, cresce até passar por trás do objeto da foto).
-        val clockHeight: Dp? = if (!settings.coverClockAdaptive) {
+        var liveScale by remember(settings.coverClockScale) { mutableFloatStateOf(settings.coverClockScale) }
+        // Altura do relógio com tamanho 100% (sem o ajuste do usuário).
+        val baseClockHeight: Dp? = if (!settings.coverClockAdaptive) {
             null
         } else {
             val top = insets.calculateTopPadding() + 14.dp
@@ -175,8 +185,9 @@ fun CoverLockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions:
                 val room = with(density) { (rect.top + frac * rect.height).toDp() } - top
                 if (room > 48.dp) h = room * 1.45f
             }
-            (h * settings.coverClockScale.coerceIn(0.6f, 1.4f)).coerceIn(64.dp, free)
+            h.coerceIn(64.dp, free)
         }
+        val clockHeight: Dp? = baseClockHeight?.let { (it * liveScale.coerceIn(0.6f, 1.8f)).coerceAtLeast(56.dp) }
         val column: @Composable (showClock: Boolean, showRest: Boolean) -> Unit = { showClock, showRest ->
             CoverClockColumn(
                 state = state,
@@ -190,6 +201,16 @@ fun CoverLockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions:
                 showClock = showClock,
                 showRest = showRest,
                 clockHeight = clockHeight,
+                fixedScale = liveScale,
+                resize = if (onClockScale != null && showRest) {
+                    ResizeControl(
+                        baseHeight = baseClockHeight ?: 120.dp,
+                        onDrag = { d -> liveScale = (liveScale + d).coerceIn(0.6f, 1.8f) },
+                        onEnd = { onClockScale(liveScale) },
+                    )
+                } else {
+                    null
+                },
                 expandedKey = expandedKey,
                 onToggle = { key -> expandedKey = if (expandedKey == key) null else key },
                 onOpen = actions.onOpenNotification,
@@ -229,6 +250,8 @@ private fun CoverClockColumn(
     showClock: Boolean,
     showRest: Boolean,
     clockHeight: Dp?,
+    fixedScale: Float,
+    resize: ResizeControl?,
     expandedKey: String?,
     onToggle: (String) -> Unit,
     onOpen: (NotificationItem) -> Unit,
@@ -253,15 +276,18 @@ private fun CoverClockColumn(
         val time = formatTime(now, is24h)
         val glassInk = Brush.verticalGradient(listOf(ink, ink.copy(alpha = 0.62f)))
         if (clockHeight != null) {
-            AdaptiveClock(
-                time = time,
-                font = settings.coverClockFont,
-                layout = settings.coverClockLayout,
-                adaptive = true,
-                brush = glassInk,
-                modifier = Modifier.fillMaxWidth().height(clockHeight).then(clockAlpha),
-                verticalAlignment = if (settings.coverClockPosition == CoverClockPosition.TOP) Alignment.Top else Alignment.CenterVertically,
-            )
+            Box(Modifier.fillMaxWidth().height(clockHeight)) {
+                AdaptiveClock(
+                    time = time,
+                    font = settings.coverClockFont,
+                    layout = settings.coverClockLayout,
+                    adaptive = true,
+                    brush = glassInk,
+                    modifier = Modifier.fillMaxSize().then(clockAlpha),
+                    verticalAlignment = if (settings.coverClockPosition == CoverClockPosition.TOP) Alignment.Top else Alignment.CenterVertically,
+                )
+                if (resize != null) ClockResizeHandle(resize.baseHeight, resize.onDrag, resize.onEnd)
+            }
             Text(
                 formatDate(now).replaceFirstChar { it.titlecase(locale) },
                 color = ink.copy(alpha = 0.9f),
@@ -274,7 +300,7 @@ private fun CoverClockColumn(
             Text(
                 time,
                 style = settings.coverClockFont.clockStyle().copy(brush = glassInk, shadow = WallpaperTextShadow),
-                fontSize = (104f * settings.coverClockScale.coerceIn(0.6f, 1.4f)).sp,
+                fontSize = (104f * fixedScale.coerceIn(0.6f, 1.8f)).sp,
                 maxLines = 1,
                 softWrap = false,
                 modifier = clockAlpha,
@@ -317,6 +343,9 @@ private fun CoverClockColumn(
         if (position != CoverClockPosition.BOTTOM) Spacer(Modifier.weight(1f))
     }
 }
+
+/** Alça de tamanho do relógio (só na pré-visualização). */
+private class ResizeControl(val baseHeight: Dp, val onDrag: (Float) -> Unit, val onEnd: () -> Unit)
 
 /** Notificação compacta: uma linha; ao tocar, expande e mostra o botão de abrir. */
 @Composable

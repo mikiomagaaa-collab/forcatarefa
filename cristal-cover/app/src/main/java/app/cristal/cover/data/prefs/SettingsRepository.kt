@@ -82,6 +82,10 @@ object PrefKeys {
     val LOCK_CLOCK_LAYOUT = stringPreferencesKey("lock_clock_layout")
     val LOCK_CLOCK_ADAPTIVE = booleanPreferencesKey("lock_clock_adaptive")
     val LOCK_CLOCK_CARD = booleanPreferencesKey("lock_clock_card")
+    val LOCK_CLOCK_SCALE = floatPreferencesKey("lock_clock_scale")
+    val LOCK_MEDIA_POSITION = stringPreferencesKey("lock_media_position")
+    val LOCK_WIDGETS = stringPreferencesKey("lock_widgets")
+    val LOCK_WIDGETS_POSITION = stringPreferencesKey("lock_widgets_position")
     val COVER_CLOCK_SCALE = floatPreferencesKey("cover_clock_scale")
     val COVER_CLOCK_POSITION = stringPreferencesKey("cover_clock_position")
     val COVER_LOCK_MAX_NOTIFICATIONS = intPreferencesKey("cover_lock_max_notifications")
@@ -162,7 +166,12 @@ internal fun Preferences.toSettings(): Settings {
         lockClockLayout = enumOr(PrefKeys.LOCK_CLOCK_LAYOUT, d.lockClockLayout),
         lockClockAdaptive = this[PrefKeys.LOCK_CLOCK_ADAPTIVE] ?: d.lockClockAdaptive,
         lockClockCard = this[PrefKeys.LOCK_CLOCK_CARD] ?: d.lockClockCard,
-        coverClockScale = (this[PrefKeys.COVER_CLOCK_SCALE] ?: d.coverClockScale).coerceIn(0.6f, 1.4f),
+        lockClockScale = (this[PrefKeys.LOCK_CLOCK_SCALE] ?: d.lockClockScale).coerceIn(0.6f, 1.8f),
+        lockMediaPosition = enumOr(PrefKeys.LOCK_MEDIA_POSITION, d.lockMediaPosition),
+        lockWidgets = this[PrefKeys.LOCK_WIDGETS]?.split(',')?.mapNotNull { n -> LockWidget.entries.firstOrNull { it.name == n } }?.distinct()
+            ?: d.lockWidgets,
+        lockWidgetsPosition = enumOr(PrefKeys.LOCK_WIDGETS_POSITION, d.lockWidgetsPosition),
+        coverClockScale = (this[PrefKeys.COVER_CLOCK_SCALE] ?: d.coverClockScale).coerceIn(0.6f, 1.8f),
         coverClockPosition = enumOr(PrefKeys.COVER_CLOCK_POSITION, d.coverClockPosition),
         coverLockMaxNotifications = (this[PrefKeys.COVER_LOCK_MAX_NOTIFICATIONS] ?: d.coverLockMaxNotifications).coerceIn(0, 4),
         flipTransition = this[PrefKeys.FLIP_TRANSITION] ?: d.flipTransition,

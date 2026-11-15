@@ -1,5 +1,7 @@
 package app.cristal.cover.ui.settings
 
+import app.cristal.cover.data.prefs.LockPlacement
+import app.cristal.cover.data.prefs.LockWidget
 import app.cristal.cover.data.prefs.ClockLayout
 import androidx.compose.runtime.mutableIntStateOf
 import android.Manifest
@@ -483,12 +485,53 @@ private fun LockPage(
                     subtitle = "Desligado, os números ficam grandes direto sobre a foto (com o efeito de profundidade isso é automático).",
                 )
                 ChoiceRow("Forma", ClockLayout.entries.map { it to it.label }, settings.lockClockLayout) { vm.setEnum(PrefKeys.LOCK_CLOCK_LAYOUT, it) }
+                SliderRow("Tamanho", settings.lockClockScale, 0.6f..1.8f, label = { "${(it * 100).roundToInt()}%" }) {
+                    vm.set(PrefKeys.LOCK_CLOCK_SCALE, it)
+                }
+                GlassButton("Pré-visualizar e ajustar o tamanho", Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                    context.startSafely(Intent(context, LockActivity::class.java).putExtra(LockActivity.EXTRA_PREVIEW, true))
+                }
+                InfoText("Na pré-visualização, arraste a alça embaixo do relógio para aumentar ou diminuir, como no iPhone.")
                 SwitchRow(
                     title = "Formato adaptativo",
                     checked = settings.lockClockAdaptive,
                     onChange = { vm.set(PrefKeys.LOCK_CLOCK_ADAPTIVE, it) },
                     subtitle = "Ajusta tamanho e forma ao espaço livre; com profundidade, cresce até passar por trás do objeto da foto.",
                 )
+            }
+        }
+        item {
+            SettingsCard("Widgets e música no bloqueio") {
+                InfoText("Escolha até 4 widgets pequenos para a tela de bloqueio interna.")
+                for (w in LockWidget.entries) {
+                    val on = w in settings.lockWidgets
+                    SwitchRow(
+                        title = w.label,
+                        checked = on,
+                        enabled = on || settings.lockWidgets.size < 4,
+                        onChange = { checked ->
+                            val next = if (checked) settings.lockWidgets + w else settings.lockWidgets - w
+                            vm.set(PrefKeys.LOCK_WIDGETS, next.joinToString(",") { it.name })
+                        },
+                    )
+                }
+                if (settings.lockWidgets.isNotEmpty()) {
+                    ChoiceRow("Posição dos widgets", LockPlacement.entries.map { it to it.label }, settings.lockWidgetsPosition) {
+                        vm.setEnum(PrefKeys.LOCK_WIDGETS_POSITION, it)
+                    }
+                }
+                ChoiceRow(
+                    "Player de música",
+                    listOf<Pair<LockPlacement?, String>>(LockPlacement.BELOW_CLOCK to "Abaixo do relógio", LockPlacement.BOTTOM to "Embaixo", null to "Esconder"),
+                    if (settings.lockMusic) settings.lockMediaPosition else null,
+                ) { choice ->
+                    if (choice == null) {
+                        vm.set(PrefKeys.LOCK_MUSIC, false)
+                    } else {
+                        vm.set(PrefKeys.LOCK_MUSIC, true)
+                        vm.setEnum(PrefKeys.LOCK_MEDIA_POSITION, choice)
+                    }
+                }
             }
         }
         item {
@@ -510,7 +553,7 @@ private fun LockPage(
                 SliderRow(
                     "Tamanho",
                     settings.coverClockScale,
-                    0.6f..1.4f,
+                    0.6f..1.8f,
                     label = { "${(it * 100).roundToInt()}%" },
                 ) { vm.set(PrefKeys.COVER_CLOCK_SCALE, it) }
                 ChoiceRow(

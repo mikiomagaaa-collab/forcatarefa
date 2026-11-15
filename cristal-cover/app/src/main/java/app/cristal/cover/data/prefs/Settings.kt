@@ -148,6 +148,11 @@ data class Settings(
     val lockClockAdaptive: Boolean = true,
     /** Relógio dentro de um cartão de vidro (desligado: números grandes direto sobre a foto). */
     val lockClockCard: Boolean = true,
+    /** Tamanho do relógio do bloqueio interno (também ajustável arrastando na pré-visualização). */
+    val lockClockScale: Float = 1f,
+    val lockMediaPosition: LockPlacement = LockPlacement.BELOW_CLOCK,
+    val lockWidgets: List<LockWidget> = emptyList(),
+    val lockWidgetsPosition: LockPlacement = LockPlacement.BELOW_CLOCK,
     val coverClockScale: Float = 1f,
     val coverClockPosition: CoverClockPosition = CoverClockPosition.TOP,
     val coverLockMaxNotifications: Int = 3,

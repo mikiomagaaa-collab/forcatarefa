@@ -1,5 +1,6 @@
 package app.cristal.cover.ui.lock
 
+import app.cristal.cover.data.prefs.PrefKeys
 import android.annotation.SuppressLint
 import android.app.ActivityOptions
 import android.app.KeyguardManager
@@ -101,6 +102,16 @@ class LockActivity : ComponentActivity() {
                     secure = keyguard?.isDeviceSecure == true,
                     resetKey = resetKey,
                     coverMinimal = onCover,
+                    // Na pré-visualização, arrastar a alça muda o tamanho do relógio (e salva).
+                    onClockScale = if (preview) {
+                        { v ->
+                            lifecycleScope.launch {
+                                settingsRepository.set(if (onCover) PrefKeys.COVER_CLOCK_SCALE else PrefKeys.LOCK_CLOCK_SCALE, v)
+                            }
+                        }
+                    } else {
+                        null
+                    },
                     actions = LockActions(
                         onUnlock = { requestUnlock(null) },
                         onOpenNotification = ::openNotification,

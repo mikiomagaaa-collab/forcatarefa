@@ -71,6 +71,9 @@ import app.cristal.cover.ui.glass.rememberGlassBackdrop
 import app.cristal.cover.ui.launcher.NotificationCard
 import app.cristal.cover.ui.launcher.SwipeDismiss
 import app.cristal.cover.ui.theme.clockStyle
+import app.cristal.cover.data.prefs.LockPlacement
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.setValue
 import app.cristal.cover.ui.components.AdaptiveClock
 import app.cristal.cover.ui.components.subjectTopFraction
 import app.cristal.cover.ui.components.wallpaperImageRect
@@ -109,10 +112,18 @@ class LockActions(
  * @param resetKey muda quando um pedido de desbloqueio é cancelado, para a tela voltar ao lugar.
  */
 @Composable
-fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: LockActions, coverMinimal: Boolean = false) {
+fun LockScreen(
+    state: LockUiState,
+    secure: Boolean,
+    resetKey: Int,
+    actions: LockActions,
+    coverMinimal: Boolean = false,
+    /** Só na pré-visualização: permite mudar o tamanho do relógio arrastando a alça. */
+    onClockScale: ((Float) -> Unit)? = null,
+) {
     if (coverMinimal) {
         // Na tela externa o bloqueio é o Cover Clock: só papel de parede, relógio e notificações.
-        CoverLockScreen(state, secure, resetKey, actions)
+        CoverLockScreen(state, secure, resetKey, actions, onClockScale)
         return
     }
     val settings = state.settings
@@ -183,7 +194,14 @@ fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: Lock
         val density = LocalDensity.current
         val dateLine = 26.dp
         val topGap = 18.dp
-        val clockHeight: Dp = run {
+        var liveScale by remember(settings.lockClockScale) { mutableFloatStateOf(settings.lockClockScale) }
+        val widgets = settings.lockWidgets
+        val widgetsAbove = if (widgets.isNotEmpty() && settings.lockWidgetsPosition == LockPlacement.ABOVE_CLOCK) {
+            LockWidgetRowHeight + 8.dp
+        } else {
+            0.dp
+        }
+        val baseClockHeight: Dp = run {
             val default = if (compact) 150.dp else 214.dp
             val top = subjectTop
             if (subject == null || top == null || !settings.lockClockAdaptive) return@run default
@@ -194,11 +212,12 @@ fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: Lock
                     settings.wallpaperZoom, settings.wallpaperOffsetX, settings.wallpaperOffsetY, settings.wallpaperSpatial,
                 )
                 val subjectY = (rect.top + top * rect.height).toDp()
-                val clockTop = insets.calculateTopPadding() + topGap + dateLine
+                val clockTop = insets.calculateTopPadding() + topGap + dateLine + widgetsAbove
                 val free = subjectY - clockTop
                 if (free < 56.dp) default else (free * 1.45f).coerceIn(110.dp, maxHeight * 0.46f)
             }
         }
+        val clockHeight = (baseClockHeight * liveScale).coerceIn(70.dp, maxHeight * 0.62f)
         if (bigClock) {
             Column(
                 modifier = Modifier
@@ -209,7 +228,7 @@ fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: Lock
                         translationY = p * size.height * 0.5f
                         alpha = (1f + p * 1.6f).coerceIn(0f, 1f)
                     }
-                    .padding(top = topGap),
+                    .padding(top = topGap + widgetsAbove),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box(Modifier.height(dateLine), contentAlignment = Alignment.Center) {
@@ -227,7 +246,7 @@ fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: Lock
                     layout = settings.lockClockLayout,
                     adaptive = settings.lockClockAdaptive,
                     brush = Brush.verticalGradient(listOf(Color.White, Color.White.copy(alpha = 0.74f))),
-                    fixedSize = if (compact) 96.sp else 128.sp,
+                    fixedSize = (if (compact) 96f else 128f).times(liveScale).sp,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp).height(clockHeight),
                 )
             }
@@ -257,13 +276,42 @@ fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: Lock
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                val media = state.media
+                val mediaCard: @Composable (Modifier) -> Unit = { m ->
+                    if (media != null) {
+                        WidgetCard(
+                            kind = WidgetKind.MUSIC,
+                            data = WidgetData(media = media, notificationAccess = true),
+                            actions = WidgetActions(
+                                onMediaPlayPause = actions.onMediaPlayPause,
+                                onMediaNext = actions.onMediaNext,
+                                onMediaPrevious = actions.onMediaPrevious,
+                            ),
+                            modifier = m.fillMaxWidth().height(96.dp),
+                        )
+                    }
+                }
+                if (widgetsAbove > 0.dp) {
+                    LockWidgetsRow(widgets, state)
+                    Spacer(Modifier.height(8.dp))
+                }
                 if (bigClock) {
                     // O relógio já foi desenhado (atrás do objeto, se houver); aqui só reserva o espaço.
-                    Spacer(Modifier.height(topGap + dateLine + clockHeight - 8.dp))
+                    Box(Modifier.fillMaxWidth().height(topGap + dateLine + clockHeight - 8.dp)) {
+                        if (onClockScale != null) {
+                            ClockResizeHandle(
+                                baseHeight = baseClockHeight,
+                                onDrag = { d -> liveScale = (liveScale + d).coerceIn(0.6f, 1.8f) },
+                                onEnd = { onClockScale(liveScale) },
+                            )
+                        }
+                    }
                 } else {
                 // Relógio grande em vidro
+                val cardScale = liveScale.coerceIn(0.8f, 1.6f)
+                Box(Modifier.fillMaxWidth()) {
                 GlassSurface(
-                    modifier = Modifier.fillMaxWidth().height(if (compact) 104.dp else 128.dp),
+                    modifier = Modifier.fillMaxWidth().height((if (compact) 104.dp else 128.dp) * cardScale),
                     cornerRadius = 34.dp,
                     reactToTouch = false,
                     elevation = 16.dp,
@@ -275,7 +323,7 @@ fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: Lock
                             style = settings.lockClockFont.clockStyle().copy(
                                 brush = Brush.verticalGradient(listOf(ink, ink.copy(alpha = 0.62f))),
                             ),
-                            fontSize = if (compact) 60.sp else 76.sp,
+                            fontSize = (if (compact) 60f else 76f).times(cardScale).sp,
                             maxLines = 1,
                             softWrap = false,
                         )
@@ -307,6 +355,18 @@ fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: Lock
                         )
                     }
                 }
+                if (onClockScale != null) {
+                    ClockResizeHandle(
+                        baseHeight = if (compact) 104.dp else 128.dp,
+                        onDrag = { d -> liveScale = (liveScale + d).coerceIn(0.6f, 1.8f) },
+                        onEnd = { onClockScale(liveScale) },
+                    )
+                }
+                }
+                }
+                if (widgets.isNotEmpty() && settings.lockWidgetsPosition == LockPlacement.BELOW_CLOCK) {
+                    Spacer(Modifier.height(10.dp))
+                    LockWidgetsRow(widgets, state)
                 }
 
                 // Música e notificações
@@ -315,19 +375,8 @@ fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: Lock
                     contentPadding = PaddingValues(vertical = 10.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    if (state.media != null) {
-                        item(key = "media") {
-                            WidgetCard(
-                                kind = WidgetKind.MUSIC,
-                                data = WidgetData(media = state.media, notificationAccess = true),
-                                actions = WidgetActions(
-                                    onMediaPlayPause = actions.onMediaPlayPause,
-                                    onMediaNext = actions.onMediaNext,
-                                    onMediaPrevious = actions.onMediaPrevious,
-                                ),
-                                modifier = Modifier.fillMaxWidth().height(96.dp),
-                            )
-                        }
+                    if (media != null && settings.lockMediaPosition != LockPlacement.BOTTOM) {
+                        item(key = "media") { mediaCard(Modifier) }
                     }
                     items(state.notifications, key = { it.key }) { item ->
                         val concealed = secure && settings.lockHideSensitive && !item.isPublic
@@ -335,6 +384,13 @@ fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: Lock
                             NotificationCard(item = item, concealed = concealed, onClick = { actions.onOpenNotification(item) })
                         }
                     }
+                }
+
+                if (media != null && settings.lockMediaPosition == LockPlacement.BOTTOM) {
+                    mediaCard(Modifier.padding(bottom = 8.dp))
+                }
+                if (widgets.isNotEmpty() && settings.lockWidgetsPosition == LockPlacement.BOTTOM) {
+                    LockWidgetsRow(widgets, state, Modifier.padding(bottom = 8.dp))
                 }
 
                 // Atalhos e dica de desbloqueio
