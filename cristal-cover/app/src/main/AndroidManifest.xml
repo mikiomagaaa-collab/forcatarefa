@@ -19,6 +19,14 @@
     <!-- Reconectar os serviços depois de ligar o aparelho. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Central de Controle: brilho e rotação (o usuário libera em "Alterar configurações do sistema"). -->
+    <uses-permission
+        android:name="android.permission.WRITE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
+    <!-- Central de Controle: ligar e desligar o Não perturbe (liberado pelo usuário). -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <!-- Ler o estado do NFC para o botão da central. -->
+    <uses-permission android:name="android.permission.NFC" />
     <!--
         Só passa a valer se for concedida manualmente via Shizuku/ADB ("pm grant").
         Permite ao app religar o próprio serviço de acessibilidade depois de uma atualização.
@@ -30,6 +38,7 @@
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
     <uses-feature android:name="android.hardware.location" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.nfc" android:required="false" />
 
     <queries>
         <package android:name="moe.shizuku.privileged.api" />

@@ -12,6 +12,7 @@ import app.cristal.cover.data.notifications.NotificationRepository
 import app.cristal.cover.data.prefs.Settings
 import app.cristal.cover.data.prefs.SettingsRepository
 import app.cristal.cover.data.prefs.WallpaperImages
+import app.cristal.cover.data.prefs.WallpaperKind
 import app.cristal.cover.data.prefs.WallpaperSlot
 import app.cristal.cover.data.system.QuickSettingsRepository
 import app.cristal.cover.data.wallpaper.WallpaperRepository
@@ -34,11 +35,17 @@ data class LockUiState(
     val torchOn: Boolean = false,
     val wallpaper: ImageBitmap? = null,
     val images: WallpaperImages = emptyMap(),
+    /** Recorte do objeto principal (efeito de profundidade), quando houver. */
+    val subject: ImageBitmap? = null,
+    val subjects: WallpaperImages = emptyMap(),
 ) {
     /** Este estado "visto" da tela de bloqueio interna ou externa, com o papel de parede dela. */
     fun forDisplay(onCover: Boolean): LockUiState {
         val view = settings.forSlot(WallpaperSlot.lock(onCover))
-        return copy(settings = view, wallpaper = images[view.wallpaperSlot])
+        val image = images[view.wallpaperSlot]
+        // A profundidade só faz sentido com a foto nítida: com desfoque, o recorte destoaria.
+        val depth = view.wallpaperKind == WallpaperKind.IMAGE && view.wallpaperDepth && view.wallpaperBlur < 0.05f
+        return copy(settings = view, wallpaper = image, subject = if (depth && image != null) subjects[view.wallpaperSlot] else null)
     }
 }
 
@@ -61,7 +68,9 @@ class LockPresenter @Inject constructor(
         batteryRepository.state,
         mediaRepository.state,
         notificationRepository.items,
-        combine(quickSettingsRepository.state, wallpaperRepository.images) { quick, images -> quick to images },
+        combine(quickSettingsRepository.state, wallpaperRepository.images, wallpaperRepository.subjects) { quick, images, subjects ->
+            Triple(quick, images, subjects)
+        },
     ) { settings, battery, media, notifications, extra ->
         LockUiState(
             settings = settings,
@@ -75,6 +84,7 @@ class LockPresenter @Inject constructor(
             torchAvailable = extra.first.torchAvailable,
             torchOn = extra.first.torchOn,
             images = extra.second,
+            subjects = extra.third,
         )
     }.stateIn(scope, SharingStarted.WhileSubscribed(5_000), LockUiState(settings = settingsRepository.settings.value))
 

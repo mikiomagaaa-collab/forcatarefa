@@ -40,6 +40,12 @@ data class WallpaperConfig(
     val imageDark: Boolean = true,
     val version: Long = 0,
     val follows: WallpaperSlot? = null,
+    /** Efeito de profundidade: o objeto principal da foto fica na frente do relógio do bloqueio. */
+    val depth: Boolean = true,
+    /** Papel de parede espacial: a imagem se move de leve quando o aparelho inclina. */
+    val spatial: Boolean = false,
+    /** Momento em que o recorte do objeto foi gerado (0 = sem recorte). */
+    val subjectVersion: Long = 0,
 )
 
 /** Imagens escolhidas pelo usuário, por área (só as áreas com imagem própria aparecem). */
@@ -60,6 +66,9 @@ class WallpaperKeys private constructor(slot: WallpaperSlot) {
     val imageDark = booleanPreferencesKey("${prefix}_image_dark")
     val version = longPreferencesKey("${prefix}_version")
     val follows = stringPreferencesKey("${prefix}_follows")
+    val depth = booleanPreferencesKey("${prefix}_depth")
+    val spatial = booleanPreferencesKey("${prefix}_spatial")
+    val subjectVersion = longPreferencesKey("${prefix}_subject_version")
 
     /** @param defaultFollows usado enquanto o usuário nunca configurou esta área. */
     fun read(prefs: Preferences, defaultFollows: WallpaperSlot?): WallpaperConfig {
@@ -77,6 +86,9 @@ class WallpaperKeys private constructor(slot: WallpaperSlot) {
             imageDark = prefs[imageDark] ?: d.imageDark,
             version = prefs[version] ?: d.version,
             follows = if (followsRaw == null) defaultFollows else WallpaperSlot.fromName(followsRaw),
+            depth = prefs[depth] ?: d.depth,
+            spatial = prefs[spatial] ?: d.spatial,
+            subjectVersion = prefs[subjectVersion] ?: d.subjectVersion,
         )
     }
 
@@ -92,6 +104,9 @@ class WallpaperKeys private constructor(slot: WallpaperSlot) {
         prefs[imageDark] = config.imageDark
         prefs[version] = config.version
         prefs[follows] = config.follows?.name.orEmpty()
+        prefs[depth] = config.depth
+        prefs[spatial] = config.spatial
+        prefs[subjectVersion] = config.subjectVersion
     }
 
     companion object {

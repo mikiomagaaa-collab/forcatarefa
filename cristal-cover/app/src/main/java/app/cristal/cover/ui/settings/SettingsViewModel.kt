@@ -25,6 +25,7 @@ import app.cristal.cover.data.prefs.WallpaperSlot
 import app.cristal.cover.data.shizuku.ShizukuManager
 import app.cristal.cover.data.system.PermissionCenter
 import app.cristal.cover.data.system.PermissionState
+import app.cristal.cover.data.wallpaper.SubjectStatus
 import app.cristal.cover.data.wallpaper.WallpaperRepository
 import app.cristal.cover.data.weather.CityResult
 import app.cristal.cover.data.weather.WeatherRepository
@@ -170,6 +171,11 @@ class SettingsViewModel @Inject constructor(
     fun useWallpaperPreset(slot: WallpaperSlot, index: Int) {
         viewModelScope.launch { wallpaperRepository.usePreset(slot, index) }
     }
+
+    val subjectStatus: StateFlow<Map<WallpaperSlot, SubjectStatus>> = wallpaperRepository.subjectStatus
+    val subjectError: StateFlow<String?> = wallpaperRepository.lastSubjectError
+
+    fun detectSubject(slot: WallpaperSlot) = wallpaperRepository.detectSubject(slot)
 
     fun updateWallpaper(slot: WallpaperSlot, change: (WallpaperConfig) -> WallpaperConfig) {
         viewModelScope.launch { wallpaperRepository.update(slot, change) }

@@ -31,8 +31,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/** Situação do recorte do objeto (efeito de profundidade) de uma área. */
+enum class SubjectStatus { NONE, WORKING, READY, NO_SUBJECT, UNAVAILABLE }
 
 /**
  * Papéis de parede próprios do launcher, um por área (início e bloqueio, interna e externa).
@@ -45,11 +49,29 @@ import kotlinx.coroutines.withContext
 class WallpaperRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settingsRepository: SettingsRepository,
-    @AppScope scope: CoroutineScope,
+    @AppScope private val scope: CoroutineScope,
     @IoDispatcher private val io: CoroutineDispatcher,
 ) {
     private fun file(slot: WallpaperSlot): File =
         File(context.filesDir, if (slot.key.isEmpty()) "wallpaper.jpg" else "wallpaper_${slot.key}.jpg")
+
+    private fun subjectFile(slot: WallpaperSlot): File =
+        File(context.filesDir, if (slot.key.isEmpty()) "wallpaper_subject.png" else "wallpaper_${slot.key}_subject.png")
+
+    private val detector by lazy { SubjectDetector(context) }
+
+    private val _subjects = MutableStateFlow<WallpaperImages>(emptyMap())
+
+    /** Recorte do objeto principal de cada área com imagem própria e efeito de profundidade ligado. */
+    val subjects: StateFlow<WallpaperImages> = _subjects.asStateFlow()
+
+    private val _subjectStatus = MutableStateFlow<Map<WallpaperSlot, SubjectStatus>>(emptyMap())
+    val subjectStatus: StateFlow<Map<WallpaperSlot, SubjectStatus>> = _subjectStatus.asStateFlow()
+
+    private val _lastSubjectError = MutableStateFlow<String?>(null)
+
+    /** Motivo da última falha do recorte, para mostrar ao usuário. */
+    val lastSubjectError: StateFlow<String?> = _lastSubjectError.asStateFlow()
 
     private val _images = MutableStateFlow<WallpaperImages>(emptyMap())
 
@@ -71,6 +93,88 @@ class WallpaperRepository @Inject constructor(
                         }
                     }
                 }
+        }
+        scope.launch {
+            settingsRepository.settings
+                .map { s ->
+                    s.wallpapers.filterValues { c -> c.kind == WallpaperKind.IMAGE && c.follows == null && c.depth }
+                        .mapValues { (_, c) -> c.subjectVersion }
+                }
+                .distinctUntilChanged()
+                .collectLatest { versions ->
+                    val loaded = withContext(io) {
+                        buildMap {
+                            for ((slot, version) in versions) {
+                                if (version == 0L) continue
+                                val f = subjectFile(slot)
+                                if (!f.exists()) continue
+                                safely("carregar recorte ${slot.name}") { BitmapFactory.decodeFile(f.absolutePath) }
+                                    ?.let { put(slot, it.asImageBitmap()) }
+                            }
+                        }
+                    }
+                    _subjects.value = loaded
+                    _subjectStatus.update { current ->
+                        WallpaperSlot.entries.associateWith { slot ->
+                            val now = current[slot]
+                            when {
+                                now == SubjectStatus.WORKING -> now
+                                loaded.containsKey(slot) -> SubjectStatus.READY
+                                now == SubjectStatus.NO_SUBJECT || now == SubjectStatus.UNAVAILABLE -> now
+                                else -> SubjectStatus.NONE
+                            }
+                        }
+                    }
+                }
+        }
+    }
+
+    /**
+     * Recorta o objeto principal da imagem da área (para o efeito de profundidade). Roda em segundo
+     * plano; o resultado aparece em [subjects] e [subjectStatus].
+     */
+    fun detectSubject(slot: WallpaperSlot) {
+        scope.launch {
+            _subjectStatus.update { it + (slot to SubjectStatus.WORKING) }
+            val source = withContext(io) {
+                safely("ler papel de parede para recorte") {
+                    val f = file(slot)
+                    if (!f.exists()) return@safely null
+                    BitmapFactory.decodeFile(f.absolutePath, BitmapFactory.Options().apply { inPreferredConfig = Bitmap.Config.ARGB_8888 })
+                }
+            }
+            if (source == null) {
+                _subjectStatus.update { it + (slot to SubjectStatus.NONE) }
+                return@launch
+            }
+            val status = when (val result = detector.detect(source)) {
+                is SubjectResult.Found -> {
+                    val saved = withContext(io) {
+                        safely("gravar recorte") {
+                            val target = subjectFile(slot)
+                            val tmp = File(context.filesDir, "${target.name}.tmp")
+                            tmp.outputStream().use { out -> result.foreground.compress(Bitmap.CompressFormat.PNG, 100, out) }
+                            if (!tmp.renameTo(target)) {
+                                tmp.copyTo(target, overwrite = true)
+                                tmp.delete()
+                            }
+                            true
+                        } ?: false
+                    }
+                    if (saved) {
+                        update(slot) { it.copy(subjectVersion = System.currentTimeMillis(), depth = true) }
+                        SubjectStatus.READY
+                    } else {
+                        SubjectStatus.UNAVAILABLE
+                    }
+                }
+                SubjectResult.NoSubject -> SubjectStatus.NO_SUBJECT
+                is SubjectResult.Unavailable -> {
+                    _lastSubjectError.value = result.reason
+                    SubjectStatus.UNAVAILABLE
+                }
+            }
+            _subjectStatus.update { it + (slot to status) }
         }
     }
 
@@ -98,6 +202,7 @@ class WallpaperRepository @Inject constructor(
                 tmp.delete()
             }
             val dark = isDark(bitmap)
+            subjectFile(slot).delete()
             update(slot) {
                 it.copy(
                     kind = WallpaperKind.IMAGE,
@@ -107,8 +212,11 @@ class WallpaperRepository @Inject constructor(
                     zoom = 1f,
                     offsetX = 0f,
                     offsetY = 0f,
+                    subjectVersion = 0,
                 )
             }
+            // O recorte para o efeito de profundidade é feito em segundo plano, logo em seguida.
+            if (settingsRepository.current().wallpapers[slot]?.depth != false) detectSubject(slot)
             true
         } catch (t: Throwable) {
             Logx.w("Falha ao importar papel de parede", t)

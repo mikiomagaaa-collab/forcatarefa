@@ -96,7 +96,7 @@ object PrefKeys {
     val WEATHER_CACHE = stringPreferencesKey("weather_cache")
 
     /** Chaves que não devem ser exportadas nem restauradas. */
-    val transient: Set<String> = setOf(WEATHER_CACHE.name) + WallpaperSlot.entries.map { WallpaperKeys.of(it).version.name }
+    val transient: Set<String> = setOf(WEATHER_CACHE.name) + WallpaperSlot.entries.flatMap { WallpaperKeys.of(it).let { k -> listOf(k.version.name, k.subjectVersion.name) } }
 }
 
 private inline fun <reified E : Enum<E>> Preferences.enumOr(key: Preferences.Key<String>, default: E): E {
@@ -179,6 +179,9 @@ class SettingsRepository @Inject constructor(
             throw e
         }
     }
+
+    /** Preferências cruas, para quem guarda dados próprios (ex.: layouts da central de controle). */
+    val raw: Flow<Preferences> = safeData
 
     /** Preferências sempre atualizadas. Começa com os padrões até o disco responder. */
     val settings: StateFlow<Settings> = safeData

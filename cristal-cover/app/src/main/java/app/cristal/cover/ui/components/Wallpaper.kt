@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
@@ -176,6 +178,10 @@ fun WallpaperLayer(
     offsetY: Float = 0f,
     saturation: Float = 1f,
     parallax: () -> Float = { 0f },
+    /** Inclinação do aparelho (-1 a 1 em cada eixo), para o papel de parede espacial. */
+    tilt: () -> Offset = NoTilt,
+    /** Amplia um pouco a imagem para sobrar margem para o movimento espacial. */
+    spatial: Boolean = false,
 ) {
     val preset = WallpaperPresets.get(presetIndex)
     Spacer(
@@ -187,7 +193,12 @@ fun WallpaperLayer(
             }
             .drawBehind {
                 val shift = parallax().coerceIn(-1f, 1f)
-                if (image != null) drawCroppedImage(image, shift, zoom, offsetX, offsetY, saturation) else drawPreset(preset, shift)
+                val t = if (spatial) tilt() else Offset.Zero
+                if (image != null) {
+                    drawCroppedImage(image, shift, zoom, offsetX, offsetY, saturation, t, spatial)
+                } else {
+                    drawPreset(preset, shift, t)
+                }
                 // Vinheta suave: escurece os cantos e dá profundidade.
                 val longest = max(size.width, size.height)
                 drawRect(
@@ -202,6 +213,49 @@ fun WallpaperLayer(
     )
 }
 
+val NoTilt: () -> Offset = { Offset.Zero }
+
+/**
+ * O objeto principal da foto, recortado, desenhado exatamente sobre o papel de parede (mesmo
+ * enquadramento, mesmo movimento). Tudo o que fica entre [WallpaperLayer] e esta camada parece
+ * estar "atrás" do objeto: é o efeito de profundidade.
+ */
+@Composable
+fun WallpaperSubjectLayer(
+    subject: ImageBitmap,
+    dim: Float,
+    modifier: Modifier = Modifier,
+    zoom: Float = 1f,
+    offsetX: Float = 0f,
+    offsetY: Float = 0f,
+    saturation: Float = 1f,
+    parallax: () -> Float = { 0f },
+    tilt: () -> Offset = NoTilt,
+    spatial: Boolean = false,
+) {
+    Spacer(
+        modifier = modifier
+            .fillMaxSize()
+            // Camada própria: a vinheta e o escurecimento só tingem os pixels do objeto.
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawBehind {
+                val shift = parallax().coerceIn(-1f, 1f)
+                val t = if (spatial) tilt() else Offset.Zero
+                drawCroppedImage(subject, shift, zoom, offsetX, offsetY, saturation, t, spatial)
+                val longest = max(size.width, size.height)
+                drawRect(
+                    Brush.radialGradient(
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.14f)),
+                        center = Offset(size.width / 2f, size.height / 2f),
+                        radius = longest * 0.85f,
+                    ),
+                    blendMode = BlendMode.SrcAtop,
+                )
+                if (dim > 0.001f) drawRect(Color.Black.copy(alpha = dim.coerceIn(0f, 0.9f)), blendMode = BlendMode.SrcAtop)
+            },
+    )
+}
+
 private fun DrawScope.drawCroppedImage(
     image: ImageBitmap,
     shift: Float,
@@ -209,19 +263,24 @@ private fun DrawScope.drawCroppedImage(
     offsetX: Float,
     offsetY: Float,
     saturation: Float,
+    tilt: Offset = Offset.Zero,
+    spatial: Boolean = false,
 ) {
     if (image.width <= 0 || image.height <= 0) return
-    // 8% maior que a tela, para ter margem de deslocamento no parallax.
-    val scale = max(size.width / image.width, size.height / image.height) * 1.08f * zoom.coerceIn(1f, 4f)
+    // 8% maior que a tela, para ter margem de deslocamento no parallax (16% no modo espacial).
+    val margin = if (spatial) 1.16f else 1.08f
+    val scale = max(size.width / image.width, size.height / image.height) * margin * zoom.coerceIn(1f, 4f)
     val dw = image.width * scale
     val dh = image.height * scale
     val slackX = (dw - size.width) / 2f
     val slackY = (dh - size.height) / 2f
     // A posição escolhida vale primeiro; o parallax usa a folga que sobrar, sem descobrir a borda.
     val x = offsetX.coerceIn(-1f, 1f)
-    val tx = (x + shift * (1f - abs(x))).coerceIn(-1f, 1f)
+    val y = offsetY.coerceIn(-1f, 1f)
+    val tx = (x + shift * (1f - abs(x)) + tilt.x * 0.55f).coerceIn(-1f, 1f)
+    val ty = (y + tilt.y * 0.55f).coerceIn(-1f, 1f)
     val dx = -slackX - tx * slackX
-    val dy = -slackY - offsetY.coerceIn(-1f, 1f) * slackY
+    val dy = -slackY - ty * slackY
     val filter = if (abs(saturation - 1f) > 0.01f) {
         ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(saturation.coerceIn(0f, 2f)) })
     } else {
@@ -236,13 +295,14 @@ private fun DrawScope.drawCroppedImage(
     )
 }
 
-private fun DrawScope.drawPreset(preset: WallpaperPreset, shift: Float) {
+private fun DrawScope.drawPreset(preset: WallpaperPreset, shift: Float, tilt: Offset = Offset.Zero) {
     drawRect(Brush.linearGradient(preset.base, start = Offset.Zero, end = Offset(size.width, size.height)))
     val longest = max(size.width, size.height)
     for (blob in preset.blobs) {
         val center = Offset(
-            x = blob.x * size.width - shift * size.width * 0.05f * blob.depth,
-            y = blob.y * size.height,
+            // Cada mancha tem a sua profundidade: as "mais perto" andam mais (papel de parede espacial).
+            x = blob.x * size.width - shift * size.width * 0.05f * blob.depth + tilt.x * size.width * 0.045f * blob.depth,
+            y = blob.y * size.height + tilt.y * size.height * 0.03f * blob.depth,
         )
         val radius = blob.radius * longest
         drawCircle(

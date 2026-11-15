@@ -1,5 +1,6 @@
 package app.cristal.cover.ui.settings
 
+import androidx.compose.runtime.mutableIntStateOf
 import android.Manifest
 import android.content.Intent
 import android.view.Display
@@ -101,7 +102,7 @@ enum class SettingsPage(val title: String) {
 fun gestureLabel(action: GestureAction): String = when (action) {
     GestureAction.NONE -> "Nenhuma"
     GestureAction.APP_DRAWER -> "Gaveta de apps"
-    GestureAction.QUICK_PANEL -> "Painel do Cristal"
+    GestureAction.QUICK_PANEL -> "Central de Controle"
     GestureAction.SYSTEM_NOTIFICATIONS -> "Notificações do sistema"
     GestureAction.SYSTEM_QUICK_SETTINGS -> "Ajustes rápidos do sistema"
     GestureAction.LOCK_SCREEN -> "Bloquear tela"
@@ -402,6 +403,7 @@ private fun GesturesPage(
                 ChoiceRow("Ação", options, settings.gestureSwipeDown) { vm.setEnum(PrefKeys.GESTURE_SWIPE_DOWN, it) }
             }
         }
+        item { ControlCenterCard(permissions) }
         item {
             SettingsCard("Dois toques no fundo") {
                 ChoiceRow("Ação", options, settings.gestureDoubleTap) { vm.setEnum(PrefKeys.GESTURE_DOUBLE_TAP, it) }
@@ -954,6 +956,60 @@ private fun AboutPage(settings: Settings, wallpaper: ImageBitmap?, onBack: () ->
                 InfoText("• Apps comuns não podem alternar Wi-Fi, Bluetooth ou dados; sem Shizuku o Cristal abre o painel do sistema.")
                 InfoText("• O vidro refrata o papel de parede do próprio Cristal; o Android não permite ler o papel de parede do sistema.")
             }
+        }
+    }
+}
+
+/** Explica a Liquid Control Center e libera o que ela precisa para mexer no sistema. */
+@Composable
+private fun ControlCenterCard(permissions: PermissionState) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var tick by remember { mutableIntStateOf(0) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        tick++
+        onPauseOrDispose { }
+    }
+    val canWrite = remember(tick) { runCatching { android.provider.Settings.System.canWrite(context) }.getOrDefault(false) }
+    val dndAccess = remember(tick) {
+        runCatching {
+            context.getSystemService(android.app.NotificationManager::class.java)?.isNotificationPolicyAccessGranted == true
+        }.getOrDefault(false)
+    }
+    fun open(intent: android.content.Intent) {
+        runCatching { context.startActivity(intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }
+    SettingsCard("Liquid Control Center") {
+        InfoText(
+            "Deslize para baixo na tela inicial para abrir. Toque no lápis para editar: adicionar e remover controles, " +
+                "mudar o tamanho, criar páginas e escolher uma predefinição (Liquid Flip, iOS ou One UI). " +
+                "A tela interna e a externa têm centrais separadas.",
+        )
+        InfoText(
+            "Brilho, rotação e Não perturbe funcionam depois de liberar abaixo. Wi-Fi, Bluetooth, dados, modo avião, " +
+                "localização, NFC, modo escuro e economia de bateria só podem ser ligados direto com o Shizuku; sem ele, " +
+                "o botão abre o ajuste do sistema. Toque longo em qualquer controle abre o ajuste dele.",
+        )
+        SwitchRow(
+            "Alterar configurações do sistema",
+            canWrite,
+            {
+                open(
+                    android.content.Intent(
+                        android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS,
+                        android.net.Uri.parse("package:${context.packageName}"),
+                    ),
+                )
+            },
+            subtitle = if (canWrite) "Liberado: brilho e rotação pela central" else "Toque para liberar brilho e rotação",
+        )
+        SwitchRow(
+            "Acesso ao Não perturbe",
+            dndAccess,
+            { open(android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) },
+            subtitle = if (dndAccess) "Liberado" else "Toque para liberar o botão Não perturbe",
+        )
+        if (permissions.shizuku != app.cristal.cover.data.shizuku.ShizukuStatus.READY) {
+            InfoText("Shizuku desligado: os botões de rádio abrem o ajuste do sistema em vez de ligar direto.")
         }
     }
 }

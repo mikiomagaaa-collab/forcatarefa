@@ -43,6 +43,7 @@ import app.cristal.cover.data.prefs.WallpaperConfig
 import app.cristal.cover.data.prefs.WallpaperImages
 import app.cristal.cover.data.prefs.WallpaperKind
 import app.cristal.cover.data.prefs.WallpaperSlot
+import app.cristal.cover.data.wallpaper.SubjectStatus
 import app.cristal.cover.ui.components.WallpaperLayer
 import app.cristal.cover.ui.components.WallpaperPresets
 import app.cristal.cover.ui.components.WallpaperTextShadow
@@ -255,6 +256,48 @@ private fun SlotEditor(
                         }
                         InfoText("Use o zoom e a posição para tirar o assunto da foto de trás do relógio ou das câmeras.")
                     }
+                }
+            }
+            item {
+                SettingsCard("Profundidade") {
+                    if (config.kind == WallpaperKind.IMAGE) {
+                        val statuses by vm.subjectStatus.collectAsStateWithLifecycle()
+                        val error by vm.subjectError.collectAsStateWithLifecycle()
+                        val status = statuses[slot] ?: SubjectStatus.NONE
+                        SwitchRow(
+                            "Efeito de profundidade",
+                            config.depth,
+                            { on ->
+                                vm.updateWallpaper(slot) { it.copy(depth = on) }
+                                if (on && status != SubjectStatus.READY && status != SubjectStatus.WORKING) vm.detectSubject(slot)
+                            },
+                            subtitle = "O objeto principal da foto (pessoa, pet, prédio) fica na frente do relógio do bloqueio.",
+                        )
+                        if (config.depth) {
+                            InfoText(
+                                when (status) {
+                                    SubjectStatus.WORKING -> "Recortando o objeto da foto no aparelho…"
+                                    SubjectStatus.READY -> "Objeto recortado. Veja no bloqueio (Tela de bloqueio > Pré-visualizar)."
+                                    SubjectStatus.NO_SUBJECT -> "Não encontrei um objeto principal nesta foto. Fotos com uma pessoa ou objeto em destaque funcionam melhor."
+                                    SubjectStatus.UNAVAILABLE -> error ?: "O recorte não está disponível neste aparelho."
+                                    SubjectStatus.NONE -> "Toque em \"Recortar objeto\" para preparar o efeito."
+                                },
+                            )
+                            if (config.blur >= 0.05f) InfoText("Com desfoque ligado o efeito fica desativado: a foto precisa estar nítida.")
+                            if (status != SubjectStatus.WORKING) {
+                                GlassButton(
+                                    if (status == SubjectStatus.READY) "Recortar de novo" else "Recortar objeto",
+                                    Modifier.fillMaxWidth().padding(top = 6.dp),
+                                ) { vm.detectSubject(slot) }
+                            }
+                        }
+                    }
+                    SwitchRow(
+                        "Papel de parede espacial",
+                        config.spatial,
+                        { on -> vm.updateWallpaper(slot) { it.copy(spatial = on) } },
+                        subtitle = "A imagem se move de leve quando você inclina o aparelho, dando sensação de profundidade. Gasta um pouco mais de bateria.",
+                    )
                 }
             }
             item {

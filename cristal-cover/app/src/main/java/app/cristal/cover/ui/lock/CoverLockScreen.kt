@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,6 +35,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -54,12 +56,14 @@ import app.cristal.cover.data.prefs.CoverClockPosition
 import app.cristal.cover.data.prefs.CoverClockStyle
 import app.cristal.cover.data.prefs.WallpaperKind
 import app.cristal.cover.ui.components.WallpaperLayer
+import app.cristal.cover.ui.components.WallpaperSubjectLayer
 import app.cristal.cover.ui.components.WallpaperTextShadow
 import app.cristal.cover.ui.glass.GlassSurface
 import app.cristal.cover.ui.glass.LocalGlassBackdrop
 import app.cristal.cover.ui.glass.LocalGlassSpec
 import app.cristal.cover.ui.glass.Motion
 import app.cristal.cover.ui.glass.glassBackdropSource
+import app.cristal.cover.ui.glass.rememberDeviceTilt
 import app.cristal.cover.ui.glass.rememberGlassBackdrop
 import app.cristal.cover.ui.launcher.GlassButton
 import app.cristal.cover.ui.launcher.relativeTime
@@ -118,6 +122,7 @@ fun CoverLockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions:
                 )
             },
     ) {
+        val tilt = rememberDeviceTilt(settings.wallpaperSpatial)
         WallpaperLayer(
             image = if (settings.wallpaperKind == WallpaperKind.IMAGE) state.wallpaper else null,
             presetIndex = settings.wallpaperPreset,
@@ -128,88 +133,159 @@ fun CoverLockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions:
             offsetX = settings.wallpaperOffsetX,
             offsetY = settings.wallpaperOffsetY,
             saturation = settings.wallpaperSaturation,
+            tilt = { tilt.value },
+            spatial = settings.wallpaperSpatial,
         )
-        CompositionLocalProvider(LocalGlassBackdrop provides backdrop) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(insets)
-                    .graphicsLayer {
-                        val p = slide.value
-                        translationY = p * size.height * 0.5f
-                        alpha = (1f + p * 1.6f).coerceIn(0f, 1f)
-                    }
-                    .padding(horizontal = 20.dp, vertical = 14.dp),
-            ) {
-                val position = settings.coverClockPosition
-                if (position != CoverClockPosition.TOP) Spacer(Modifier.weight(1f))
+        // O estado de "expandida" fica fora das camadas, para as duas medirem igual.
+        var expandedKey by remember { mutableStateOf<String?>(null) }
+        val column: @Composable (showClock: Boolean, showRest: Boolean) -> Unit = { showClock, showRest ->
+            CoverClockColumn(
+                state = state,
+                secure = secure,
+                now = now,
+                is24h = is24h,
+                locale = locale,
+                ink = ink,
+                insets = insets,
+                slide = { slide.value },
+                showClock = showClock,
+                showRest = showRest,
+                expandedKey = expandedKey,
+                onToggle = { key -> expandedKey = if (expandedKey == key) null else key },
+                onOpen = actions.onOpenNotification,
+            )
+        }
+        val subject = state.subject
+        if (subject != null) {
+            // Efeito de profundidade: relógio, depois o objeto da foto, depois as notificações.
+            column(true, false)
+            WallpaperSubjectLayer(
+                subject = subject,
+                dim = settings.wallpaperDim,
+                zoom = settings.wallpaperZoom,
+                offsetX = settings.wallpaperOffsetX,
+                offsetY = settings.wallpaperOffsetY,
+                saturation = settings.wallpaperSaturation,
+                tilt = { tilt.value },
+                spatial = settings.wallpaperSpatial,
+            )
+            CompositionLocalProvider(LocalGlassBackdrop provides backdrop) { column(false, true) }
+        } else {
+            CompositionLocalProvider(LocalGlassBackdrop provides backdrop) { column(true, true) }
+        }
+    }
+}
 
-                val base = when (settings.coverClockStyle) {
-                    CoverClockStyle.LIQUID -> TextStyle(
-                        fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, letterSpacing = (-0.045).em,
-                        brush = Brush.verticalGradient(listOf(ink, ink.copy(alpha = 0.55f))),
-                    )
-                    CoverClockStyle.MINIMAL -> TextStyle(
-                        fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Thin, letterSpacing = (-0.02).em, color = ink,
-                    )
-                    CoverClockStyle.DIGITAL -> TextStyle(
-                        fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium, letterSpacing = (-0.03).em, color = ink,
-                    )
-                    CoverClockStyle.CLASSIC -> TextStyle(
-                        fontFamily = FontFamily.Serif, fontWeight = FontWeight.Medium, letterSpacing = (-0.01).em, color = ink,
+@Composable
+private fun CoverClockColumn(
+    state: LockUiState,
+    secure: Boolean,
+    now: Long,
+    is24h: Boolean,
+    locale: java.util.Locale,
+    ink: Color,
+    insets: PaddingValues,
+    slide: () -> Float,
+    showClock: Boolean,
+    showRest: Boolean,
+    expandedKey: String?,
+    onToggle: (String) -> Unit,
+    onOpen: (NotificationItem) -> Unit,
+) {
+    val settings = state.settings
+    val clockAlpha = if (showClock) Modifier else Modifier.alpha(0f)
+    val restAlpha = if (showRest) Modifier else Modifier.alpha(0f)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(insets)
+            .graphicsLayer {
+                val p = slide()
+                translationY = p * size.height * 0.5f
+                alpha = (1f + p * 1.6f).coerceIn(0f, 1f)
+            }
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+    ) {
+        val position = settings.coverClockPosition
+        if (position != CoverClockPosition.TOP) Spacer(Modifier.weight(1f))
+
+        val base = when (settings.coverClockStyle) {
+            CoverClockStyle.LIQUID -> TextStyle(
+                fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, letterSpacing = (-0.045).em,
+                brush = Brush.verticalGradient(listOf(ink, ink.copy(alpha = 0.55f))),
+            )
+            CoverClockStyle.MINIMAL -> TextStyle(
+                fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Thin, letterSpacing = (-0.02).em, color = ink,
+            )
+            CoverClockStyle.DIGITAL -> TextStyle(
+                fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium, letterSpacing = (-0.03).em, color = ink,
+            )
+            CoverClockStyle.CLASSIC -> TextStyle(
+                fontFamily = FontFamily.Serif, fontWeight = FontWeight.Medium, letterSpacing = (-0.01).em, color = ink,
+            )
+        }
+        Text(
+            formatTime(now, is24h),
+            style = base.copy(fontFeatureSettings = "tnum", shadow = WallpaperTextShadow),
+            fontSize = (104f * settings.coverClockScale.coerceIn(0.6f, 1.4f)).sp,
+            maxLines = 1,
+            softWrap = false,
+            modifier = clockAlpha,
+        )
+        Text(
+            formatDate(now).replaceFirstChar { it.titlecase(locale) },
+            color = ink.copy(alpha = 0.9f),
+            style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Medium, shadow = WallpaperTextShadow),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 4.dp).then(clockAlpha),
+        )
+
+        val shown = state.notifications.take(settings.coverLockMaxNotifications.coerceIn(0, 4))
+        if (shown.isNotEmpty()) {
+            Spacer(Modifier.height(14.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = restAlpha) {
+                for (item in shown) {
+                    val concealed = secure && settings.lockHideSensitive && !item.isPublic
+                    CompactNotification(
+                        item = item,
+                        concealed = concealed,
+                        expanded = expandedKey == item.key,
+                        interactive = showRest,
+                        onToggle = { onToggle(item.key) },
+                    ) { onOpen(item) }
+                }
+                val hidden = state.notifications.size - shown.size
+                if (hidden > 0) {
+                    Text(
+                        "+$hidden",
+                        color = ink.copy(alpha = 0.85f),
+                        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, shadow = WallpaperTextShadow),
+                        modifier = Modifier.padding(start = 6.dp),
                     )
                 }
-                Text(
-                    formatTime(now, is24h),
-                    style = base.copy(fontFeatureSettings = "tnum", shadow = WallpaperTextShadow),
-                    fontSize = (104f * settings.coverClockScale.coerceIn(0.6f, 1.4f)).sp,
-                    maxLines = 1,
-                    softWrap = false,
-                )
-                Text(
-                    formatDate(now).replaceFirstChar { it.titlecase(locale) },
-                    color = ink.copy(alpha = 0.9f),
-                    style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Medium, shadow = WallpaperTextShadow),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(start = 4.dp),
-                )
-
-                val shown = state.notifications.take(settings.coverLockMaxNotifications.coerceIn(0, 4))
-                if (shown.isNotEmpty()) {
-                    Spacer(Modifier.height(14.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        for (item in shown) {
-                            val concealed = secure && settings.lockHideSensitive && !item.isPublic
-                            CompactNotification(item, concealed) { actions.onOpenNotification(item) }
-                        }
-                        val hidden = state.notifications.size - shown.size
-                        if (hidden > 0) {
-                            Text(
-                                "+$hidden",
-                                color = ink.copy(alpha = 0.85f),
-                                style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, shadow = WallpaperTextShadow),
-                                modifier = Modifier.padding(start = 6.dp),
-                            )
-                        }
-                    }
-                }
-                if (position != CoverClockPosition.BOTTOM) Spacer(Modifier.weight(1f))
             }
         }
+        if (position != CoverClockPosition.BOTTOM) Spacer(Modifier.weight(1f))
     }
 }
 
 /** Notificação compacta: uma linha; ao tocar, expande e mostra o botão de abrir. */
 @Composable
-private fun CompactNotification(item: NotificationItem, concealed: Boolean, onOpen: () -> Unit) {
-    var expanded by remember(item.key) { mutableStateOf(false) }
+private fun CompactNotification(
+    item: NotificationItem,
+    concealed: Boolean,
+    expanded: Boolean,
+    interactive: Boolean,
+    onToggle: () -> Unit,
+    onOpen: () -> Unit,
+) {
     val spec = LocalGlassSpec.current
     GlassSurface(
         modifier = Modifier.fillMaxWidth().animateContentSize(),
         cornerRadius = 20.dp,
         elevation = 6.dp,
-        onClick = { expanded = !expanded },
+        onClick = if (interactive) onToggle else null,
     ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

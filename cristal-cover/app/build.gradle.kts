@@ -132,6 +132,9 @@ dependencies {
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
 
+    // Recorte do objeto principal da foto (efeito de profundidade), feito no aparelho.
+    implementation(libs.mlkit.subject.segmentation)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)

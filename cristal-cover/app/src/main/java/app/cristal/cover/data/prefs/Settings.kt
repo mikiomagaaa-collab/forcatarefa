@@ -94,6 +94,9 @@ data class Settings(
     val wallpaperOffsetX: Float = 0f,
     val wallpaperOffsetY: Float = 0f,
     val wallpaperSaturation: Float = 1f,
+    /** Valores da área em uso (preenchidos por [forSlot]). */
+    val wallpaperDepth: Boolean = true,
+    val wallpaperSpatial: Boolean = false,
     /** Área cuja imagem está em uso nesta "visão" das preferências (ver [forSlot]). */
     val wallpaperSlot: WallpaperSlot = WallpaperSlot.HOME_INNER,
     /** Configuração bruta das quatro áreas. Os campos `wallpaper*` acima são a área resolvida. */
@@ -189,6 +192,8 @@ data class Settings(
             wallpaperOffsetX = c.offsetX,
             wallpaperOffsetY = c.offsetY,
             wallpaperSaturation = c.saturation,
+            wallpaperDepth = c.depth,
+            wallpaperSpatial = c.spatial,
         )
     }
 

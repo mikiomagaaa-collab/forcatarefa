@@ -74,8 +74,20 @@ import app.cristal.cover.ui.launcher.HomeContent
 import app.cristal.cover.ui.launcher.MenuAction
 import app.cristal.cover.ui.launcher.MenuState
 import app.cristal.cover.ui.launcher.MenuTarget
-import app.cristal.cover.ui.launcher.QuickPanel
-import app.cristal.cover.ui.launcher.QuickPanelActions
+import app.cristal.cover.ui.launcher.ControlCenter
+import app.cristal.cover.ui.launcher.ControlCenterActions
+import app.cristal.cover.data.control.ControlLayout
+import app.cristal.cover.data.control.ControlPreset
+import app.cristal.cover.data.prefs.WallpaperKind
+import android.graphics.LinearGradient
+import android.graphics.Shader
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import app.cristal.cover.ui.launcher.SafeLayout
 import app.cristal.cover.ui.launcher.TodayPanel
 import app.cristal.cover.ui.launcher.WidgetPicker
@@ -215,7 +227,25 @@ class ScreensSmokeTest {
 
     private val callbacks = HomeCallbacks({}, {}, { _, _, _ -> }, {}, {}, {}, {})
     private val widgetActions = WidgetActions()
-    private val quickActions = QuickPanelActions({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+    private val controlActions = ControlCenterActions(
+        onControl = {}, onControlSettings = {}, onBrightness = {}, onBrightnessEnd = {}, onAutoBrightness = {},
+        onVolume = {}, onSaveLayout = {}, onPreset = {}, onSystemPanel = {}, onOpenNotification = {},
+        onDismissNotification = {}, onClearAll = {}, onRequestNotificationAccess = {},
+    )
+
+    /** Foto de teste (gradiente) e o "objeto" dela: um círculo no meio, com o resto transparente. */
+    private fun depthImages(): Pair<ImageBitmap, ImageBitmap> {
+        val w = 600
+        val h = 1200
+        val photo = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val subject = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c1 = Canvas(photo)
+        c1.drawPaint(Paint().apply { shader = LinearGradient(0f, 0f, 0f, h.toFloat(), 0xFF203A8F.toInt(), 0xFF8E3B9E.toInt(), Shader.TileMode.CLAMP) })
+        val disc = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFB347.toInt() }
+        c1.drawCircle(w / 2f, h * 0.36f, w * 0.3f, disc)
+        Canvas(subject).drawCircle(w / 2f, h * 0.36f, w * 0.3f, disc)
+        return photo.asImageBitmap() to subject.asImageBitmap()
+    }
 
     // --- Infra -------------------------------------------------------------------------------------
 
@@ -325,32 +355,46 @@ class ScreensSmokeTest {
     }
 
     @Test
-    fun `painel rapido com notificacoes e musica`() {
+    fun `central de controle na tela externa`() {
         rule.setContent {
             Scene(Settings()) {
-                QuickPanel(
-                    state = openSheet(), safe = SafeLayout(), quick = quick, widgetData = widgetData, widgetActions = widgetActions,
-                    notifications = notifications, notificationAccess = true, actions = quickActions,
+                ControlCenter(
+                    state = openSheet(), safe = SafeLayout(), quick = quick, layout = ControlPreset.LIQUID_FLIP.build(onCover = true),
+                    widgetData = widgetData, widgetActions = widgetActions, notifications = notifications,
+                    notificationAccess = true, onCover = true, actions = controlActions,
                 )
             }
         }
-        shot("07-painel-rapido")
-        rule.onNodeWithText("Lanterna").assertExists()
-        rule.onNodeWithText("Ana").assertExists()
+        shot("07-central-externa")
+        rule.onNodeWithContentDescription("Wi-Fi").assertExists()
+        rule.onNodeWithContentDescription("Brilho").assertExists()
+        // Modo de edição: tocar num controle mostra as ações dele.
+        rule.onNodeWithContentDescription("Editar a central").performClick()
+        rule.onNodeWithText("Concluir").assertExists()
+        rule.onNodeWithContentDescription("Brilho").performClick()
+        rule.onNodeWithContentDescription("Mudar tamanho").assertExists()
+        shot("07b-central-edicao")
     }
 
     @Test
-    fun `painel rapido sem acesso as notificacoes`() {
+    @Config(sdk = [36], qualifiers = "w411dp-h1004dp-420dpi")
+    fun `central de controle na tela interna e notificacoes`() {
+        val single = ControlLayout(pages = listOf(ControlPreset.IOS.build(onCover = false).pages.first()))
         rule.setContent {
-            Scene(Settings()) {
-                QuickPanel(
-                    state = openSheet(), safe = SafeLayout(), quick = quick.copy(torchAvailable = false),
-                    widgetData = widgetData.copy(media = null), widgetActions = widgetActions,
-                    notifications = emptyList(), notificationAccess = false, actions = quickActions,
+            Scene(Settings().forScreen(onCover = false)) {
+                ControlCenter(
+                    state = openSheet(), safe = SafeLayout(), quick = quick.copy(dndOn = true, autoRotate = true),
+                    layout = single, widgetData = widgetData, widgetActions = widgetActions, notifications = notifications,
+                    notificationAccess = true, onCover = false, actions = controlActions,
                 )
             }
         }
-        shot("08-painel-sem-acesso")
+        shot("08-central-interna")
+        rule.onAllNodesWithText("Garota de Ipanema").onFirst().assertExists()
+        rule.onRoot().performTouchInput { swipeLeft() }
+        rule.waitForIdle()
+        shot("08b-central-notificacoes")
+        rule.onNodeWithText("Ana").assertExists()
     }
 
     @Test
@@ -484,5 +528,42 @@ class ScreensSmokeTest {
         rule.setContent { Scene(Settings().forScreen(onCover = false), sceneLayout = inner) }
         shot("16-tela-interna")
         rule.onAllNodesWithText("Parcialmente nublado").onFirst().assertExists()
+    }
+
+    @Test
+    @Config(sdk = [36], qualifiers = "w411dp-h1004dp-420dpi")
+    fun `bloqueio interno com efeito de profundidade`() {
+        val (photo, subject) = depthImages()
+        val settings = Settings().copy(wallpaperKind = WallpaperKind.IMAGE)
+        val state = LockUiState(
+            settings = settings, battery = BatteryState(percent = 76), notifications = notifications.take(1),
+            wallpaper = photo, subject = subject,
+        )
+        rule.setContent {
+            CristalTheme(settings = settings) {
+                LockScreen(state = state, secure = false, resetKey = 0, actions = LockActions({}, {}, {}, {}, {}, {}, {}, {}))
+            }
+        }
+        shot("17-bloqueio-profundidade")
+        rule.onNodeWithText("Deslize para desbloquear").assertExists()
+    }
+
+    @Test
+    fun `cover clock com efeito de profundidade`() {
+        val (photo, subject) = depthImages()
+        val settings = Settings().copy(wallpaperKind = WallpaperKind.IMAGE)
+        val state = LockUiState(settings = settings, notifications = notifications, wallpaper = photo, subject = subject)
+        rule.setContent {
+            CristalTheme(settings = settings) {
+                LockScreen(
+                    state = state, secure = false, resetKey = 0,
+                    actions = LockActions({}, {}, {}, {}, {}, {}, {}, {}), coverMinimal = true,
+                )
+            }
+        }
+        shot("18-cover-clock-profundidade")
+        // As duas camadas medem igual: tocar expande a notificação da camada de cima.
+        rule.onAllNodesWithText("Boletim escolar").onLast().performClick()
+        rule.onAllNodesWithText("Abrir").onLast().assertExists()
     }
 }

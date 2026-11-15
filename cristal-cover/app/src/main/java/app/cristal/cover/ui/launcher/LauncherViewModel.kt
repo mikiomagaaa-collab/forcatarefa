@@ -1,5 +1,8 @@
 package app.cristal.cover.ui.launcher
 
+import android.content.Intent
+import app.cristal.cover.BuildConfig
+import kotlinx.coroutines.flow.flatMapLatest
 import android.graphics.Rect
 import android.view.Display
 import androidx.compose.runtime.Immutable
@@ -40,6 +43,10 @@ import app.cristal.cover.data.prefs.WallpaperImages
 import app.cristal.cover.data.shizuku.ShizukuManager
 import app.cristal.cover.data.system.PermissionCenter
 import app.cristal.cover.data.system.PermissionState
+import app.cristal.cover.data.control.ControlCenterRepository
+import app.cristal.cover.data.control.ControlKind
+import app.cristal.cover.data.control.ControlLayout
+import app.cristal.cover.data.control.ControlPreset
 import app.cristal.cover.data.system.QuickSettingsRepository
 import app.cristal.cover.data.system.QuickState
 import app.cristal.cover.data.system.SystemBridge
@@ -85,6 +92,7 @@ sealed interface LauncherEvent {
     /** O app foi pedido, mas pode não ter aparecido na tela externa (bloqueio do fabricante). */
     data class CheckLaunched(val app: AppInfo) : LauncherEvent
     data class OpenSystemPanel(val action: String) : LauncherEvent
+    data class OpenIntent(val intent: android.content.Intent) : LauncherEvent
     data object GoHome : LauncherEvent
 }
 
@@ -103,6 +111,7 @@ class LauncherViewModel @Inject constructor(
     private val weatherRepository: WeatherRepository,
     private val calendarRepository: CalendarRepository,
     private val quickSettingsRepository: QuickSettingsRepository,
+    private val controlCenterRepository: ControlCenterRepository,
     private val systemBridge: SystemBridge,
     private val permissionCenter: PermissionCenter,
     private val shizukuManager: ShizukuManager,
@@ -166,6 +175,12 @@ class LauncherViewModel @Inject constructor(
 
     val notifications: StateFlow<List<NotificationItem>> = notificationRepository.items
     val quick: StateFlow<QuickState> = quickSettingsRepository.state
+
+    /** Layout da Liquid Control Center da tela atual (interna ou externa). */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val controlLayout: StateFlow<ControlLayout> = profile
+        .flatMapLatest { p -> controlCenterRepository.layout(p == HomeProfile.COVER) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), controlCenterRepository.inner.value)
     val permissions: StateFlow<PermissionState> = permissionCenter.state
     val cover: StateFlow<CoverState> = coverDisplayRepository.state
     val wallpapers: StateFlow<WallpaperImages> = wallpaperRepository.images
@@ -374,12 +389,129 @@ class LauncherViewModel @Inject constructor(
         shellToggle(android.provider.Settings.Panel.ACTION_INTERNET_CONNECTIVITY) { quickSettingsRepository.toggleMobileData() }
 
     private fun shellToggle(panelAction: String, toggle: suspend () -> ToggleResult) {
-        viewModelScope.launch {
-            when (toggle()) {
-                ToggleResult.DONE -> Unit
-                ToggleResult.NEEDS_SYSTEM_PANEL -> _events.trySend(LauncherEvent.OpenSystemPanel(panelAction))
-                ToggleResult.FAILED -> _events.trySend(LauncherEvent.OpenSystemPanel(panelAction))
+        viewModelScope.launch { handleToggle(toggle(), Intent(panelAction)) }
+    }
+
+    private fun handleToggle(result: ToggleResult, panel: Intent?, permission: Intent? = null, permissionHint: String? = null) {
+        when (result) {
+            ToggleResult.DONE -> Unit
+            ToggleResult.NEEDS_SYSTEM_PANEL, ToggleResult.FAILED -> panel?.let { _events.trySend(LauncherEvent.OpenIntent(it)) }
+            ToggleResult.NEEDS_PERMISSION -> {
+                permissionHint?.let(::message)
+                (permission ?: panel)?.let { _events.trySend(LauncherEvent.OpenIntent(it)) }
             }
+        }
+    }
+
+    // --- Liquid Control Center --------------------------------------------------------------------
+
+    fun saveControlLayout(layout: ControlLayout) {
+        val onCover = profile.value == HomeProfile.COVER
+        viewModelScope.launch { controlCenterRepository.save(onCover, layout) }
+    }
+
+    fun applyControlPreset(preset: ControlPreset) {
+        val onCover = profile.value == HomeProfile.COVER
+        viewModelScope.launch { controlCenterRepository.applyPreset(onCover, preset) }
+    }
+
+    private val writeSettingsIntent: Intent
+        get() = Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS, android.net.Uri.parse("package:${BuildConfig.APPLICATION_ID}"))
+
+    /** Executa o toque num módulo da central. Os módulos que mexem na própria tela são tratados pela UI. */
+    fun runControl(kind: ControlKind) {
+        when (kind) {
+            ControlKind.TORCH -> toggleTorch()
+            ControlKind.RINGER -> toggleRinger()
+            ControlKind.WIFI -> toggleWifi()
+            ControlKind.BLUETOOTH -> toggleBluetooth()
+            ControlKind.MOBILE_DATA -> toggleMobileData()
+            ControlKind.AIRPLANE -> viewModelScope.launch {
+                handleToggle(quickSettingsRepository.toggleAirplane(), Intent(android.provider.Settings.ACTION_AIRPLANE_MODE_SETTINGS))
+            }
+            ControlKind.LOCATION -> viewModelScope.launch {
+                handleToggle(quickSettingsRepository.toggleLocation(), Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            }
+            ControlKind.NFC -> viewModelScope.launch {
+                handleToggle(quickSettingsRepository.toggleNfc(), Intent(android.provider.Settings.ACTION_NFC_SETTINGS))
+            }
+            ControlKind.BATTERY_SAVER -> viewModelScope.launch {
+                handleToggle(quickSettingsRepository.toggleBatterySaver(), Intent(android.provider.Settings.ACTION_BATTERY_SAVER_SETTINGS))
+            }
+            ControlKind.DARK_MODE -> viewModelScope.launch {
+                handleToggle(quickSettingsRepository.toggleDarkMode(), Intent(android.provider.Settings.ACTION_DISPLAY_SETTINGS))
+            }
+            ControlKind.DND -> viewModelScope.launch {
+                handleToggle(
+                    quickSettingsRepository.toggleDnd(),
+                    panel = null,
+                    permission = Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS),
+                    permissionHint = "Libere o Cristal em \"Acesso ao Não perturbe\" para usar este botão.",
+                )
+            }
+            ControlKind.ROTATION -> viewModelScope.launch {
+                handleToggle(
+                    quickSettingsRepository.toggleRotation(),
+                    panel = null,
+                    permission = writeSettingsIntent,
+                    permissionHint = "Permita que o Cristal altere as configurações do sistema para mudar a rotação.",
+                )
+            }
+            ControlKind.HOTSPOT -> _events.trySend(LauncherEvent.OpenIntent(Intent(TETHER_SETTINGS)))
+            ControlKind.LOCK -> lockScreen()
+            ControlKind.RECENTS -> openRecents()
+            ControlKind.SYSTEM_PANEL -> if (!openSystemQuickSettings()) {
+                message("Ative o serviço de acessibilidade do Cristal para abrir o painel do sistema.")
+            }
+            ControlKind.TIMER -> _events.trySend(LauncherEvent.OpenIntent(Intent(android.provider.AlarmClock.ACTION_SHOW_TIMERS)))
+            ControlKind.ALARM -> _events.trySend(LauncherEvent.OpenIntent(Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS)))
+            ControlKind.CALCULATOR -> _events.trySend(
+                LauncherEvent.OpenIntent(Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_CALCULATOR)),
+            )
+            ControlKind.CAMERA -> _events.trySend(
+                LauncherEvent.OpenIntent(Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)),
+            )
+            ControlKind.MEDIA, ControlKind.BATTERY, ControlKind.BRIGHTNESS, ControlKind.VOLUME, ControlKind.CONNECTIVITY,
+            ControlKind.SCREENSHOT, ControlKind.SEARCH, ControlKind.WALLPAPER, ControlKind.SETTINGS -> Unit
+        }
+    }
+
+    /** Toque longo num módulo: abre a tela do sistema ligada a ele. */
+    fun controlSettings(kind: ControlKind) {
+        val action = when (kind) {
+            ControlKind.WIFI, ControlKind.CONNECTIVITY -> android.provider.Settings.ACTION_WIFI_SETTINGS
+            ControlKind.BLUETOOTH -> android.provider.Settings.ACTION_BLUETOOTH_SETTINGS
+            ControlKind.MOBILE_DATA -> android.provider.Settings.ACTION_DATA_ROAMING_SETTINGS
+            ControlKind.AIRPLANE -> android.provider.Settings.ACTION_AIRPLANE_MODE_SETTINGS
+            ControlKind.HOTSPOT -> TETHER_SETTINGS
+            ControlKind.NFC -> android.provider.Settings.ACTION_NFC_SETTINGS
+            ControlKind.LOCATION -> android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS
+            ControlKind.RINGER, ControlKind.VOLUME -> android.provider.Settings.ACTION_SOUND_SETTINGS
+            ControlKind.DND -> android.provider.Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS
+            ControlKind.ROTATION, ControlKind.DARK_MODE, ControlKind.BRIGHTNESS -> android.provider.Settings.ACTION_DISPLAY_SETTINGS
+            ControlKind.BATTERY_SAVER, ControlKind.BATTERY -> android.provider.Settings.ACTION_BATTERY_SAVER_SETTINGS
+            else -> null
+        } ?: return
+        _events.trySend(LauncherEvent.OpenIntent(Intent(action)))
+    }
+
+    fun setBrightness(fraction: Float) {
+        if (quickSettingsRepository.setBrightness(fraction) == ToggleResult.NEEDS_PERMISSION) {
+            message("Permita que o Cristal altere as configurações do sistema para mudar o brilho por aqui.")
+            _events.trySend(LauncherEvent.OpenIntent(writeSettingsIntent))
+        }
+    }
+
+    fun endBrightnessDrag() = quickSettingsRepository.endBrightnessDrag()
+
+    fun toggleAutoBrightness() {
+        viewModelScope.launch {
+            handleToggle(
+                quickSettingsRepository.toggleAutoBrightness(),
+                panel = null,
+                permission = writeSettingsIntent,
+                permissionHint = "Permita que o Cristal altere as configurações do sistema para usar o brilho automático.",
+            )
         }
     }
 
@@ -498,6 +630,9 @@ class LauncherViewModel @Inject constructor(
     }
 
     companion object {
+        /** Tela de ponto de acesso; não é uma constante pública, mas existe em todos os Android recentes. */
+        const val TETHER_SETTINGS = "android.settings.TETHER_SETTINGS"
+
         const val NO_DISPLAY = Display.INVALID_DISPLAY
     }
 }

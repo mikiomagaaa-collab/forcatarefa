@@ -1,5 +1,6 @@
 package app.cristal.cover.ui.launcher
 
+import app.cristal.cover.data.control.ControlKind
 import android.Manifest
 import android.app.Activity
 import android.content.ContentUris
@@ -74,6 +75,7 @@ import app.cristal.cover.ui.components.WallpaperLayer
 import app.cristal.cover.ui.glass.LocalGlassBackdrop
 import app.cristal.cover.ui.glass.Motion
 import app.cristal.cover.ui.glass.glassBackdropSource
+import app.cristal.cover.ui.glass.rememberDeviceTilt
 import app.cristal.cover.ui.glass.rememberGlassBackdrop
 import app.cristal.cover.ui.glass.rememberHaptic
 import app.cristal.cover.ui.settings.SettingsActivity
@@ -102,6 +104,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
     val widgetData by viewModel.widgetData.collectAsStateWithLifecycle()
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val quick by viewModel.quick.collectAsStateWithLifecycle()
+    val controlLayout by viewModel.controlLayout.collectAsStateWithLifecycle()
     val permissions by viewModel.permissions.collectAsStateWithLifecycle()
     val cover by viewModel.cover.collectAsStateWithLifecycle()
     val wallpaperImages by viewModel.wallpapers.collectAsStateWithLifecycle()
@@ -133,6 +136,8 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
     val foldTarget = if (rawSettings.flipTransition && !onCover && hinge != null) ((150f - hinge) / 90f).coerceIn(0f, 1f) else 0f
     val foldAmount by animateFloatAsState(foldTarget, Motion.gentle, label = "dobra")
     val safe = rememberSafeLayout(settings.useCutoutArea)
+    // Papel de parede espacial: só com o vidro completo (no modo leve, economiza bateria).
+    val homeTilt = rememberDeviceTilt(settings.wallpaperSpatial && quality != GlassQuality.LIGHT)
     val shizukuReady = permissions.shizuku == ShizukuStatus.READY
 
     val layout = home.layout
@@ -218,6 +223,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                 is LauncherEvent.Message -> showMessage(event.text)
                 is LauncherEvent.ConfirmCompat -> compat = event
                 is LauncherEvent.OpenSystemPanel -> openExternalIntent(Intent(event.action))
+                is LauncherEvent.OpenIntent -> openExternalIntent(event.intent)
                 is LauncherEvent.CheckLaunched -> launch {
                     // Se depois de um tempo o launcher continua em primeiro plano, o app não apareceu nesta tela.
                     delay(1_800)
@@ -503,6 +509,8 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                 offsetY = settings.wallpaperOffsetY,
                 saturation = settings.wallpaperSaturation,
                 modifier = Modifier.glassBackdropSource(sceneBackdrop),
+                tilt = { homeTilt.value },
+                spatial = settings.wallpaperSpatial,
                 parallax = {
                     if (!settingsState.value.wallpaperParallax) {
                         0f
@@ -571,23 +579,41 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                 },
             )
 
-            QuickPanel(
+            ControlCenter(
                 state = panel,
                 safe = safe,
                 quick = quick,
+                layout = controlLayout,
                 widgetData = widgetData,
                 widgetActions = widgetActions,
                 notifications = notifications,
                 notificationAccess = permissions.notificationAccess,
-                actions = QuickPanelActions(
-                    onTorch = viewModel::toggleTorch,
-                    onWifi = viewModel::toggleWifi,
-                    onBluetooth = viewModel::toggleBluetooth,
-                    onMobileData = viewModel::toggleMobileData,
-                    onRinger = viewModel::toggleRinger,
+                onCover = onCover,
+                actions = ControlCenterActions(
+                    onControl = { kind ->
+                        when (kind) {
+                            ControlKind.SCREENSHOT -> scope.launch {
+                                // Fecha a central antes, para ela não sair na captura.
+                                panel.close()
+                                viewModel.takeScreenshot()
+                            }
+                            ControlKind.SEARCH -> {
+                                scope.launch { panel.close() }
+                                scope.launch { drawer.open() }
+                            }
+                            ControlKind.WALLPAPER -> openCristalSettings(SettingsActivity.PAGE_WALLPAPER)
+                            ControlKind.SETTINGS -> openCristalSettings()
+                            ControlKind.MEDIA -> viewModel.mediaOpen(displayId)
+                            else -> viewModel.runControl(kind)
+                        }
+                    },
+                    onControlSettings = viewModel::controlSettings,
+                    onBrightness = viewModel::setBrightness,
+                    onBrightnessEnd = viewModel::endBrightnessDrag,
+                    onAutoBrightness = viewModel::toggleAutoBrightness,
                     onVolume = viewModel::setMediaVolume,
-                    onLock = viewModel::lockScreen,
-                    onSettings = { openCristalSettings() },
+                    onSaveLayout = viewModel::saveControlLayout,
+                    onPreset = viewModel::applyControlPreset,
                     onSystemPanel = {
                         if (!viewModel.openSystemQuickSettings()) {
                             showMessage("Ative o serviço de acessibilidade do Cristal para abrir o painel do sistema.")
@@ -602,19 +628,6 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                     onRequestNotificationAccess = {
                         openExternalIntent(Intent(SystemSettings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                     },
-                    onScreenshot = {
-                        scope.launch {
-                            // Fecha o painel antes, para ele não sair na captura.
-                            panel.close()
-                            viewModel.takeScreenshot()
-                        }
-                    },
-                    onRecents = viewModel::openRecents,
-                    onSearch = {
-                        scope.launch { panel.close() }
-                        scope.launch { drawer.open() }
-                    },
-                    onWallpaper = { openCristalSettings(SettingsActivity.PAGE_WALLPAPER) },
                 ),
             )
 
