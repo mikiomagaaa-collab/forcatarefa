@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Cristal Cover</string>
+    <string name="settings_label">Configurações do Cristal</string>
+    <string name="notification_listener_label">Cristal Cover</string>
+    <string name="accessibility_label">Cristal Cover</string>
+    <string name="accessibility_summary">Gestos do launcher, tela externa e tela de bloqueio</string>
+    <string name="accessibility_description">O Cristal Cover usa este serviço para: bloquear a tela e abrir os painéis do sistema por gesto; abrir o launcher quando a tela inicial da tela externa aparece; e mostrar a tela de bloqueio do Cristal com o aparelho apagado.\n\nO serviço NÃO lê o conteúdo das telas nem o que você digita. Ele só é avisado de qual app veio para o primeiro plano. Nenhuma informação sai do aparelho.</string>
+</resources>

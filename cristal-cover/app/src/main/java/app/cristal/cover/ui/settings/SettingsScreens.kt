@@ -1,0 +1,946 @@
+package app.cristal.cover.ui.settings
+
+import android.Manifest
+import android.content.Intent
+import android.view.Display
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Backup
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material.icons.rounded.Wallpaper
+import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.cristal.cover.BuildConfig
+import app.cristal.cover.data.backup.BackupManager
+import app.cristal.cover.data.display.CoverState
+import app.cristal.cover.data.prefs.DrawerSort
+import app.cristal.cover.data.prefs.GestureAction
+import app.cristal.cover.data.prefs.GlassQuality
+import app.cristal.cover.data.prefs.IconShape
+import app.cristal.cover.data.prefs.IconStyle
+import app.cristal.cover.data.prefs.LockMode
+import app.cristal.cover.data.prefs.PrefKeys
+import app.cristal.cover.data.prefs.RefreshMode
+import app.cristal.cover.data.prefs.Settings
+import app.cristal.cover.data.prefs.SettingsLimits
+import app.cristal.cover.data.prefs.TempUnit
+import app.cristal.cover.data.prefs.ThemeMode
+import app.cristal.cover.data.prefs.WallpaperKind
+import app.cristal.cover.data.shizuku.ShizukuStatus
+import app.cristal.cover.data.system.PermissionState
+import app.cristal.cover.ui.components.AppIconImage
+import app.cristal.cover.ui.components.GlassTextField
+import app.cristal.cover.ui.components.WallpaperLayer
+import app.cristal.cover.ui.components.WallpaperPresets
+import app.cristal.cover.ui.launcher.GlassButton
+import app.cristal.cover.ui.launcher.SwitchRow
+import app.cristal.cover.ui.launcher.startSafely
+import app.cristal.cover.ui.lock.LockActivity
+import app.cristal.cover.ui.widgets.formatTemp
+import app.cristal.cover.ui.widgets.weatherLabel
+import kotlin.math.roundToInt
+
+enum class SettingsPage(val title: String) {
+    MAIN("Configurações"),
+    APPEARANCE("Aparência"),
+    WALLPAPER("Papel de parede"),
+    HOME("Tela inicial e ícones"),
+    GESTURES("Gestos"),
+    LOCK("Tela de bloqueio"),
+    COVER("Tela externa"),
+    WEATHER("Clima"),
+    PERMISSIONS("Permissões"),
+    BACKUP("Backup"),
+    HIDDEN("Apps ocultos"),
+    ABOUT("Sobre"),
+}
+
+fun gestureLabel(action: GestureAction): String = when (action) {
+    GestureAction.NONE -> "Nenhuma"
+    GestureAction.APP_DRAWER -> "Gaveta de apps"
+    GestureAction.QUICK_PANEL -> "Painel do Cristal"
+    GestureAction.SYSTEM_NOTIFICATIONS -> "Notificações do sistema"
+    GestureAction.SYSTEM_QUICK_SETTINGS -> "Ajustes rápidos do sistema"
+    GestureAction.LOCK_SCREEN -> "Bloquear tela"
+    GestureAction.RECENTS -> "Apps recentes"
+    GestureAction.SETTINGS -> "Configurações do Cristal"
+    GestureAction.TORCH -> "Lanterna"
+}
+
+@Composable
+fun SettingsRoot(viewModel: SettingsViewModel, initialPage: SettingsPage, onExit: () -> Unit) {
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val wallpaper by viewModel.wallpaper.collectAsStateWithLifecycle()
+    val permissions by viewModel.permissions.collectAsStateWithLifecycle()
+    val cover by viewModel.cover.collectAsStateWithLifecycle()
+    var page by rememberSaveable { mutableStateOf(initialPage) }
+
+    // Quem abriu direto em uma subpágina (ex.: "Papel de parede" pelo menu) sai ao voltar.
+    val back: () -> Unit = { if (page == SettingsPage.MAIN || page == initialPage) onExit() else page = SettingsPage.MAIN }
+    androidx.activity.compose.BackHandler(onBack = back)
+
+    when (page) {
+        SettingsPage.MAIN -> MainPage(settings, wallpaper, permissions, back) { page = it }
+        SettingsPage.APPEARANCE -> AppearancePage(viewModel, settings, wallpaper, back)
+        SettingsPage.WALLPAPER -> WallpaperPage(viewModel, settings, wallpaper, back)
+        SettingsPage.HOME -> HomePage(viewModel, settings, wallpaper, back)
+        SettingsPage.GESTURES -> GesturesPage(viewModel, settings, wallpaper, permissions, back)
+        SettingsPage.LOCK -> LockPage(viewModel, settings, wallpaper, permissions, back) { page = SettingsPage.PERMISSIONS }
+        SettingsPage.COVER -> CoverPage(viewModel, settings, wallpaper, permissions, cover, back)
+        SettingsPage.WEATHER -> WeatherPage(viewModel, settings, wallpaper, permissions, back)
+        SettingsPage.PERMISSIONS -> PermissionsPage(viewModel, settings, wallpaper, permissions, back, onExit)
+        SettingsPage.BACKUP -> BackupPage(viewModel, settings, wallpaper, back)
+        SettingsPage.HIDDEN -> HiddenAppsPage(viewModel, settings, wallpaper, back)
+        SettingsPage.ABOUT -> AboutPage(settings, wallpaper, back)
+    }
+}
+
+@Composable
+private fun MainPage(
+    settings: Settings,
+    wallpaper: ImageBitmap?,
+    permissions: PermissionState,
+    onBack: () -> Unit,
+    open: (SettingsPage) -> Unit,
+) {
+    val pending = listOf(permissions.notificationAccess, permissions.accessibility).count { !it }
+    SettingsScaffold(SettingsPage.MAIN.title, settings, wallpaper, onBack) {
+        if (pending > 0) {
+            item {
+                SettingsCard {
+                    NavRow(
+                        Icons.Rounded.Security,
+                        if (pending == 1) "1 acesso pendente" else "$pending acessos pendentes",
+                        "Toque para ativar notificações e acessibilidade.",
+                    ) { open(SettingsPage.PERMISSIONS) }
+                }
+            }
+        }
+        item {
+            SettingsCard("Visual") {
+                NavRow(Icons.Rounded.Palette, "Aparência", "Tema, vidro, desempenho e taxa de atualização") { open(SettingsPage.APPEARANCE) }
+                NavRow(Icons.Rounded.Wallpaper, "Papel de parede", "Presets ou uma imagem sua") { open(SettingsPage.WALLPAPER) }
+                NavRow(Icons.Rounded.GridView, "Tela inicial e ícones", "Grade, dock, forma, tamanho e pacotes de ícones") { open(SettingsPage.HOME) }
+            }
+        }
+        item {
+            SettingsCard("Comportamento") {
+                NavRow(Icons.Rounded.TouchApp, "Gestos", "O que cada gesto faz") { open(SettingsPage.GESTURES) }
+                NavRow(Icons.Rounded.Lock, "Tela de bloqueio", "Relógio, notificações e atalhos sobre o bloqueio do sistema") { open(SettingsPage.LOCK) }
+                NavRow(Icons.Rounded.Smartphone, "Tela externa", "Assumir a tela externa, liberar apps e compatibilidade") { open(SettingsPage.COVER) }
+                NavRow(Icons.Rounded.WbSunny, "Clima", "Cidade e unidade de temperatura") { open(SettingsPage.WEATHER) }
+            }
+        }
+        item {
+            SettingsCard("Sistema") {
+                NavRow(Icons.Rounded.Security, "Permissões", "Notificações, acessibilidade, Shizuku e launcher padrão") { open(SettingsPage.PERMISSIONS) }
+                NavRow(Icons.Rounded.Backup, "Backup", "Exportar e restaurar toda a configuração") { open(SettingsPage.BACKUP) }
+                NavRow(Icons.Rounded.VisibilityOff, "Apps ocultos") { open(SettingsPage.HIDDEN) }
+                NavRow(Icons.Rounded.Info, "Sobre", "Versão, privacidade e limitações") { open(SettingsPage.ABOUT) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppearancePage(vm: SettingsViewModel, settings: Settings, wallpaper: ImageBitmap?, onBack: () -> Unit) {
+    SettingsScaffold(SettingsPage.APPEARANCE.title, settings, wallpaper, onBack) {
+        item {
+            SettingsCard("Tema") {
+                ChoiceRow(
+                    "Modo",
+                    listOf(ThemeMode.AUTO to "Automático", ThemeMode.LIGHT to "Claro", ThemeMode.DARK to "Escuro"),
+                    settings.themeMode,
+                ) { vm.setEnum(PrefKeys.THEME_MODE, it) }
+            }
+        }
+        item {
+            SettingsCard("Vidro") {
+                ChoiceRow(
+                    "Qualidade",
+                    listOf(GlassQuality.LIGHT to "Leve", GlassQuality.BLUR to "Blur", GlassQuality.LIQUID to "Líquido"),
+                    settings.glassQuality,
+                ) { vm.setEnum(PrefKeys.GLASS_QUALITY, it) }
+                InfoText(
+                    when (settings.glassQuality) {
+                        GlassQuality.LIGHT -> "Sem blur nem shader: o mais econômico. Ideal para poupar bateria."
+                        GlassQuality.BLUR -> "Desfoque real do fundo, sem refração."
+                        GlassQuality.LIQUID -> "Desfoque, refração, dispersão de cor e brilho nas bordas (shader AGSL)."
+                    },
+                )
+                SliderRow(
+                    "Intensidade",
+                    settings.glassIntensity,
+                    0f..1f,
+                    label = { "${(it * 100).roundToInt()}%" },
+                ) { vm.set(PrefKeys.GLASS_INTENSITY, it) }
+                SwitchRow(
+                    title = "Reflexo acompanha o movimento",
+                    subtitle = "Usa o sensor de gravidade para o brilho da borda se mover ao inclinar o aparelho.",
+                    checked = settings.dynamicLight,
+                    onChange = { vm.set(PrefKeys.DYNAMIC_LIGHT, it) },
+                )
+            }
+        }
+        item {
+            SettingsCard("Desempenho") {
+                SwitchRow(
+                    title = "Desempenho adaptativo",
+                    subtitle = "Se os quadros começarem a atrasar, reduz sozinho a qualidade do vidro até a tela ser recriada.",
+                    checked = settings.adaptivePerformance,
+                    onChange = { vm.set(PrefKeys.ADAPTIVE_PERFORMANCE, it) },
+                )
+                ChoiceRow(
+                    "Taxa de atualização",
+                    listOf(RefreshMode.AUTO to "Automática", RefreshMode.MAX to "Máxima", RefreshMode.SAVER to "60 Hz"),
+                    settings.refreshMode,
+                ) { vm.setEnum(PrefKeys.REFRESH_MODE, it) }
+                InfoText(
+                    "Automática deixa o sistema decidir. Máxima pede a maior taxa da tela (144 Hz na tela externa) " +
+                        "e volta para automática se os quadros não couberem nesse ritmo. No modo de economia de bateria " +
+                        "o app usa 60 Hz e vidro leve.",
+                )
+                SwitchRow(
+                    title = "Vibração ao tocar",
+                    checked = settings.haptics,
+                    onChange = { vm.set(PrefKeys.HAPTICS, it) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WallpaperPage(vm: SettingsViewModel, settings: Settings, wallpaper: ImageBitmap?, onBack: () -> Unit) {
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) vm.setWallpaperImage(uri)
+    }
+    SettingsScaffold(SettingsPage.WALLPAPER.title, settings, wallpaper, onBack) {
+        item {
+            SettingsCard("Presets") {
+                val presets = WallpaperPresets.all
+                for (rowStart in presets.indices step 4) {
+                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        for (index in rowStart until rowStart + 4) {
+                            if (index < presets.size) {
+                                PresetTile(
+                                    index = index,
+                                    name = presets[index].name,
+                                    selected = settings.wallpaperKind == WallpaperKind.PRESET && settings.wallpaperPreset == index,
+                                    modifier = Modifier.weight(1f),
+                                ) { vm.useWallpaperPreset(index) }
+                            } else {
+                                Spacer(Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            SettingsCard("Sua imagem") {
+                InfoText(
+                    "O Cristal guarda uma cópia reduzida da imagem na pasta privada do app. É ela que o vidro " +
+                        "desfoca e refrata. O papel de parede do sistema não é alterado.",
+                )
+                Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GlassButton("Escolher imagem", Modifier.weight(1f), primary = true) {
+                        runCatching {
+                            picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        }.onFailure { vm.message("Não foi possível abrir o seletor de fotos nesta tela.") }
+                    }
+                }
+                if (settings.wallpaperKind == WallpaperKind.IMAGE) InfoText("Em uso: imagem personalizada.")
+            }
+        }
+        item {
+            SettingsCard("Ajustes") {
+                SliderRow(
+                    "Escurecer",
+                    settings.wallpaperDim,
+                    0f..0.7f,
+                    label = { "${(it * 100).roundToInt()}%" },
+                ) { vm.set(PrefKeys.WALLPAPER_DIM, it) }
+                SwitchRow(
+                    title = "Parallax entre páginas",
+                    subtitle = "O fundo desliza de leve ao trocar de página.",
+                    checked = settings.wallpaperParallax,
+                    onChange = { vm.set(PrefKeys.WALLPAPER_PARALLAX, it) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PresetTile(index: Int, name: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Column(
+        modifier = modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = onClick,
+        ),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(62.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .border(
+                    if (selected) 2.dp else 0.75.dp,
+                    LocalContentColor.current.copy(alpha = if (selected) 1f else 0.3f),
+                    RoundedCornerShape(16.dp),
+                ),
+        ) {
+            WallpaperLayer(image = null, presetIndex = index, dim = 0f)
+        }
+        Text(name, fontSize = 11.sp, maxLines = 1, modifier = Modifier.padding(top = 3.dp))
+    }
+}
+
+private fun <T> rangeOptions(range: IntRange, map: (Int) -> T): List<Pair<T, String>> = range.map { map(it) to it.toString() }
+
+@Composable
+private fun HomePage(vm: SettingsViewModel, settings: Settings, wallpaper: ImageBitmap?, onBack: () -> Unit) {
+    val packs by vm.iconPacks.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { vm.loadIconPacks() }
+    SettingsScaffold(SettingsPage.HOME.title, settings, wallpaper, onBack) {
+        item {
+            SettingsCard("Grade") {
+                ChoiceRow("Colunas", rangeOptions(SettingsLimits.gridColumns) { it }, settings.gridColumns) {
+                    vm.set(PrefKeys.GRID_COLUMNS, it)
+                }
+                ChoiceRow("Linhas", rangeOptions(SettingsLimits.gridRows) { it }, settings.gridRows) {
+                    vm.set(PrefKeys.GRID_ROWS, it)
+                }
+                InfoText("Ao diminuir a grade, os itens que não couberem vão para a primeira posição livre.")
+                SwitchRow(title = "Mostrar nomes dos apps", checked = settings.showLabels, onChange = { vm.set(PrefKeys.SHOW_LABELS, it) })
+            }
+        }
+        item {
+            SettingsCard("Dock") {
+                SwitchRow(title = "Mostrar dock", checked = settings.dockEnabled, onChange = { vm.set(PrefKeys.DOCK_ENABLED, it) })
+                ChoiceRow("Itens no dock", rangeOptions(SettingsLimits.dockCount) { it }, settings.dockCount) {
+                    vm.set(PrefKeys.DOCK_COUNT, it)
+                }
+                SwitchRow(
+                    title = "Aproveitar a área ao lado das câmeras",
+                    subtitle = "Na tela externa, coloca o dock na faixa livre ao lado das lentes, se ela existir.",
+                    checked = settings.useCutoutArea,
+                    onChange = { vm.set(PrefKeys.USE_CUTOUT_AREA, it) },
+                )
+            }
+        }
+        item {
+            SettingsCard("Ícones") {
+                SliderRow(
+                    "Tamanho",
+                    settings.iconScale,
+                    SettingsLimits.ICON_SCALE_MIN..SettingsLimits.ICON_SCALE_MAX,
+                    label = { "${(it * 100).roundToInt()}%" },
+                ) { vm.set(PrefKeys.ICON_SCALE, it) }
+                ChoiceRow(
+                    "Forma",
+                    listOf(
+                        IconShape.SQUIRCLE to "Squircle",
+                        IconShape.CIRCLE to "Círculo",
+                        IconShape.ROUNDED to "Arredondado",
+                        IconShape.SQUARE to "Quadrado",
+                        IconShape.TEARDROP to "Gota",
+                        IconShape.HEXAGON to "Hexágono",
+                    ),
+                    settings.iconShape,
+                ) { vm.setEnum(PrefKeys.ICON_SHAPE, it) }
+                ChoiceRow(
+                    "Estilo",
+                    listOf(IconStyle.ORIGINAL to "Original", IconStyle.MONO_GLASS to "Vidro monocromático"),
+                    settings.iconStyle,
+                ) { vm.setEnum(PrefKeys.ICON_STYLE, it) }
+                InfoText("O estilo monocromático vale para apps que oferecem ícone temático; os demais ficam como estão.")
+                ChoiceRow(
+                    "Pacote de ícones",
+                    listOf("" to "Nenhum") + packs.map { it.packageName to it.label },
+                    settings.iconPack,
+                ) { vm.set(PrefKeys.ICON_PACK, it) }
+                if (packs.isEmpty()) InfoText("Nenhum pacote de ícones instalado. Pacotes no formato ADW/Nova da Play Store funcionam.")
+            }
+        }
+        item {
+            SettingsCard("Gaveta de apps") {
+                ChoiceRow("Colunas", rangeOptions(SettingsLimits.drawerColumns) { it }, settings.drawerColumns) {
+                    vm.set(PrefKeys.DRAWER_COLUMNS, it)
+                }
+                ChoiceRow(
+                    "Ordem",
+                    listOf(DrawerSort.NAME to "Alfabética", DrawerSort.USAGE to "Mais usados"),
+                    settings.drawerSort,
+                ) { vm.setEnum(PrefKeys.DRAWER_SORT, it) }
+                SwitchRow(
+                    title = "Abrir já com o teclado",
+                    subtitle = "Foca a busca assim que a gaveta abre.",
+                    checked = settings.drawerSearchOnOpen,
+                    onChange = { vm.set(PrefKeys.DRAWER_SEARCH_ON_OPEN, it) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GesturesPage(
+    vm: SettingsViewModel,
+    settings: Settings,
+    wallpaper: ImageBitmap?,
+    permissions: PermissionState,
+    onBack: () -> Unit,
+) {
+    val options = GestureAction.entries.map { it to gestureLabel(it) }
+    SettingsScaffold(SettingsPage.GESTURES.title, settings, wallpaper, onBack) {
+        item {
+            SettingsCard {
+                InfoText("Deslizar para os lados sempre troca de página; a primeira página à esquerda é o painel \"Hoje\".")
+                if (!permissions.accessibility) {
+                    InfoText("As ações \"do sistema\", \"Bloquear tela\" e \"Apps recentes\" precisam do serviço de acessibilidade ativo.")
+                }
+            }
+        }
+        item {
+            SettingsCard("Deslizar para cima") {
+                ChoiceRow("Ação", options, settings.gestureSwipeUp) { vm.setEnum(PrefKeys.GESTURE_SWIPE_UP, it) }
+            }
+        }
+        item {
+            SettingsCard("Deslizar para baixo") {
+                ChoiceRow("Ação", options, settings.gestureSwipeDown) { vm.setEnum(PrefKeys.GESTURE_SWIPE_DOWN, it) }
+            }
+        }
+        item {
+            SettingsCard("Dois toques no fundo") {
+                ChoiceRow("Ação", options, settings.gestureDoubleTap) { vm.setEnum(PrefKeys.GESTURE_DOUBLE_TAP, it) }
+            }
+        }
+        item {
+            SettingsCard("Sempre ativos") {
+                InfoText("Toque longo em um ícone: menu e arrastar. Toque longo no fundo: widgets, papel de parede e configurações.")
+            }
+        }
+    }
+}
+
+@Composable
+private fun LockPage(
+    vm: SettingsViewModel,
+    settings: Settings,
+    wallpaper: ImageBitmap?,
+    permissions: PermissionState,
+    onBack: () -> Unit,
+    openPermissions: () -> Unit,
+) {
+    val context = LocalContext.current
+    SettingsScaffold(SettingsPage.LOCK.title, settings, wallpaper, onBack) {
+        item {
+            SettingsCard("Modo") {
+                ChoiceRow(
+                    "Tela de bloqueio do Cristal",
+                    listOf(LockMode.OFF to "Desligada", LockMode.ACTIVITY to "Activity (recomendado)", LockMode.OVERLAY to "Sobreposição"),
+                    settings.lockMode,
+                ) { vm.setEnum(PrefKeys.LOCK_MODE, it) }
+                InfoText(
+                    when (settings.lockMode) {
+                        LockMode.OFF -> "O aparelho usa só a tela de bloqueio original."
+                        LockMode.ACTIVITY -> "Uma tela do Cristal aparece sobre o bloqueio do sistema, pelo mecanismo oficial do Android (o mesmo de alarmes e chamadas)."
+                        LockMode.OVERLAY -> "Experimental: uma janela de acessibilidade cobre o bloqueio. Use se o modo Activity não aparecer na tela externa do seu aparelho."
+                    },
+                )
+                if (settings.lockMode != LockMode.OFF && !permissions.accessibility) {
+                    NavRow(Icons.Rounded.Security, "Falta ativar a acessibilidade", "Sem ela o Android não deixa abrir a tela com o aparelho apagado.", openPermissions)
+                }
+                GlassButton("Pré-visualizar", Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                    context.startSafely(Intent(context, LockActivity::class.java).putExtra(LockActivity.EXTRA_PREVIEW, true))
+                }
+            }
+        }
+        item {
+            SettingsCard("Conteúdo") {
+                SwitchRow(
+                    title = "Só na tela externa",
+                    subtitle = "Com o aparelho aberto, fica a tela de bloqueio original.",
+                    checked = settings.lockCoverOnly,
+                    onChange = { vm.set(PrefKeys.LOCK_COVER_ONLY, it) },
+                )
+                SwitchRow(title = "Mostrar notificações", checked = settings.lockShowNotifications, onChange = { vm.set(PrefKeys.LOCK_SHOW_NOTIFICATIONS, it) })
+                SwitchRow(
+                    title = "Ocultar conteúdo sensível",
+                    subtitle = "Mostra só o nome do app até você desbloquear. Notificações marcadas como secretas nunca aparecem.",
+                    checked = settings.lockHideSensitive,
+                    onChange = { vm.set(PrefKeys.LOCK_HIDE_SENSITIVE, it) },
+                    enabled = settings.lockShowNotifications,
+                )
+                SwitchRow(title = "Atalhos de lanterna e câmera", checked = settings.lockShortcuts, onChange = { vm.set(PrefKeys.LOCK_SHORTCUTS, it) })
+                SwitchRow(title = "Controle de música", checked = settings.lockMusic, onChange = { vm.set(PrefKeys.LOCK_MUSIC, it) })
+            }
+        }
+        item {
+            SettingsCard("Segurança") {
+                InfoText(
+                    "O Cristal não substitui nem desliga o bloqueio do Android: ele só desenha por cima. Para destravar, " +
+                        "deslize para cima e o próprio sistema pede o PIN, o padrão ou a digital. O app nunca vê sua credencial. " +
+                        "Se o Cristal fechar por qualquer motivo, a tela de bloqueio original está logo atrás.",
+                )
+                InfoText(
+                    "Limitação conhecida: com uma tela sobre o bloqueio, o leitor de digital lateral só é ativado depois que " +
+                        "você desliza para desbloquear.",
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CoverPage(
+    vm: SettingsViewModel,
+    settings: Settings,
+    wallpaper: ImageBitmap?,
+    permissions: PermissionState,
+    cover: CoverState,
+    onBack: () -> Unit,
+) {
+    val context = LocalContext.current
+    val shizukuReady = permissions.shizuku == ShizukuStatus.READY
+    SettingsScaffold(SettingsPage.COVER.title, settings, wallpaper, onBack) {
+        item {
+            SettingsCard("Telas detectadas") {
+                if (cover.displays.isEmpty()) InfoText("Nenhuma tela informada pelo sistema.")
+                for (d in cover.displays) {
+                    val isCover = cover.cover?.id == d.id
+                    Text(
+                        "Tela ${d.id}${if (isCover) " · externa" else ""}${if (d.isDefault) " · principal" else ""}",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    InfoText("${d.name} · ${d.widthPx}×${d.heightPx} · ${d.densityDpi} dpi · até ${d.maxRefreshRate.roundToInt()} Hz")
+                }
+                val folded = when (cover.folded) {
+                    true -> "fechado"
+                    false -> "aberto"
+                    null -> "não informado pelo aparelho"
+                }
+                InfoText("Estado do aparelho: $folded.")
+                ChoiceRow(
+                    "Qual é a tela externa",
+                    listOf(-1 to "Detectar") + cover.displays.filter { it.id != Display.DEFAULT_DISPLAY }.map { it.id to "Tela ${it.id}" },
+                    settings.coverDisplayOverride,
+                ) { vm.set(PrefKeys.COVER_DISPLAY_OVERRIDE, it) }
+            }
+        }
+        item {
+            SettingsCard("Launcher na tela externa") {
+                SwitchRow(
+                    title = "Assumir a tela externa",
+                    subtitle = "Sempre que a tela inicial da Motorola aparecer na tela externa, o Cristal abre por cima. " +
+                        "Precisa da acessibilidade. Para ver a tela original, toque longo no fundo > Tela Motorola.",
+                    checked = settings.coverTakeover,
+                    onChange = { vm.set(PrefKeys.COVER_TAKEOVER, it) },
+                    enabled = permissions.accessibility || settings.coverTakeover,
+                )
+                GlassButton("Configurações da tela externa (sistema)", Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                    val opened = vm.center.externalDisplaySettingsIntents().any { context.startSafely(it) }
+                    if (!opened) vm.message("Não foi possível abrir as configurações do sistema.")
+                }
+                InfoText("Na Motorola, libere o Cristal e os apps desejados em Configurações > Tela externa > Apps.")
+            }
+        }
+        item {
+            SettingsCard("Apps de terceiros") {
+                SwitchRow(
+                    title = "Avisar sobre apps incompatíveis",
+                    subtitle = "Antes de abrir um app que tende a não caber na tela externa.",
+                    checked = settings.warnIncompatible,
+                    onChange = { vm.set(PrefKeys.WARN_INCOMPATIBLE, it) },
+                )
+                SwitchRow(
+                    title = "Liberar apps automaticamente",
+                    subtitle = "Antes de abrir, pede ao serviço da Motorola para permitir o app na tela externa (via Shizuku). " +
+                        "A liberação vale até reiniciar o aparelho.",
+                    checked = settings.autoAllowOnCover,
+                    onChange = { vm.set(PrefKeys.AUTO_ALLOW_ON_COVER, it) },
+                )
+                SwitchRow(
+                    title = "Ignorar orientação pedida pelos apps",
+                    subtitle = "Faz apps \"só deitados\" ou \"só em pé\" ocuparem a tela externa inteira (via Shizuku).",
+                    checked = settings.ignoreOrientationOnCover,
+                    onChange = { vm.setIgnoreOrientation(it) },
+                    enabled = shizukuReady,
+                )
+                InfoText(
+                    if (shizukuReady) {
+                        "Shizuku ativo. Escala e redimensionamento por app ficam em: toque longo no ícone > Opções na tela externa."
+                    } else {
+                        "Sem Shizuku, o Cristal abre os apps pelo caminho normal do Android e avisa quando o sistema bloquear."
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WeatherPage(
+    vm: SettingsViewModel,
+    settings: Settings,
+    wallpaper: ImageBitmap?,
+    permissions: PermissionState,
+    onBack: () -> Unit,
+) {
+    val cities by vm.cities.collectAsStateWithLifecycle()
+    val weather by vm.weather.collectAsStateWithLifecycle()
+    var query by rememberSaveable { mutableStateOf("") }
+    val locationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        vm.refreshPermissions()
+        if (granted) vm.setUseLocation(true) else vm.message("Sem a permissão, escolha a cidade pelo nome.")
+    }
+    SettingsScaffold(SettingsPage.WEATHER.title, settings, wallpaper, onBack) {
+        item {
+            SettingsCard("Agora") {
+                val data = weather.data
+                if (data != null) {
+                    Text(
+                        "${formatTemp(data.tempC, settings.tempUnit)} · ${weatherLabel(data.code)}",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    InfoText(data.place.ifBlank { "Local atual (aproximado)" })
+                } else {
+                    InfoText("Escolha uma cidade abaixo para ver o clima nos widgets.")
+                }
+                GlassButton("Atualizar agora", Modifier.fillMaxWidth().padding(top = 4.dp)) { vm.refreshWeather() }
+            }
+        }
+        item {
+            SettingsCard("Lugar") {
+                SwitchRow(
+                    title = "Usar minha localização aproximada",
+                    subtitle = "Usa a última posição conhecida do aparelho, arredondada para cerca de 1 km.",
+                    checked = settings.weatherUseLocation && permissions.location,
+                    onChange = { enabled ->
+                        if (enabled && !permissions.location) {
+                            runCatching { locationPermission.launch(Manifest.permission.ACCESS_COARSE_LOCATION) }
+                        } else {
+                            vm.setUseLocation(enabled)
+                        }
+                    },
+                )
+                if (settings.weatherCity.isNotBlank()) InfoText("Cidade escolhida: ${settings.weatherCity}")
+                GlassTextField(
+                    value = query,
+                    onValueChange = {
+                        query = it
+                        vm.searchCity(it)
+                    },
+                    placeholder = "Buscar cidade",
+                    leadingIcon = Icons.Rounded.Search,
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                )
+                for (city in cities) {
+                    Text(
+                        city.display,
+                        fontSize = 14.sp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                                query = ""
+                                vm.pickCity(city)
+                            }
+                            .padding(vertical = 10.dp),
+                    )
+                }
+            }
+        }
+        item {
+            SettingsCard("Unidade") {
+                ChoiceRow(
+                    "Temperatura",
+                    listOf(TempUnit.CELSIUS to "Celsius (°C)", TempUnit.FAHRENHEIT to "Fahrenheit (°F)"),
+                    settings.tempUnit,
+                ) { vm.setEnum(PrefKeys.TEMP_UNIT, it) }
+                InfoText("Dados do Open-Meteo (open-meteo.com). O app envia apenas latitude e longitude arredondadas.")
+            }
+        }
+    }
+}
+
+@Composable
+private fun PermissionsPage(
+    vm: SettingsViewModel,
+    settings: Settings,
+    wallpaper: ImageBitmap?,
+    permissions: PermissionState,
+    onBack: () -> Unit,
+    onExit: () -> Unit,
+) {
+    SettingsScaffold(SettingsPage.PERMISSIONS.title, settings, wallpaper, onBack) {
+        item { SettingsCard("Acessos") { PermissionList(vm, permissions) } }
+        item { SettingsCard("Shizuku (opcional)") { ShizukuSection(vm, permissions) } }
+        item {
+            SettingsCard {
+                GlassButton("Refazer a configuração guiada", Modifier.fillMaxWidth()) {
+                    vm.redoOnboarding()
+                    vm.message("A configuração guiada abrirá na próxima vez que você abrir o launcher.")
+                    onExit()
+                }
+            }
+        }
+    }
+}
+
+/** Lista completa de acessos; usada nas configurações. */
+@Composable
+fun PermissionList(vm: SettingsViewModel, permissions: PermissionState) {
+    CorePermissions(vm, permissions)
+    OptionalPermissions(vm, permissions)
+}
+
+/** Os dois acessos que destravam a maior parte do app. */
+@Composable
+fun CorePermissions(vm: SettingsViewModel, permissions: PermissionState) {
+    val context = LocalContext.current
+    PermissionRow(
+        title = "Acesso às notificações",
+        description = "Para mostrar notificações no painel e na tela de bloqueio e controlar a música. Nada sai do aparelho.",
+        granted = permissions.notificationAccess,
+        actionLabel = "Ativar",
+        onAction = {
+            if (!context.startSafely(vm.center.notificationAccessIntent())) {
+                context.startSafely(vm.center.notificationAccessFallbackIntent())
+            }
+        },
+    )
+    PermissionRow(
+        title = "Serviço de acessibilidade",
+        description = "Para bloquear a tela por gesto, abrir os painéis do sistema, assumir a tela externa e mostrar a " +
+            "tela de bloqueio. O serviço não lê o conteúdo das telas: só sabe qual app está em primeiro plano.",
+        granted = permissions.accessibility,
+        actionLabel = "Abrir acessibilidade",
+        onAction = { context.startSafely(vm.center.accessibilityIntent()) },
+    )
+    if (!permissions.notificationAccess || !permissions.accessibility) {
+        InfoText(
+            "Apareceu \"Configuração restrita\"? É a proteção do Android para apps instalados por APK. Abra os " +
+                "detalhes do app, toque nos três pontinhos no canto e escolha \"Permitir configurações restritas\". Depois volte aqui.",
+        )
+        Chip("Abrir detalhes do app", selected = false) { context.startSafely(vm.center.appDetailsIntent()) }
+    }
+}
+
+@Composable
+fun OptionalPermissions(vm: SettingsViewModel, permissions: PermissionState) {
+    val context = LocalContext.current
+    val calendar = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refreshPermissions() }
+    val location = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refreshPermissions() }
+    PermissionRow(
+        title = "Agenda",
+        description = "Para o widget de próximos compromissos (somente leitura).",
+        granted = permissions.calendar,
+        actionLabel = "Permitir",
+        onAction = { runCatching { calendar.launch(Manifest.permission.READ_CALENDAR) } },
+        optional = true,
+    )
+    PermissionRow(
+        title = "Localização aproximada",
+        description = "Para o clima do lugar onde você está. Você também pode escolher a cidade pelo nome.",
+        granted = permissions.location,
+        actionLabel = "Permitir",
+        onAction = { runCatching { location.launch(Manifest.permission.ACCESS_COARSE_LOCATION) } },
+        optional = true,
+    )
+    PermissionRow(
+        title = "Launcher padrão",
+        description = "Só se quiser o Cristal também como tela inicial do aparelho aberto. Não é necessário para a tela externa.",
+        granted = permissions.defaultHome,
+        actionLabel = "Escolher launcher",
+        onAction = { context.startSafely(vm.center.homeSettingsIntent()) },
+        optional = true,
+    )
+}
+
+@Composable
+fun ShizukuSection(vm: SettingsViewModel, permissions: PermissionState) {
+    val context = LocalContext.current
+    val busy by vm.busy.collectAsStateWithLifecycle()
+    val status = when (permissions.shizuku) {
+        ShizukuStatus.NOT_INSTALLED -> "Não instalado"
+        ShizukuStatus.NOT_RUNNING -> "Instalado, mas parado"
+        ShizukuStatus.NO_PERMISSION -> "Rodando; falta autorizar o Cristal"
+        ShizukuStatus.READY -> "Pronto"
+    }
+    RowTitle("Estado", status)
+    InfoText(
+        "O Shizuku dá ao Cristal os mesmos poderes do ADB, sem root e sem computador. Com ele o app libera apps na " +
+            "tela externa, ajusta a escala, alterna Wi-Fi/Bluetooth e concede os acessos acima em um toque.",
+    )
+    Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        when (permissions.shizuku) {
+            ShizukuStatus.NOT_INSTALLED -> GlassButton("Baixar o Shizuku", Modifier.weight(1f), primary = true) {
+                context.startSafely(vm.center.shizukuDownloadIntent())
+            }
+
+            ShizukuStatus.NOT_RUNNING -> {
+                GlassButton("Abrir o Shizuku", Modifier.weight(1f), primary = true) {
+                    vm.center.shizukuAppIntent()?.let { context.startSafely(it) }
+                }
+                GlassButton("Opções do desenvolvedor", Modifier.weight(1f)) {
+                    context.startSafely(vm.center.developerSettingsIntent())
+                }
+            }
+
+            ShizukuStatus.NO_PERMISSION -> GlassButton("Autorizar o Cristal", Modifier.weight(1f), primary = true) {
+                vm.requestShizukuPermission()
+            }
+
+            ShizukuStatus.READY -> GlassButton(
+                if (busy) "Concedendo…" else "Conceder acessos automaticamente",
+                Modifier.weight(1f),
+                primary = true,
+            ) { if (!busy) vm.grantViaShizuku() }
+        }
+    }
+    if (permissions.shizuku == ShizukuStatus.NOT_RUNNING) {
+        InfoText(
+            "Para iniciar sem computador: ative as Opções do desenvolvedor, ligue a \"Depuração por Wi-Fi\", e no " +
+                "Shizuku toque em Parear e depois em Iniciar. É preciso repetir o Iniciar depois de reiniciar o aparelho.",
+        )
+    }
+    if (permissions.secureSettings) {
+        InfoText("O Cristal já consegue religar os próprios serviços sozinho depois de uma atualização.")
+    }
+}
+
+@Composable
+private fun BackupPage(vm: SettingsViewModel, settings: Settings, wallpaper: ImageBitmap?, onBack: () -> Unit) {
+    val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) vm.exportBackup(uri)
+    }
+    val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) vm.importBackup(uri)
+    }
+    val busy by vm.busy.collectAsStateWithLifecycle()
+    SettingsScaffold(SettingsPage.BACKUP.title, settings, wallpaper, onBack) {
+        item {
+            SettingsCard {
+                InfoText(
+                    "O backup é um arquivo .json com todas as preferências, a tela inicial (páginas, dock, pastas e " +
+                        "widgets) e os ajustes por app. A imagem do papel de parede não entra; escolha-a de novo depois de restaurar.",
+                )
+                Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GlassButton(if (busy) "Aguarde…" else "Exportar", Modifier.weight(1f), primary = true) {
+                        if (!busy) {
+                            runCatching { exporter.launch(BackupManager.SUGGESTED_NAME) }
+                                .onFailure { vm.message("Não foi possível abrir o seletor de arquivos nesta tela.") }
+                        }
+                    }
+                    GlassButton("Restaurar", Modifier.weight(1f)) {
+                        if (!busy) {
+                            runCatching { importer.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
+                                .onFailure { vm.message("Não foi possível abrir o seletor de arquivos nesta tela.") }
+                        }
+                    }
+                }
+                InfoText("Restaurar substitui a configuração atual. Dica: faça isso com o aparelho aberto, na tela principal.")
+            }
+        }
+    }
+}
+
+@Composable
+private fun HiddenAppsPage(vm: SettingsViewModel, settings: Settings, wallpaper: ImageBitmap?, onBack: () -> Unit) {
+    val hidden by vm.hiddenApps.collectAsStateWithLifecycle()
+    SettingsScaffold(SettingsPage.HIDDEN.title, settings, wallpaper, onBack) {
+        item {
+            SettingsCard {
+                if (hidden.isEmpty()) {
+                    InfoText("Nenhum app oculto. Para ocultar, toque longo em um app na gaveta e escolha \"Ocultar da gaveta\".")
+                }
+                for (app in hidden) {
+                    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        AppIconImage(app = app, size = 36.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Text(app.label, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                        Chip("Reexibir", selected = false) { vm.unhide(app) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AboutPage(settings: Settings, wallpaper: ImageBitmap?, onBack: () -> Unit) {
+    SettingsScaffold(SettingsPage.ABOUT.title, settings, wallpaper, onBack) {
+        item {
+            SettingsCard {
+                Text("Cristal Cover", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                InfoText("Versão ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+                InfoText("Launcher e tela de bloqueio em vidro líquido para a tela externa de dobráveis flip.")
+            }
+        }
+        item {
+            SettingsCard("Privacidade") {
+                InfoText(
+                    "O app não tem anúncios, contas nem telemetria. As notificações são lidas e mostradas apenas no " +
+                        "aparelho. A única conexão de rede é a consulta de clima ao Open-Meteo.",
+                )
+            }
+        }
+        item {
+            SettingsCard("Limitações do Android e da Motorola") {
+                InfoText("• Nenhum app pode substituir a tela de bloqueio do sistema; o Cristal desenha por cima dela.")
+                InfoText("• O gesto de início na tela externa sempre leva ao launcher da Motorola; \"Assumir a tela externa\" reabre o Cristal em seguida.")
+                InfoText("• A Motorola decide quais apps podem aparecer na tela externa; a liberação via Shizuku dura até o próximo reinício.")
+                InfoText("• Apps comuns não podem alternar Wi-Fi, Bluetooth ou dados; sem Shizuku o Cristal abre o painel do sistema.")
+                InfoText("• O vidro refrata o papel de parede do próprio Cristal; o Android não permite ler o papel de parede do sistema.")
+            }
+        }
+    }
+}

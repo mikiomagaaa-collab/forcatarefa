@@ -1,0 +1,160 @@
+# Compila o app Android "Cristal Cover" (pasta cristal-cover/).
+#
+# Este workflow é independente do site: só roda quando algo dentro de cristal-cover/ muda
+# (ou quando é disparado à mão) e não publica nada no GitHub Pages.
+name: Cristal Cover - compilar APK
+
+on:
+  push:
+    branches: ['**']
+    tags: ['cristal-v*']
+    paths:
+      - 'cristal-cover/**'
+      - '.github/workflows/build.yml'
+  pull_request:
+    paths:
+      - 'cristal-cover/**'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+    inputs:
+      publicar_release:
+        description: 'Publicar o APK em uma Release do GitHub'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cristal-cover-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Compilar e testar
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: cristal-cover
+    outputs:
+      versao: ${{ steps.info.outputs.versao }}
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar o Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Preparar o Gradle (com cache)
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Instalar a plataforma Android 37
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;36.0.0" > /dev/null
+
+      # Assinatura. Sem secrets, o build usa a chave de CI que acompanha o repositório
+      # (cristal-cover/keystore/cristal-ci.jks). Para assinar com a sua própria chave, crie os
+      # secrets CRISTAL_KEYSTORE_BASE64, CRISTAL_KEYSTORE_PASSWORD, CRISTAL_KEY_ALIAS e
+      # CRISTAL_KEY_PASSWORD (passo a passo em cristal-cover/docs/GUIA.md).
+      - name: Preparar a assinatura
+        env:
+          KEYSTORE_BASE64: ${{ secrets.CRISTAL_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/cristal-release.jks"
+            echo "CRISTAL_KEYSTORE_FILE=$RUNNER_TEMP/cristal-release.jks" >> "$GITHUB_ENV"
+            echo "Assinando com a chave configurada nos secrets."
+          else
+            echo "Nenhum secret de assinatura: usando a chave de CI do repositório."
+          fi
+
+      - name: Testes unitários
+        run: ./gradlew --no-daemon testDebugUnitTest
+
+      - name: Compilar os APKs (debug e release)
+        env:
+          CRISTAL_KEYSTORE_PASSWORD: ${{ secrets.CRISTAL_KEYSTORE_PASSWORD }}
+          CRISTAL_KEY_ALIAS: ${{ secrets.CRISTAL_KEY_ALIAS }}
+          CRISTAL_KEY_PASSWORD: ${{ secrets.CRISTAL_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon assembleDebug assembleRelease
+
+      - name: Nomear os arquivos
+        id: info
+        run: |
+          versao="1.0.0-${GITHUB_RUN_NUMBER}"
+          mkdir -p saida
+          cp app/build/outputs/apk/release/app-release.apk "saida/cristal-cover-${versao}.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "saida/cristal-cover-${versao}-debug.apk"
+          ls -la saida
+          echo "versao=${versao}" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Cristal Cover ${versao}"
+            echo ""
+            echo "Baixe o artefato **cristal-cover-apk** no fim desta página, extraia o .zip e instale o arquivo"
+            echo "\`cristal-cover-${versao}.apk\` (é a versão otimizada; a \`-debug\` é só para diagnóstico)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publicar o APK como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: cristal-cover-apk
+          path: cristal-cover/saida/cristal-cover-${{ steps.info.outputs.versao }}.apk
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publicar o APK de diagnóstico (debug)
+        uses: actions/upload-artifact@v4
+        with:
+          name: cristal-cover-apk-debug
+          path: cristal-cover/saida/cristal-cover-${{ steps.info.outputs.versao }}-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Lint (informativo)
+        if: always()
+        continue-on-error: true
+        run: ./gradlew --no-daemon lintDebug
+
+      - name: Publicar o relatório do lint
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: cristal-cover-lint
+          path: cristal-cover/app/build/reports/lint-results-debug.html
+          if-no-files-found: ignore
+          retention-days: 14
+
+  release:
+    name: Publicar Release
+    needs: build
+    # Só publica em tags cristal-v* ou quando pedido no disparo manual.
+    if: startsWith(github.ref, 'refs/tags/cristal-v') || (github.event_name == 'workflow_dispatch' && inputs.publicar_release)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Baixar o APK
+        uses: actions/download-artifact@v4
+        with:
+          name: cristal-cover-apk
+          path: apk
+
+      - name: Criar a Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('cristal-v{0}', needs.build.outputs.versao) }}
+          name: Cristal Cover ${{ needs.build.outputs.versao }}
+          target_commitish: ${{ github.sha }}
+          body: |
+            APK do Cristal Cover, launcher e tela de bloqueio em vidro líquido para a tela externa do Razr.
+
+            Baixe o arquivo `.apk` abaixo no celular e toque nele para instalar.
+            Guia completo: `cristal-cover/docs/GUIA.md`.
+          files: apk/*.apk
+          fail_on_unmatched_files: true

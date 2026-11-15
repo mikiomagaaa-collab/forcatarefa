@@ -1,0 +1,455 @@
+package app.cristal.cover.ui.launcher
+
+import android.graphics.Rect
+import android.view.Display
+import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import app.cristal.cover.core.DefaultDispatcher
+import app.cristal.cover.data.apps.AppInfo
+import app.cristal.cover.data.apps.AppRepository
+import app.cristal.cover.data.battery.BatteryRepository
+import app.cristal.cover.data.calendar.CalendarRepository
+import app.cristal.cover.data.db.AppPrefDao
+import app.cristal.cover.data.db.AppPrefEntity
+import app.cristal.cover.data.db.Container
+import app.cristal.cover.data.db.HomeItemEntity
+import app.cristal.cover.data.db.ItemType
+import app.cristal.cover.data.display.CoverDisplayRepository
+import app.cristal.cover.data.display.CoverState
+import app.cristal.cover.data.home.DropResult
+import app.cristal.cover.data.home.HomeItem
+import app.cristal.cover.data.home.HomeLayout
+import app.cristal.cover.data.home.HomeRepository
+import app.cristal.cover.data.home.WidgetKind
+import app.cristal.cover.data.launch.AppLauncher
+import app.cristal.cover.data.launch.CompatReport
+import app.cristal.cover.data.launch.LaunchFailure
+import app.cristal.cover.data.launch.LaunchOutcome
+import app.cristal.cover.data.media.MediaRepository
+import app.cristal.cover.data.notifications.NotificationItem
+import app.cristal.cover.data.notifications.NotificationRepository
+import app.cristal.cover.data.prefs.DrawerSort
+import app.cristal.cover.data.prefs.GestureAction
+import app.cristal.cover.data.prefs.PrefKeys
+import app.cristal.cover.data.prefs.Settings
+import app.cristal.cover.data.prefs.SettingsRepository
+import app.cristal.cover.data.shizuku.ShizukuManager
+import app.cristal.cover.data.system.PermissionCenter
+import app.cristal.cover.data.system.PermissionState
+import app.cristal.cover.data.system.QuickSettingsRepository
+import app.cristal.cover.data.system.QuickState
+import app.cristal.cover.data.system.SystemBridge
+import app.cristal.cover.data.system.ToggleResult
+import app.cristal.cover.data.wallpaper.WallpaperRepository
+import app.cristal.cover.data.weather.WeatherRepository
+import app.cristal.cover.ui.widgets.WidgetData
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlin.math.max
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+
+/** Apps e tela inicial prontos para a UI. */
+@Immutable
+data class HomeUi(
+    val loaded: Boolean = false,
+    val layout: HomeLayout = HomeLayout(),
+    /** Apps visíveis na gaveta, já na ordem escolhida. */
+    val apps: List<AppInfo> = emptyList(),
+    val prefs: Map<String, AppPrefEntity> = emptyMap(),
+)
+
+/** Eventos pontuais que a tela precisa mostrar. */
+sealed interface LauncherEvent {
+    data class Message(val text: String) : LauncherEvent
+    data class ConfirmCompat(val app: AppInfo, val report: CompatReport, val displayId: Int) : LauncherEvent
+
+    /** O app foi pedido, mas pode não ter aparecido na tela externa (bloqueio do fabricante). */
+    data class CheckLaunched(val app: AppInfo) : LauncherEvent
+    data class OpenSystemPanel(val action: String) : LauncherEvent
+    data object GoHome : LauncherEvent
+}
+
+/** O que a tela deve fazer depois de um gesto. */
+enum class GestureEffect { NONE, OPEN_DRAWER, OPEN_QUICK_PANEL, OPEN_SETTINGS }
+
+@HiltViewModel
+class LauncherViewModel @Inject constructor(
+    private val settingsRepository: SettingsRepository,
+    private val appRepository: AppRepository,
+    private val homeRepository: HomeRepository,
+    private val appPrefDao: AppPrefDao,
+    private val appLauncher: AppLauncher,
+    private val notificationRepository: NotificationRepository,
+    private val mediaRepository: MediaRepository,
+    private val weatherRepository: WeatherRepository,
+    private val calendarRepository: CalendarRepository,
+    private val quickSettingsRepository: QuickSettingsRepository,
+    private val systemBridge: SystemBridge,
+    private val permissionCenter: PermissionCenter,
+    private val shizukuManager: ShizukuManager,
+    batteryRepository: BatteryRepository,
+    coverDisplayRepository: CoverDisplayRepository,
+    wallpaperRepository: WallpaperRepository,
+    @DefaultDispatcher default: CoroutineDispatcher,
+) : ViewModel() {
+
+    val settings: StateFlow<Settings> = settingsRepository.settings
+
+    private val _settingsLoaded = MutableStateFlow(false)
+
+    /** `true` quando as preferências já vieram do disco (evita piscar o onboarding). */
+    val settingsLoaded: StateFlow<Boolean> = _settingsLoaded.asStateFlow()
+
+    private val gridFlow: Flow<Pair<Int, DrawerSort>> = settings
+        .map { it.dockCount to it.drawerSort }
+        .distinctUntilChanged()
+
+    val home: StateFlow<HomeUi> = combine(
+        homeRepository.items,
+        appRepository.apps,
+        appPrefDao.observeAll(),
+        gridFlow,
+        appRepository.loaded,
+    ) { entities, apps, prefs, grid, loaded ->
+        buildHome(entities, apps, prefs, dockCount = grid.first, sort = grid.second, loaded = loaded)
+    }.flowOn(default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUi())
+
+    val widgetData: StateFlow<WidgetData> = combine(
+        batteryRepository.state,
+        weatherRepository.state,
+        mediaRepository.state,
+        calendarRepository.state,
+        combine(settings.map { it.tempUnit }.distinctUntilChanged(), notificationRepository.connected) { u, c -> u to c },
+    ) { battery, weather, media, agenda, extra ->
+        WidgetData(
+            battery = battery,
+            weather = weather,
+            media = media,
+            agenda = agenda,
+            tempUnit = extra.first,
+            notificationAccess = extra.second,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WidgetData())
+
+    val notifications: StateFlow<List<NotificationItem>> = notificationRepository.items
+    val quick: StateFlow<QuickState> = quickSettingsRepository.state
+    val permissions: StateFlow<PermissionState> = permissionCenter.state
+    val cover: StateFlow<CoverState> = coverDisplayRepository.state
+    val wallpaper: StateFlow<ImageBitmap?> = wallpaperRepository.image
+    val accessibilityConnected: StateFlow<Boolean> = systemBridge.accessibilityConnected
+
+    private val _events = Channel<LauncherEvent>(Channel.BUFFERED)
+    val events: Flow<LauncherEvent> = _events.receiveAsFlow()
+
+    init {
+        viewModelScope.launch {
+            // Espera o StateFlow alcançar o que está no disco, para a UI não piscar com os padrões.
+            val disk = settingsRepository.current()
+            settings.first { it == disk }
+            _settingsLoaded.value = true
+        }
+    }
+
+    // --- Ciclo de vida ----------------------------------------------------------------------------
+
+    fun onResume() {
+        permissionCenter.refresh()
+        quickSettingsRepository.refresh()
+        calendarRepository.refresh()
+        weatherRepository.refresh()
+        appLauncher.restoreDisplayScale()
+    }
+
+    /** Volta ao estado inicial (tecla Home, tela apagada). */
+    fun requestHome() {
+        _events.trySend(LauncherEvent.GoHome)
+    }
+
+    fun finishOnboarding() {
+        viewModelScope.launch { settingsRepository.set(PrefKeys.ONBOARDING_DONE, true) }
+    }
+
+    // --- Abrir apps -------------------------------------------------------------------------------
+
+    fun launchApp(app: AppInfo, displayId: Int, onCover: Boolean, bounds: Rect? = null, force: Boolean = false) {
+        viewModelScope.launch {
+            when (val outcome = appLauncher.launch(app, displayId, onCover, bounds, force)) {
+                LaunchOutcome.Started -> if (onCover) _events.trySend(LauncherEvent.CheckLaunched(app))
+                is LaunchOutcome.NeedsConfirmation ->
+                    _events.trySend(LauncherEvent.ConfirmCompat(outcome.app, outcome.report, displayId))
+
+                is LaunchOutcome.Failed -> _events.trySend(
+                    LauncherEvent.Message(
+                        when (outcome.reason) {
+                            LaunchFailure.NOT_FOUND -> "${app.label} não está mais instalado."
+                            LaunchFailure.NOT_ALLOWED -> "O sistema não permitiu abrir ${app.label} nesta tela."
+                            LaunchFailure.UNKNOWN -> "Não foi possível abrir ${app.label}."
+                        },
+                    ),
+                )
+            }
+        }
+    }
+
+    /** O usuário confirmou abrir um app com aviso de compatibilidade. */
+    fun confirmLaunch(app: AppInfo, displayId: Int, dontAskAgain: Boolean) {
+        viewModelScope.launch {
+            if (dontAskAgain) updatePref(app.key) { it.copy(skipWarning = true) }
+            launchApp(app, displayId, onCover = true, force = true)
+        }
+    }
+
+    fun openAppInfo(app: AppInfo, displayId: Int) {
+        if (!appLauncher.openAppInfo(app, displayId)) message("Não foi possível abrir os detalhes do app.")
+    }
+
+    fun uninstall(app: AppInfo, displayId: Int) {
+        if (app.isSystem) {
+            message("${app.label} é um app do sistema e não pode ser desinstalado.")
+            return
+        }
+        if (!appLauncher.uninstall(app, displayId)) message("Não foi possível iniciar a desinstalação.")
+    }
+
+    // --- Edição da tela inicial -------------------------------------------------------------------
+
+    fun addToHome(app: AppInfo, page: Int) {
+        viewModelScope.launch {
+            homeRepository.addAppToDesktop(app.key, page)
+            message("${app.label} adicionado à tela inicial.")
+        }
+    }
+
+    fun addToDock(app: AppInfo) {
+        viewModelScope.launch {
+            val ok = homeRepository.addAppToDock(app.key)
+            message(if (ok) "${app.label} adicionado ao dock." else "O dock está cheio.")
+        }
+    }
+
+    fun addWidget(kind: WidgetKind, page: Int) {
+        viewModelScope.launch { homeRepository.addWidget(kind, page) }
+    }
+
+    fun removeItem(id: Long) {
+        viewModelScope.launch { homeRepository.remove(id) }
+    }
+
+    fun moveToDesktop(id: Long, page: Int) {
+        viewModelScope.launch { homeRepository.moveToDesktop(id, page) }
+    }
+
+    fun moveToDock(id: Long) {
+        viewModelScope.launch {
+            val result = homeRepository.dropOnDock(id, Int.MAX_VALUE)
+            if (result == DropResult.REJECTED) message("O dock está cheio.")
+        }
+    }
+
+    fun dropOnCell(id: Long, page: Int, x: Int, y: Int) {
+        viewModelScope.launch {
+            if (homeRepository.dropOnCell(id, page, x, y) == DropResult.REJECTED) message("Não há espaço nessa posição.")
+        }
+    }
+
+    fun dropOnDock(id: Long, index: Int) {
+        viewModelScope.launch {
+            if (homeRepository.dropOnDock(id, index) == DropResult.REJECTED) message("O dock está cheio.")
+        }
+    }
+
+    fun renameFolder(id: Long, title: String) {
+        viewModelScope.launch { homeRepository.renameFolder(id, title) }
+    }
+
+    fun setHidden(app: AppInfo, hidden: Boolean) {
+        viewModelScope.launch {
+            updatePref(app.key) { it.copy(hidden = hidden) }
+            if (hidden) message("${app.label} foi ocultado. Reexiba em Configurações > Apps ocultos.")
+        }
+    }
+
+    fun setAppScale(app: AppInfo, percent: Int) {
+        viewModelScope.launch { updatePref(app.key) { it.copy(scalePercent = percent.coerceIn(50, 100)) } }
+    }
+
+    fun setForceResizable(app: AppInfo, enabled: Boolean) {
+        viewModelScope.launch {
+            updatePref(app.key) { it.copy(forceResizable = enabled) }
+            if (!enabled) appLauncher.clearCompat(app.packageName)
+        }
+    }
+
+    fun setSkipWarning(app: AppInfo, skip: Boolean) {
+        viewModelScope.launch { updatePref(app.key) { it.copy(skipWarning = skip) } }
+    }
+
+    private suspend fun updatePref(key: String, change: (AppPrefEntity) -> AppPrefEntity) {
+        val current = appPrefDao.get(key) ?: AppPrefEntity(componentKey = key)
+        appPrefDao.upsert(change(current))
+    }
+
+    // --- Notificações e mídia ---------------------------------------------------------------------
+
+    fun dismissNotification(item: NotificationItem) = notificationRepository.dismiss(item)
+
+    fun dismissAllNotifications() = notificationRepository.dismissAll()
+
+    fun openNotification(item: NotificationItem, displayId: Int) {
+        if (!notificationRepository.open(item, displayId)) message("Esta notificação não tem uma ação para abrir.")
+    }
+
+    fun mediaPlayPause() = mediaRepository.playPause()
+    fun mediaNext() = mediaRepository.next()
+    fun mediaPrevious() = mediaRepository.previous()
+
+    fun mediaOpen(displayId: Int) {
+        if (!mediaRepository.openPlayer(displayId)) message("Nenhum player ativo para abrir.")
+    }
+
+    fun refreshWeather() = weatherRepository.refresh(force = true)
+
+    // --- Ajustes rápidos --------------------------------------------------------------------------
+
+    fun toggleTorch() {
+        if (!quickSettingsRepository.toggleTorch()) message("A lanterna não está disponível agora.")
+    }
+
+    fun toggleRinger() {
+        if (!quickSettingsRepository.toggleRinger()) message("Não foi possível mudar o modo de toque (Não Perturbe ativo?).")
+    }
+
+    fun setMediaVolume(fraction: Float) = quickSettingsRepository.setMediaVolume(fraction)
+
+    fun toggleWifi() = shellToggle(android.provider.Settings.Panel.ACTION_WIFI) { quickSettingsRepository.toggleWifi() }
+
+    fun toggleBluetooth() =
+        shellToggle(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS) { quickSettingsRepository.toggleBluetooth() }
+
+    fun toggleMobileData() =
+        shellToggle(android.provider.Settings.Panel.ACTION_INTERNET_CONNECTIVITY) { quickSettingsRepository.toggleMobileData() }
+
+    private fun shellToggle(panelAction: String, toggle: suspend () -> ToggleResult) {
+        viewModelScope.launch {
+            when (toggle()) {
+                ToggleResult.DONE -> Unit
+                ToggleResult.NEEDS_SYSTEM_PANEL -> _events.trySend(LauncherEvent.OpenSystemPanel(panelAction))
+                ToggleResult.FAILED -> _events.trySend(LauncherEvent.OpenSystemPanel(panelAction))
+            }
+        }
+    }
+
+    // --- Gestos e ações do sistema ----------------------------------------------------------------
+
+    /** Executa uma ação de gesto. Ações de UI são devolvidas para a tela tratar. */
+    fun performGesture(action: GestureAction): GestureEffect {
+        when (action) {
+            GestureAction.NONE -> Unit
+            GestureAction.APP_DRAWER -> return GestureEffect.OPEN_DRAWER
+            GestureAction.QUICK_PANEL -> return GestureEffect.OPEN_QUICK_PANEL
+            GestureAction.SETTINGS -> return GestureEffect.OPEN_SETTINGS
+            GestureAction.SYSTEM_NOTIFICATIONS -> if (!systemBridge.openNotifications()) return needsAccessibility(GestureEffect.OPEN_QUICK_PANEL)
+            GestureAction.SYSTEM_QUICK_SETTINGS -> if (!systemBridge.openQuickSettings()) return needsAccessibility(GestureEffect.OPEN_QUICK_PANEL)
+            GestureAction.LOCK_SCREEN -> if (!systemBridge.lockScreen()) return needsAccessibility(GestureEffect.NONE)
+            GestureAction.RECENTS -> if (!systemBridge.openRecents()) return needsAccessibility(GestureEffect.NONE)
+            GestureAction.TORCH -> toggleTorch()
+        }
+        return GestureEffect.NONE
+    }
+
+    private fun needsAccessibility(fallback: GestureEffect): GestureEffect {
+        message("Ative o serviço de acessibilidade do Cristal para usar este gesto.")
+        return fallback
+    }
+
+    fun lockScreen() {
+        if (!systemBridge.lockScreen()) message("Ative o serviço de acessibilidade do Cristal para bloquear a tela por aqui.")
+    }
+
+    fun openSystemQuickSettings(): Boolean = systemBridge.openQuickSettings()
+
+    /** Deixa o usuário chegar à tela externa original por 20 segundos, sem o Cristal reassumir. */
+    fun showStockCoverHome() {
+        systemBridge.pauseTakeover(20_000)
+        if (!systemBridge.goHome()) message("Use o gesto de início do sistema para ver a tela da Motorola.")
+    }
+
+    val isShizukuReady: Boolean get() = shizukuManager.isReady
+
+    fun message(text: String) {
+        _events.trySend(LauncherEvent.Message(text))
+    }
+
+    // --- Montagem do layout -----------------------------------------------------------------------
+
+    private fun buildHome(
+        entities: List<HomeItemEntity>,
+        apps: List<AppInfo>,
+        prefs: List<AppPrefEntity>,
+        dockCount: Int,
+        sort: DrawerSort,
+        loaded: Boolean,
+    ): HomeUi {
+        val appByKey = apps.associateBy { it.key }
+        val prefByKey = prefs.associateBy { it.componentKey }
+        val childrenByFolder = entities.filter { it.container > 0 }.groupBy { it.container }
+
+        fun toApp(e: HomeItemEntity): HomeItem.App? {
+            val app = appByKey[e.componentKey] ?: return null
+            val label = prefByKey[app.key]?.customLabel?.takeIf { it.isNotBlank() } ?: app.label
+            return HomeItem.App(e.id, e.page, e.cellX, e.cellY, app, label)
+        }
+
+        fun convert(e: HomeItemEntity): HomeItem? = when (e.type) {
+            ItemType.APP -> toApp(e)
+            ItemType.FOLDER -> {
+                val children = childrenByFolder[e.id].orEmpty().sortedBy { it.cellX }.mapNotNull(::toApp)
+                if (children.isEmpty()) null else HomeItem.Folder(e.id, e.page, e.cellX, e.cellY, e.title.orEmpty(), children)
+            }
+
+            ItemType.WIDGET -> WidgetKind.fromName(e.widgetKind)?.let {
+                HomeItem.Widget(e.id, e.page, e.cellX, e.cellY, e.spanX, e.spanY, it)
+            }
+
+            else -> null
+        }
+
+        val desktop = entities.filter { it.container == Container.DESKTOP }.mapNotNull(::convert)
+        val pageCount = max(1, (desktop.maxOfOrNull { it.page } ?: 0) + 1)
+        val pages = List(pageCount) { page -> desktop.filter { it.page == page } }
+        val dock = entities.filter { it.container == Container.DOCK }
+            .sortedBy { it.cellX }
+            .mapNotNull(::convert)
+            .take(dockCount)
+
+        val visible = apps.filter { prefByKey[it.key]?.hidden != true }
+        val sorted = when (sort) {
+            DrawerSort.NAME -> visible
+            DrawerSort.USAGE -> visible.sortedWith(
+                compareByDescending<AppInfo> { prefByKey[it.key]?.launchCount ?: 0 }
+                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it.label },
+            )
+        }
+        return HomeUi(loaded = loaded, layout = HomeLayout(pages, dock), apps = sorted, prefs = prefByKey)
+    }
+
+    companion object {
+        const val NO_DISPLAY = Display.INVALID_DISPLAY
+    }
+}
