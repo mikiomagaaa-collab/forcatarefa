@@ -132,25 +132,28 @@ enum class CoverClockPosition { TOP, CENTER, BOTTOM }
  * Fontes do relógio. As do sistema não ocupam espaço; as outras vêm no APK (licença SIL OFL).
  * @param condensed letras altas e estreitas: aguentam esticar mais no formato adaptativo.
  */
-enum class ClockFont(val label: String, val condensed: Boolean = false, val maxStretch: Float = 1.35f) {
+enum class ClockFont(val label: String, val condensed: Boolean = false, val maxStretch: Float = 2.2f) {
+    /** Condensada e uniforme, feita para esticar: o visual do relógio do iOS 26. */
+    LIQUID("Líquida", condensed = true, maxStretch = 3.4f),
+    ROUNDED("Arredondada", condensed = true, maxStretch = 3.2f),
     SYSTEM("Sistema"),
-    THIN("Fina"),
-    LIGHT("Leve"),
+    THIN("Fina", maxStretch = 2.6f),
+    LIGHT("Leve", maxStretch = 2.4f),
     GEOMETRIC("Geométrica"),
     GROTESK("Grotesca"),
-    TALL("Alta", condensed = true, maxStretch = 1.6f),
-    IMPACT("Impacto", condensed = true, maxStretch = 1.55f),
-    EDITORIAL("Editorial"),
-    CLASSIC("Clássica"),
-    FUTURE("Futurista", maxStretch = 1.25f),
-    DIGITAL("Digital"),
-    SCRIPT("Manuscrita", maxStretch = 1.12f),
+    TALL("Alta", condensed = true, maxStretch = 3.2f),
+    IMPACT("Impacto", condensed = true, maxStretch = 3.0f),
+    EDITORIAL("Editorial", maxStretch = 1.8f),
+    CLASSIC("Clássica", maxStretch = 1.8f),
+    FUTURE("Futurista", maxStretch = 2.0f),
+    DIGITAL("Digital", maxStretch = 2.4f),
+    SCRIPT("Manuscrita", maxStretch = 1.3f),
     ;
 
     companion object {
         /** Os quatro estilos antigos do Cover Clock viram fontes. */
         fun fromCoverStyle(style: CoverClockStyle): ClockFont = when (style) {
-            CoverClockStyle.LIQUID -> SYSTEM
+            CoverClockStyle.LIQUID -> LIQUID
             CoverClockStyle.MINIMAL -> THIN
             CoverClockStyle.DIGITAL -> DIGITAL
             CoverClockStyle.CLASSIC -> EDITORIAL

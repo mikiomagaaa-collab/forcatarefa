@@ -23,11 +23,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import app.cristal.cover.ui.components.ClockGlass
+import app.cristal.cover.ui.widgets.formatTemp
+import app.cristal.cover.ui.widgets.weatherIcon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.FlashlightOff
 import androidx.compose.material.icons.rounded.FlashlightOn
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.PhotoCamera
@@ -106,7 +112,9 @@ class LockActions(
 )
 
 /**
- * Tela de bloqueio do Cristal. É só visual: quem destrava de verdade é o sistema.
+ * Tela de bloqueio do Cristal, no estilo do iOS 26: data e clima no alto, relógio de vidro alto
+ * (que estica na vertical e pode ficar atrás do objeto da foto), widgets redondos e notificações
+ * embaixo. É só visual: quem destrava de verdade é o sistema.
  *
  * @param secure se o aparelho tem PIN/padrão/senha; controla a ocultação de conteúdo sensível.
  * @param resetKey muda quando um pedido de desbloqueio é cancelado, para a tela voltar ao lugar.
@@ -118,7 +126,7 @@ fun LockScreen(
     resetKey: Int,
     actions: LockActions,
     coverMinimal: Boolean = false,
-    /** Só na pré-visualização: permite mudar o tamanho do relógio arrastando a alça. */
+    /** Só na pré-visualização: permite esticar o relógio arrastando o canto. */
     onClockScale: ((Float) -> Unit)? = null,
 ) {
     if (coverMinimal) {
@@ -135,6 +143,7 @@ fun LockScreen(
     val unlock by rememberUpdatedState(actions.onUnlock)
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     val locale = currentLocale()
+    val density = LocalDensity.current
 
     LaunchedEffect(resetKey) { slide.animateTo(0f, Motion.release) }
 
@@ -170,7 +179,7 @@ fun LockScreen(
     ) {
         val compact = maxHeight < 380.dp
         val tilt = rememberDeviceTilt(settings.wallpaperSpatial)
-        val dim = (settings.wallpaperDim + 0.12f).coerceAtMost(0.8f)
+        val dim = (settings.wallpaperDim + 0.06f).coerceAtMost(0.8f)
         WallpaperLayer(
             image = if (settings.wallpaperKind == WallpaperKind.IMAGE) state.wallpaper else null,
             presetIndex = settings.wallpaperPreset,
@@ -184,70 +193,66 @@ fun LockScreen(
             tilt = { tilt.value },
             spatial = settings.wallpaperSpatial,
         )
-        // Relógio grande direto sobre a foto: com o efeito de profundidade (fica entre a foto e o
-        // objeto recortado dela) ou quando o cartão de vidro está desligado.
+
         val subject = state.subject
-        val bigClock = subject != null || !settings.lockClockCard
         val subjectTop by produceState<Float?>(null, subject) {
             value = subject?.let { withContext(Dispatchers.Default) { subjectTopFraction(it) } }
         }
-        val density = LocalDensity.current
-        val dateLine = 26.dp
-        val topGap = 18.dp
-        var liveScale by remember(settings.lockClockScale) { mutableFloatStateOf(settings.lockClockScale) }
         val widgets = settings.lockWidgets
         val widgetsAbove = if (widgets.isNotEmpty() && settings.lockWidgetsPosition == LockPlacement.ABOVE_CLOCK) {
-            LockWidgetRowHeight + 8.dp
+            LockWidgetRowHeight + 6.dp
         } else {
             0.dp
         }
+        var liveScale by remember(settings.lockClockScale) { mutableFloatStateOf(settings.lockClockScale) }
+        val topGap = 8.dp
+        val dateLine = 30.dp
+        // Altura do relógio com tamanho 100%: o terço de cima da tela, como no iOS 26; com o efeito
+        // de profundidade, desce até passar um pouco por trás do objeto da foto.
         val baseClockHeight: Dp = run {
-            val default = if (compact) 150.dp else 214.dp
+            val default = maxHeight * if (compact) 0.30f else 0.40f
             val top = subjectTop
             if (subject == null || top == null || !settings.lockClockAdaptive) return@run default
-            // Formato adaptativo: o relógio cresce até passar um pouco por trás do objeto.
             with(density) {
                 val rect = wallpaperImageRect(
                     subject.width, subject.height, Size(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat()),
                     settings.wallpaperZoom, settings.wallpaperOffsetX, settings.wallpaperOffsetY, settings.wallpaperSpatial,
                 )
                 val subjectY = (rect.top + top * rect.height).toDp()
-                val clockTop = insets.calculateTopPadding() + topGap + dateLine + widgetsAbove
+                val clockTop = insets.calculateTopPadding() + topGap + widgetsAbove + dateLine
                 val free = subjectY - clockTop
-                if (free < 56.dp) default else (free * 1.45f).coerceIn(110.dp, maxHeight * 0.46f)
+                if (free < 56.dp) default else (free * 1.35f).coerceIn(110.dp, maxHeight * 0.5f)
             }
         }
-        val clockHeight = (baseClockHeight * liveScale).coerceIn(70.dp, maxHeight * 0.62f)
+        val clockHeight = (baseClockHeight * liveScale).coerceIn(72.dp, maxHeight * 0.64f)
+        val bigClock = !settings.lockClockCard || subject != null
+        val clockGlass = if (settings.lockClockGlass) ClockGlass(backdrop, settings.lockClockGlassOpacity) else null
+        val slideModifier = Modifier.graphicsLayer {
+            val p = slide.value
+            translationY = p * size.height * 0.5f
+            alpha = (1f + p * 1.6f).coerceIn(0f, 1f)
+        }
+
         if (bigClock) {
+            // Data e relógio ficam numa camada própria, por baixo do objeto recortado da foto.
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(insets)
-                    .graphicsLayer {
-                        val p = slide.value
-                        translationY = p * size.height * 0.5f
-                        alpha = (1f + p * 1.6f).coerceIn(0f, 1f)
-                    }
+                    .then(slideModifier)
                     .padding(top = topGap + widgetsAbove),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Box(Modifier.height(dateLine), contentAlignment = Alignment.Center) {
-                    Text(
-                        formatDate(now).replaceFirstChar { it.titlecase(locale) },
-                        color = Color.White.copy(alpha = 0.92f),
-                        style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold, shadow = WallpaperTextShadow),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                LockDateLine(now, locale, state, Modifier.height(dateLine))
                 AdaptiveClock(
                     time = formatTime(now, is24h),
                     font = settings.lockClockFont,
                     layout = settings.lockClockLayout,
                     adaptive = settings.lockClockAdaptive,
-                    brush = Brush.verticalGradient(listOf(Color.White, Color.White.copy(alpha = 0.74f))),
+                    glass = clockGlass,
+                    brush = Brush.verticalGradient(listOf(Color.White, Color.White.copy(alpha = 0.78f))),
                     fixedSize = (if (compact) 96f else 128f).times(liveScale).sp,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp).height(clockHeight),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp).height(clockHeight),
                 )
             }
             if (subject != null) {
@@ -263,17 +268,14 @@ fun LockScreen(
                 )
             }
         }
+
         CompositionLocalProvider(LocalGlassBackdrop provides backdrop) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(insets)
-                    .graphicsLayer {
-                        val p = slide.value
-                        translationY = p * size.height * 0.5f
-                        alpha = (1f + p * 1.6f).coerceIn(0f, 1f)
-                    }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                    .then(slideModifier)
+                    .padding(start = 14.dp, end = 14.dp, top = topGap, bottom = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 val media = state.media
@@ -293,91 +295,38 @@ fun LockScreen(
                 }
                 if (widgetsAbove > 0.dp) {
                     LockWidgetsRow(widgets, state)
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(6.dp))
                 }
                 if (bigClock) {
                     // O relógio já foi desenhado (atrás do objeto, se houver); aqui só reserva o espaço.
-                    Box(Modifier.fillMaxWidth().height(topGap + dateLine + clockHeight - 8.dp)) {
+                    Box(Modifier.fillMaxWidth().height(dateLine + clockHeight)) {
                         if (onClockScale != null) {
                             ClockResizeHandle(
                                 baseHeight = baseClockHeight,
-                                onDrag = { d -> liveScale = (liveScale + d).coerceIn(0.6f, 1.8f) },
+                                onDrag = { d -> liveScale = (liveScale + d).coerceIn(0.5f, 2.2f) },
                                 onEnd = { onClockScale(liveScale) },
+                                modifier = Modifier.padding(top = dateLine),
                             )
                         }
                     }
                 } else {
-                // Relógio grande em vidro
-                val cardScale = liveScale.coerceIn(0.8f, 1.6f)
-                Box(Modifier.fillMaxWidth()) {
-                GlassSurface(
-                    modifier = Modifier.fillMaxWidth().height((if (compact) 104.dp else 128.dp) * cardScale),
-                    cornerRadius = 34.dp,
-                    reactToTouch = false,
-                    elevation = 16.dp,
-                ) {
-                    Row(Modifier.fillMaxSize().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-                        val ink = LocalGlassSpec.current.contentColor
-                        Text(
-                            formatTime(now, is24h),
-                            style = settings.lockClockFont.clockStyle().copy(
-                                brush = Brush.verticalGradient(listOf(ink, ink.copy(alpha = 0.62f))),
-                            ),
-                            fontSize = (if (compact) 60f else 76f).times(cardScale).sp,
-                            maxLines = 1,
-                            softWrap = false,
-                        )
-                        Spacer(Modifier.width(16.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                formatDate(now).replaceFirstChar { it.titlecase(locale) },
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                                if (state.battery.charging) {
-                                    Icon(Icons.Rounded.Bolt, contentDescription = null, modifier = Modifier.size(15.dp))
-                                }
-                                Text(
-                                    "${state.battery.percent}%",
-                                    fontSize = 13.sp,
-                                    color = LocalGlassSpec.current.secondaryContentColor,
-                                )
-                            }
-                        }
-                        Icon(
-                            if (secure) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
-                            contentDescription = if (secure) "Bloqueado" else "Sem bloqueio",
-                            modifier = Modifier.size(20.dp),
-                            tint = LocalGlassSpec.current.secondaryContentColor,
-                        )
-                    }
-                }
-                if (onClockScale != null) {
-                    ClockResizeHandle(
-                        baseHeight = if (compact) 104.dp else 128.dp,
-                        onDrag = { d -> liveScale = (liveScale + d).coerceIn(0.6f, 1.8f) },
-                        onEnd = { onClockScale(liveScale) },
-                    )
-                }
-                }
+                    GlassClockCard(state, secure, now, is24h, locale, compact, liveScale)
                 }
                 if (widgets.isNotEmpty() && settings.lockWidgetsPosition == LockPlacement.BELOW_CLOCK) {
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     LockWidgetsRow(widgets, state)
                 }
+                if (media != null && settings.lockMediaPosition == LockPlacement.BELOW_CLOCK) {
+                    Spacer(Modifier.height(12.dp))
+                    mediaCard(Modifier)
+                }
 
-                // Música e notificações
+                // Notificações: chegam por baixo, como no iPhone.
                 LazyColumn(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     contentPadding = PaddingValues(vertical = 10.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Bottom),
                 ) {
-                    if (media != null && settings.lockMediaPosition != LockPlacement.BOTTOM) {
-                        item(key = "media") { mediaCard(Modifier) }
-                    }
                     items(state.notifications, key = { it.key }) { item ->
                         val concealed = secure && settings.lockHideSensitive && !item.isPublic
                         SwipeDismiss(enabled = item.isClearable && !concealed, onDismiss = { actions.onDismissNotification(item) }) {
@@ -385,48 +334,116 @@ fun LockScreen(
                         }
                     }
                 }
-
                 if (media != null && settings.lockMediaPosition == LockPlacement.BOTTOM) {
-                    mediaCard(Modifier.padding(bottom = 8.dp))
+                    mediaCard(Modifier.padding(bottom = 10.dp))
                 }
                 if (widgets.isNotEmpty() && settings.lockWidgetsPosition == LockPlacement.BOTTOM) {
-                    LockWidgetsRow(widgets, state, Modifier.padding(bottom = 8.dp))
+                    LockWidgetsRow(widgets, state, Modifier.padding(bottom = 14.dp))
                 }
+                LockBottomBar(state, actions)
+            }
+        }
+    }
+}
 
-                // Atalhos e dica de desbloqueio
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    if (settings.lockShortcuts && state.torchAvailable) {
-                        GlassIconButton(
-                            icon = if (state.torchOn) Icons.Rounded.FlashlightOn else Icons.Rounded.FlashlightOff,
-                            contentDescription = "Lanterna",
-                            size = 48.dp,
-                            active = state.torchOn,
-                            onClick = actions.onTorch,
-                        )
-                    } else {
-                        Spacer(Modifier.size(48.dp))
-                    }
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
-                        Text(
-                            "Deslize para desbloquear",
-                            color = Color.White,
-                            style = TextStyle(fontSize = 12.sp, shadow = WallpaperTextShadow),
-                            maxLines = 1,
-                        )
-                    }
-                    if (settings.lockShortcuts) {
-                        GlassIconButton(
-                            icon = Icons.Rounded.PhotoCamera,
-                            contentDescription = "Câmera",
-                            size = 48.dp,
-                            onClick = actions.onCamera,
-                        )
-                    } else {
-                        Spacer(Modifier.size(48.dp))
-                    }
+/** "Dom., 21 de nov. · ☁ 24°": data e clima na mesma linha, como no iOS 26. */
+@Composable
+fun LockDateLine(now: Long, locale: java.util.Locale, state: LockUiState, modifier: Modifier = Modifier, color: Color = Color.White) {
+    val date = remember(now / 60_000L, locale) {
+        val pattern = DateFormat.getBestDateTimePattern(locale, "EEEdMMM")
+        java.time.format.DateTimeFormatter.ofPattern(pattern, locale)
+            .format(java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault()))
+            .replaceFirstChar { it.titlecase(locale) }
+    }
+    val weather = state.weather.data
+    val style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, shadow = WallpaperTextShadow, color = color.copy(alpha = 0.94f))
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Text(date, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (weather != null) {
+            Spacer(Modifier.width(8.dp))
+            Icon(weatherIcon(weather.code, weather.isDay), contentDescription = null, tint = color.copy(alpha = 0.94f), modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(formatTemp(weather.tempC, state.settings.tempUnit), style = style, maxLines = 1)
+        }
+    }
+}
+
+/** Relógio dentro de um cartão de vidro (quando o usuário prefere o visual antigo). */
+@Composable
+private fun GlassClockCard(state: LockUiState, secure: Boolean, now: Long, is24h: Boolean, locale: java.util.Locale, compact: Boolean, scale: Float) {
+    val settings = state.settings
+    val cardScale = scale.coerceIn(0.8f, 1.6f)
+    GlassSurface(
+        modifier = Modifier.fillMaxWidth().height((if (compact) 104.dp else 128.dp) * cardScale),
+        cornerRadius = 34.dp,
+        reactToTouch = false,
+        elevation = 16.dp,
+    ) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+            val ink = LocalGlassSpec.current.contentColor
+            Text(
+                formatTime(now, is24h),
+                style = settings.lockClockFont.clockStyle().copy(brush = Brush.verticalGradient(listOf(ink, ink.copy(alpha = 0.62f)))),
+                fontSize = (if (compact) 60f else 76f).times(cardScale).sp,
+                maxLines = 1,
+                softWrap = false,
+            )
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    formatDate(now).replaceFirstChar { it.titlecase(locale) },
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                    if (state.battery.charging) Icon(Icons.Rounded.Bolt, contentDescription = null, modifier = Modifier.size(15.dp))
+                    Text("${state.battery.percent}%", fontSize = 13.sp, color = LocalGlassSpec.current.secondaryContentColor)
                 }
             }
+            Icon(
+                if (secure) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                contentDescription = if (secure) "Bloqueado" else "Sem bloqueio",
+                modifier = Modifier.size(20.dp),
+                tint = LocalGlassSpec.current.secondaryContentColor,
+            )
+        }
+    }
+}
+
+/** Lanterna e câmera nos cantos e a barrinha de deslizar no meio, como no iPhone. */
+@Composable
+private fun LockBottomBar(state: LockUiState, actions: LockActions) {
+    val settings = state.settings
+    Box(Modifier.fillMaxWidth().height(60.dp)) {
+        if (settings.lockShortcuts && state.torchAvailable) {
+            GlassIconButton(
+                icon = if (state.torchOn) Icons.Rounded.FlashlightOn else Icons.Rounded.FlashlightOff,
+                contentDescription = "Lanterna",
+                size = 52.dp,
+                active = state.torchOn,
+                onClick = actions.onTorch,
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = 22.dp),
+            )
+        }
+        Box(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 2.dp)
+                .semantics { contentDescription = "Deslize para desbloquear" }
+                .size(width = 128.dp, height = 5.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.82f)),
+        )
+        if (settings.lockShortcuts) {
+            GlassIconButton(
+                icon = Icons.Rounded.PhotoCamera,
+                contentDescription = "Câmera",
+                size = 52.dp,
+                onClick = actions.onCamera,
+                modifier = Modifier.align(Alignment.CenterEnd).padding(end = 22.dp),
+            )
         }
     }
 }

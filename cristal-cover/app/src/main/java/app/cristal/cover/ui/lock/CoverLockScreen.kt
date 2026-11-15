@@ -57,6 +57,7 @@ import app.cristal.cover.data.prefs.CoverClockPosition
 import app.cristal.cover.data.prefs.CoverClockStyle
 import app.cristal.cover.data.prefs.WallpaperKind
 import app.cristal.cover.ui.components.AdaptiveClock
+import app.cristal.cover.ui.components.ClockGlass
 import app.cristal.cover.ui.components.WallpaperLayer
 import app.cristal.cover.ui.components.subjectTopFraction
 import app.cristal.cover.ui.components.wallpaperImageRect
@@ -202,6 +203,7 @@ fun CoverLockScreen(
                 showRest = showRest,
                 clockHeight = clockHeight,
                 fixedScale = liveScale,
+                clockGlass = if (settings.coverClockGlass) ClockGlass(backdrop, settings.lockClockGlassOpacity) else null,
                 resize = if (onClockScale != null && showRest) {
                     ResizeControl(
                         baseHeight = baseClockHeight ?: 120.dp,
@@ -251,6 +253,7 @@ private fun CoverClockColumn(
     showRest: Boolean,
     clockHeight: Dp?,
     fixedScale: Float,
+    clockGlass: ClockGlass?,
     resize: ResizeControl?,
     expandedKey: String?,
     onToggle: (String) -> Unit,
@@ -283,19 +286,13 @@ private fun CoverClockColumn(
                     layout = settings.coverClockLayout,
                     adaptive = true,
                     brush = glassInk,
+                    glass = clockGlass,
                     modifier = Modifier.fillMaxSize().then(clockAlpha),
                     verticalAlignment = if (settings.coverClockPosition == CoverClockPosition.TOP) Alignment.Top else Alignment.CenterVertically,
                 )
                 if (resize != null) ClockResizeHandle(resize.baseHeight, resize.onDrag, resize.onEnd)
             }
-            Text(
-                formatDate(now).replaceFirstChar { it.titlecase(locale) },
-                color = ink.copy(alpha = 0.9f),
-                style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Medium, shadow = WallpaperTextShadow),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp).then(clockAlpha),
-            )
+            LockDateLine(now, locale, state, Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp).then(clockAlpha), color = ink)
         } else {
             Text(
                 time,

@@ -82,6 +82,9 @@ object PrefKeys {
     val LOCK_CLOCK_LAYOUT = stringPreferencesKey("lock_clock_layout")
     val LOCK_CLOCK_ADAPTIVE = booleanPreferencesKey("lock_clock_adaptive")
     val LOCK_CLOCK_CARD = booleanPreferencesKey("lock_clock_card")
+    val LOCK_CLOCK_GLASS = booleanPreferencesKey("lock_clock_glass")
+    val LOCK_CLOCK_GLASS_OPACITY = floatPreferencesKey("lock_clock_glass_opacity")
+    val COVER_CLOCK_GLASS = booleanPreferencesKey("cover_clock_glass")
     val LOCK_CLOCK_SCALE = floatPreferencesKey("lock_clock_scale")
     val LOCK_MEDIA_POSITION = stringPreferencesKey("lock_media_position")
     val LOCK_WIDGETS = stringPreferencesKey("lock_widgets")
@@ -166,6 +169,9 @@ internal fun Preferences.toSettings(): Settings {
         lockClockLayout = enumOr(PrefKeys.LOCK_CLOCK_LAYOUT, d.lockClockLayout),
         lockClockAdaptive = this[PrefKeys.LOCK_CLOCK_ADAPTIVE] ?: d.lockClockAdaptive,
         lockClockCard = this[PrefKeys.LOCK_CLOCK_CARD] ?: d.lockClockCard,
+        lockClockGlass = this[PrefKeys.LOCK_CLOCK_GLASS] ?: d.lockClockGlass,
+        lockClockGlassOpacity = (this[PrefKeys.LOCK_CLOCK_GLASS_OPACITY] ?: d.lockClockGlassOpacity).coerceIn(0f, 1f),
+        coverClockGlass = this[PrefKeys.COVER_CLOCK_GLASS] ?: d.coverClockGlass,
         lockClockScale = (this[PrefKeys.LOCK_CLOCK_SCALE] ?: d.lockClockScale).coerceIn(0.6f, 1.8f),
         lockMediaPosition = enumOr(PrefKeys.LOCK_MEDIA_POSITION, d.lockMediaPosition),
         lockWidgets = this[PrefKeys.LOCK_WIDGETS]?.split(',')?.mapNotNull { n -> LockWidget.entries.firstOrNull { it.name == n } }?.distinct()

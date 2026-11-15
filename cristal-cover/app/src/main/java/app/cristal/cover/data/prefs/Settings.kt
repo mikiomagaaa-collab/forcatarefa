@@ -139,20 +139,25 @@ data class Settings(
 
     // Cover Clock (bloqueio da tela externa)
     val coverClockStyle: CoverClockStyle = CoverClockStyle.LIQUID,
-    val coverClockFont: ClockFont = ClockFont.SYSTEM,
+    val coverClockFont: ClockFont = ClockFont.LIQUID,
+    val coverClockGlass: Boolean = true,
     val coverClockLayout: ClockLayout = ClockLayout.AUTO,
     val coverClockAdaptive: Boolean = true,
     /** Relógio do bloqueio interno (e do widget de relógio da tela inicial). */
-    val lockClockFont: ClockFont = ClockFont.SYSTEM,
+    val lockClockFont: ClockFont = ClockFont.LIQUID,
+    /** Números de vidro (o fundo aparece dentro deles); desligado, números brancos sólidos. */
+    val lockClockGlass: Boolean = true,
+    /** Opacidade da película dos números de vidro (0 = quase transparente, 1 = leitosa). */
+    val lockClockGlassOpacity: Float = 0.32f,
     val lockClockLayout: ClockLayout = ClockLayout.AUTO,
     val lockClockAdaptive: Boolean = true,
     /** Relógio dentro de um cartão de vidro (desligado: números grandes direto sobre a foto). */
-    val lockClockCard: Boolean = true,
+    val lockClockCard: Boolean = false,
     /** Tamanho do relógio do bloqueio interno (também ajustável arrastando na pré-visualização). */
     val lockClockScale: Float = 1f,
     val lockMediaPosition: LockPlacement = LockPlacement.BELOW_CLOCK,
     val lockWidgets: List<LockWidget> = emptyList(),
-    val lockWidgetsPosition: LockPlacement = LockPlacement.BELOW_CLOCK,
+    val lockWidgetsPosition: LockPlacement = LockPlacement.BOTTOM,
     val coverClockScale: Float = 1f,
     val coverClockPosition: CoverClockPosition = CoverClockPosition.TOP,
     val coverLockMaxNotifications: Int = 3,

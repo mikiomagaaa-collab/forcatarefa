@@ -11,11 +11,15 @@ import org.junit.Test
 
 class ClockTest {
     @Test
-    fun `forma automatica empilha so quando o espaco e alto`() {
-        assertFalse(ClockFitting.stacked(ClockLayout.AUTO, 400f, 200f))
-        assertTrue(ClockFitting.stacked(ClockLayout.AUTO, 400f, 320f))
-        assertTrue(ClockFitting.stacked(ClockLayout.STACKED, 400f, 100f))
-        assertFalse(ClockFitting.stacked(ClockLayout.LINE, 100f, 400f))
+    fun `forma automatica prefere uma linha esticada`() {
+        // Caixa alta, mas a fonte estica até preencher: continua em uma linha (relógio "escorrido").
+        val tallFill = ClockFitting.fit(200f, 100f, 400f, 500f, maxStretch = 3.4f, stacked = false)
+        assertFalse(ClockFitting.stacked(ClockLayout.AUTO, tallFill, 100f, 400f, 500f))
+        // A fonte não estica o bastante: sobra muita altura, então empilha.
+        val shortFill = ClockFitting.fit(200f, 100f, 400f, 500f, maxStretch = 1.3f, stacked = false)
+        assertTrue(ClockFitting.stacked(ClockLayout.AUTO, shortFill, 100f, 400f, 500f))
+        assertTrue(ClockFitting.stacked(ClockLayout.STACKED, shortFill, 100f, 400f, 100f))
+        assertFalse(ClockFitting.stacked(ClockLayout.LINE, shortFill, 100f, 100f, 400f))
     }
 
     @Test
@@ -34,11 +38,12 @@ class ClockTest {
 
     @Test
     fun `estilos antigos do cover clock viram fontes`() {
-        assertEquals(ClockFont.SYSTEM, ClockFont.fromCoverStyle(CoverClockStyle.LIQUID))
+        assertEquals(ClockFont.LIQUID, ClockFont.fromCoverStyle(CoverClockStyle.LIQUID))
         assertEquals(ClockFont.THIN, ClockFont.fromCoverStyle(CoverClockStyle.MINIMAL))
         assertEquals(ClockFont.DIGITAL, ClockFont.fromCoverStyle(CoverClockStyle.DIGITAL))
         assertEquals(ClockFont.EDITORIAL, ClockFont.fromCoverStyle(CoverClockStyle.CLASSIC))
-        assertTrue(ClockFont.entries.size >= 12)
+        assertTrue(ClockFont.entries.size >= 14)
+        assertTrue(ClockFont.LIQUID.maxStretch >= 3f)
         assertTrue(ClockFont.TALL.maxStretch > ClockFont.SCRIPT.maxStretch)
     }
 }

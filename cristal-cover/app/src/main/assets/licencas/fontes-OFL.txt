@@ -105,3 +105,8 @@ INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
 DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
+
+Fontes de relógio e da interface adicionadas depois (licença SIL OFL 1.1):
+Copyright 2016 The Smooch Sans Project Authors (https://github.com/googlefonts/smooch-sans)
+Copyright 2019 The Sofia Sans Project Authors (https://github.com/lettersoup/Sofia-Sans)
+Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter)

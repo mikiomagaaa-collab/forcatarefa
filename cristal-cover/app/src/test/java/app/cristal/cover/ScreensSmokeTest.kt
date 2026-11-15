@@ -479,6 +479,7 @@ class ScreensSmokeTest {
     }
 
     @Test
+    @Config(sdk = [36], qualifiers = "w411dp-h1004dp-420dpi")
     fun `tela de bloqueio com notificacoes ocultas`() {
         val state = LockUiState(
             settings = Settings(), battery = BatteryState(percent = 76, charging = true), media = widgetData.media,
@@ -490,7 +491,7 @@ class ScreensSmokeTest {
             }
         }
         shot("14-bloqueio")
-        rule.onNodeWithText("Deslize para desbloquear").assertExists()
+        rule.onNodeWithContentDescription("Deslize para desbloquear").assertExists()
         // A notificação privada fica oculta; a pública aparece.
         rule.onNodeWithText("Conteúdo oculto").assertExists()
         rule.onNodeWithText("Oi! Você vem hoje?").assertDoesNotExist()
@@ -514,7 +515,7 @@ class ScreensSmokeTest {
         shot("15-cover-clock")
         // Minimalista de propósito: nada de música, atalhos ou dica de deslizar.
         rule.onNodeWithText("Garota de Ipanema").assertDoesNotExist()
-        rule.onNodeWithText("Deslize para desbloquear").assertDoesNotExist()
+        rule.onNodeWithContentDescription("Deslize para desbloquear").assertDoesNotExist()
         rule.onNodeWithText("Boletim escolar").assertExists()
         // A notificação privada mostra só o nome do app; tocar expande.
         rule.onNodeWithText("Oi! Você vem hoje?").assertDoesNotExist()
@@ -560,7 +561,7 @@ class ScreensSmokeTest {
             }
         }
         shot("17-bloqueio-profundidade")
-        rule.onNodeWithText("Deslize para desbloquear").assertExists()
+        rule.onNodeWithContentDescription("Deslize para desbloquear").assertExists()
     }
 
     @Test
@@ -656,14 +657,14 @@ class ScreensSmokeTest {
             }
         }
         shot("22-bloqueio-widgets-e-alca")
-        rule.onNodeWithText("76%").assertExists()
-        rule.onNodeWithText("Arraste para mudar o tamanho").assertExists()
+        rule.onNodeWithText("76").assertExists()
+        rule.onNodeWithText("Arraste o canto para esticar").assertExists()
         rule.onAllNodesWithText("Garota de Ipanema").onFirst().assertExists()
-        // Arrastar a alça para cima diminui o relógio e salva o novo tamanho.
-        rule.onNodeWithText("Arraste para mudar o tamanho").performTouchInput {
-            down(Offset(centerX, top - 20f))
-            moveBy(Offset(0f, -60f))
-            moveBy(Offset(0f, -60f))
+        // Arrastar o canto para cima encolhe o relógio e salva o novo tamanho.
+        rule.onNodeWithContentDescription("Esticar o relógio").performTouchInput {
+            down(center)
+            moveBy(Offset(0f, -70f))
+            moveBy(Offset(0f, -70f))
             up()
         }
         rule.waitForIdle()
