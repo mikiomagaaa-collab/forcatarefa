@@ -163,6 +163,12 @@ class ScreensSmokeTest {
                 HomeItem.Widget(21, 1, 2, 0, 2, 2, WidgetKind.BATTERY),
                 HomeItem.Widget(22, 1, 0, 2, 4, 2, WidgetKind.MUSIC),
             ),
+            listOf(
+                HomeItem.Widget(40, 2, 0, 0, 2, 2, WidgetKind.ANALOG_CLOCK),
+                HomeItem.Widget(41, 2, 2, 0, 2, 2, WidgetKind.DATE),
+                HomeItem.Widget(42, 2, 0, 2, 4, 1, WidgetKind.SHORTCUTS),
+                HomeItem.Widget(43, 2, 0, 3, 4, 1, WidgetKind.SEARCH),
+            ),
         ),
         dock = listOf(appItem(30, 12, 0, 0), appItem(31, 13, 1, 0), appItem(32, 2, 2, 0), appItem(33, 1, 3, 0)),
     )
@@ -278,6 +284,9 @@ class ScreensSmokeTest {
         // Troca de página para os dois lados sem quebrar.
         rule.onRoot().performTouchInput { swipeLeft() }
         shot("02-pagina-de-widgets")
+        rule.onRoot().performTouchInput { swipeLeft() }
+        shot("02b-widgets-novos")
+        rule.onRoot().performTouchInput { swipeRight() }
         rule.onRoot().performTouchInput { swipeRight() }
         rule.onRoot().performTouchInput { swipeRight() }
         shot("03-painel-hoje")
@@ -310,7 +319,7 @@ class ScreensSmokeTest {
             }
         }
         shot("06-gaveta")
-        rule.onNodeWithText("Buscar apps").assertExists()
+        rule.onAllNodesWithText("Buscar apps").onFirst().assertExists()
         rule.onNodeWithText("Calculadora").assertExists()
     }
 

@@ -9,7 +9,17 @@ enum class WidgetKind(val spanX: Int, val spanY: Int) {
     WEATHER(2, 2),
     MUSIC(4, 2),
     BATTERY(2, 2),
-    AGENDA(4, 2);
+    AGENDA(4, 2),
+    ANALOG_CLOCK(2, 2),
+    DATE(2, 2),
+    SHORTCUTS(4, 1),
+    SEARCH(4, 1),
+
+    /** Widget de outro app; o id no host fica guardado no item. */
+    APP_WIDGET(4, 2);
+
+    val builtIn: Boolean get() = this != APP_WIDGET
+
 
     companion object {
         fun fromName(name: String?): WidgetKind? = entries.firstOrNull { it.name == name }
@@ -61,6 +71,8 @@ sealed interface HomeItem {
         override val spanX: Int,
         override val spanY: Int,
         val kind: WidgetKind,
+        /** Id no AppWidgetHost; só vale para [WidgetKind.APP_WIDGET]. */
+        val appWidgetId: Int = -1,
     ) : HomeItem
 }
 

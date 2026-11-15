@@ -134,6 +134,18 @@
                 android:resource="@xml/accessibility_service" />
         </service>
 
+        <!-- Bloco dos Ajustes rápidos: abre o Cristal na tela em que foi tocado (útil na tela externa). -->
+        <service
+            android:name=".service.CoverTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_cristal"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
         <receiver
             android:name=".service.BootReceiver"
             android:exported="false">

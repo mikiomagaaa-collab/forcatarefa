@@ -3,6 +3,7 @@ package app.cristal.cover.data.wallpaper
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.graphics.ImageDecoder
 import android.net.Uri
 import androidx.compose.ui.graphics.ImageBitmap
@@ -82,9 +83,11 @@ class WallpaperRepository @Inject constructor(
                 tmp.copyTo(file, overwrite = true)
                 tmp.delete()
             }
+            val dark = isDark(bitmap)
             settingsRepository.edit {
                 it[PrefKeys.WALLPAPER_KIND] = WallpaperKind.IMAGE.name
                 it[PrefKeys.WALLPAPER_VERSION] = System.currentTimeMillis()
+                it[PrefKeys.WALLPAPER_IMAGE_DARK] = dark
             }
             true
         } catch (t: Throwable) {
@@ -92,6 +95,19 @@ class WallpaperRepository @Inject constructor(
             false
         }
     }
+
+    /** Brilho médio da imagem, medido em uma miniatura: decide se o texto sobre o vidro fica claro. */
+    private fun isDark(bitmap: Bitmap): Boolean = safely("medir brilho do papel de parede") {
+        val small = Bitmap.createScaledBitmap(bitmap, 24, 24, true)
+        var sum = 0.0
+        for (y in 0 until 24) {
+            for (x in 0 until 24) {
+                val c = small.getPixel(x, y)
+                sum += 0.2126 * Color.red(c) + 0.7152 * Color.green(c) + 0.0722 * Color.blue(c)
+            }
+        }
+        sum / (24 * 24 * 255.0) < 0.6
+    } ?: true
 
     suspend fun usePreset(index: Int) {
         settingsRepository.edit {

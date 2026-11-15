@@ -41,6 +41,8 @@ object PrefKeys {
     val WALLPAPER_PRESET = intPreferencesKey("wallpaper_preset")
     val WALLPAPER_DIM = floatPreferencesKey("wallpaper_dim")
     val WALLPAPER_PARALLAX = booleanPreferencesKey("wallpaper_parallax")
+    val WALLPAPER_BLUR = floatPreferencesKey("wallpaper_blur")
+    val WALLPAPER_IMAGE_DARK = booleanPreferencesKey("wallpaper_image_dark")
     val WALLPAPER_VERSION = longPreferencesKey("wallpaper_version")
 
     val GRID_COLUMNS = intPreferencesKey("grid_columns")
@@ -108,6 +110,8 @@ internal fun Preferences.toSettings(): Settings {
         wallpaperPreset = this[PrefKeys.WALLPAPER_PRESET] ?: d.wallpaperPreset,
         wallpaperDim = (this[PrefKeys.WALLPAPER_DIM] ?: d.wallpaperDim).coerceIn(0f, 0.8f),
         wallpaperParallax = this[PrefKeys.WALLPAPER_PARALLAX] ?: d.wallpaperParallax,
+        wallpaperBlur = (this[PrefKeys.WALLPAPER_BLUR] ?: d.wallpaperBlur).coerceIn(0f, 1f),
+        wallpaperImageDark = this[PrefKeys.WALLPAPER_IMAGE_DARK] ?: d.wallpaperImageDark,
         wallpaperVersion = this[PrefKeys.WALLPAPER_VERSION] ?: d.wallpaperVersion,
         gridColumns = (this[PrefKeys.GRID_COLUMNS] ?: d.gridColumns).coerceIn(SettingsLimits.gridColumns),
         gridRows = (this[PrefKeys.GRID_ROWS] ?: d.gridRows).coerceIn(SettingsLimits.gridRows),

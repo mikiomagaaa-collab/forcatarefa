@@ -120,9 +120,15 @@ class HomeRepository @Inject constructor(
         true
     }
 
-    suspend fun addWidget(kind: WidgetKind, preferredPage: Int = 0): Boolean = locked {
-        val sx = kind.spanX.coerceAtMost(cols)
-        val sy = kind.spanY.coerceAtMost(rows)
+    suspend fun addWidget(
+        kind: WidgetKind,
+        preferredPage: Int = 0,
+        appWidgetId: Int = -1,
+        spanX: Int = kind.spanX,
+        spanY: Int = kind.spanY,
+    ): Boolean = locked {
+        val sx = spanX.coerceIn(1, cols)
+        val sy = spanY.coerceIn(1, rows)
         val slot = GridMath.firstFree(desktop(), cols, rows, sx, sy, startPage = preferredPage.coerceAtLeast(0))
         dao.insert(
             HomeItemEntity(
@@ -134,6 +140,8 @@ class HomeRepository @Inject constructor(
                 spanX = sx,
                 spanY = sy,
                 widgetKind = kind.name,
+                // Para widgets de outros apps, o título guarda o id no host (evita mudar o banco).
+                title = if (appWidgetId >= 0) appWidgetId.toString() else null,
             ),
         )
         true

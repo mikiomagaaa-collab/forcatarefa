@@ -231,6 +231,17 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /** Manda o launcher para a tela externa, sem depender do painel de apps da Motorola. */
+    fun openOnCover() {
+        viewModelScope.launch {
+            val ok = appLauncher.openSelfOnCover()
+            message(
+                if (ok) "Cristal enviado para a tela externa. Feche o aparelho para ver."
+                else "O sistema não deixou abrir na tela externa. Tente o bloco dos Ajustes rápidos ou o Shizuku.",
+            )
+        }
+    }
+
     fun redoOnboarding() {
         viewModelScope.launch { settingsRepository.set(PrefKeys.ONBOARDING_DONE, false) }
     }

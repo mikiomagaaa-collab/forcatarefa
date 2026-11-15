@@ -6,6 +6,7 @@ import android.content.ContentUris
 import android.content.Intent
 import android.provider.AlarmClock
 import android.provider.CalendarContract
+import android.provider.MediaStore
 import android.provider.Settings as SystemSettings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -19,6 +20,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.DriveFileMove
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Home
@@ -64,6 +66,7 @@ import app.cristal.cover.data.prefs.GlassQuality
 import app.cristal.cover.data.prefs.WallpaperKind
 import app.cristal.cover.data.shizuku.ShizukuStatus
 import app.cristal.cover.data.weather.WeatherStatus
+import app.cristal.cover.data.widgets.WidgetProviderEntry
 import app.cristal.cover.ui.components.SheetState
 import app.cristal.cover.ui.components.WallpaperLayer
 import app.cristal.cover.ui.glass.LocalGlassBackdrop
@@ -130,9 +133,11 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
     var compat by remember { mutableStateOf<LauncherEvent.ConfirmCompat?>(null) }
     var appOptions by remember { mutableStateOf<AppInfo?>(null) }
     var blockedHelp by remember { mutableStateOf<AppInfo?>(null) }
+    var appPicker by remember { mutableStateOf(false) }
+    var pendingWidget by remember { mutableStateOf<Pair<Int, WidgetProviderEntry>?>(null) }
 
     val openFolder = openFolderId?.let { layout.findFolder(it) }
-    val dialogOpen = menu != null || homeMenu || widgetPicker || compat != null || appOptions != null || blockedHelp != null
+    val dialogOpen = menu != null || homeMenu || widgetPicker || appPicker || compat != null || appOptions != null || blockedHelp != null
     val overlayOpen = dialogOpen || openFolder != null
 
     val sceneBackdrop = rememberGlassBackdrop()
@@ -181,6 +186,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
         compat = null
         appOptions = null
         blockedHelp = null
+        appPicker = false
         openFolderId = null
         scope.launch { drawer.close() }
         scope.launch { panel.close() }
@@ -298,6 +304,52 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
     val calendarPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         viewModel.onResume()
     }
+    // Widgets de outros apps: reserva um id, pede a permissão ao sistema se preciso e coloca na página.
+    fun placeAppWidget(id: Int, entry: WidgetProviderEntry) {
+        viewModel.addAppWidget(id, entry.spanX, entry.spanY, (pagerState.currentPage - 1).coerceAtLeast(0))
+        (context as? Activity)?.let { viewModel.widgetHost.configureIfNeeded(it, id, entry.info) }
+    }
+    val bindWidget = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val pending = pendingWidget
+        pendingWidget = null
+        if (pending != null) {
+            if (result.resultCode == Activity.RESULT_OK) {
+                placeAppWidget(pending.first, pending.second)
+            } else {
+                viewModel.widgetHost.delete(pending.first)
+            }
+        }
+    }
+
+    fun pickAppWidget(entry: WidgetProviderEntry) {
+        val host = viewModel.widgetHost
+        val id = host.allocateId()
+        if (id < 0) {
+            showMessage("Não foi possível adicionar widgets de outros apps neste aparelho.")
+            return
+        }
+        if (host.bindIfAllowed(id, entry.info)) {
+            placeAppWidget(id, entry)
+        } else {
+            pendingWidget = id to entry
+            runCatching { bindWidget.launch(host.bindIntent(id, entry.info)) }.onFailure {
+                pendingWidget = null
+                host.delete(id)
+                showMessage("Não foi possível pedir a permissão do widget.")
+            }
+        }
+    }
+
+    val keysOnHome = remember(layout) {
+        (layout.pages.flatten() + layout.dock).flatMap { item ->
+            when (item) {
+                is HomeItem.App -> listOf(item.app.key)
+                is HomeItem.Folder -> item.children.map { it.app.key }
+                is HomeItem.Widget -> emptyList()
+            }
+        }.toSet()
+    }
+
     val widgetActions = WidgetActions(
         onClockClick = { openExternalIntent(Intent(AlarmClock.ACTION_SHOW_ALARMS)) },
         onWeatherClick = {
@@ -319,11 +371,16 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
         onMediaPlayPause = viewModel::mediaPlayPause,
         onMediaNext = viewModel::mediaNext,
         onMediaPrevious = viewModel::mediaPrevious,
+        onTorch = viewModel::toggleTorch,
+        onCamera = { openExternalIntent(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)) },
+        onSearch = { scope.launch { drawer.open() } },
+        onSettings = { openCristalSettings() },
     )
 
     // --- Voltar -----------------------------------------------------------------------------------
     BackHandler {
         when {
+            appPicker -> appPicker = false
             blockedHelp != null -> blockedHelp = null
             appOptions != null -> appOptions = null
             compat != null -> compat = null
@@ -420,6 +477,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                 image = if (settings.wallpaperKind == WallpaperKind.IMAGE) wallpaper else null,
                 presetIndex = settings.wallpaperPreset,
                 dim = settings.wallpaperDim,
+                blur = settings.wallpaperBlur,
                 modifier = Modifier.glassBackdropSource(sceneBackdrop),
                 parallax = {
                     if (!settingsState.value.wallpaperParallax) {
@@ -520,6 +578,19 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                     onRequestNotificationAccess = {
                         openExternalIntent(Intent(SystemSettings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                     },
+                    onScreenshot = {
+                        scope.launch {
+                            // Fecha o painel antes, para ele não sair na captura.
+                            panel.close()
+                            viewModel.takeScreenshot()
+                        }
+                    },
+                    onRecents = viewModel::openRecents,
+                    onSearch = {
+                        scope.launch { panel.close() }
+                        scope.launch { drawer.open() }
+                    },
+                    onWallpaper = { openCristalSettings(SettingsActivity.PAGE_WALLPAPER) },
                 ),
             )
 
@@ -538,6 +609,10 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
 
             if (homeMenu) {
                 val actions = buildList {
+                    add(MenuAction(Icons.Rounded.Apps, "Apps") {
+                        homeMenu = false
+                        appPicker = true
+                    })
                     add(MenuAction(Icons.Rounded.Widgets, "Widgets") {
                         homeMenu = false
                         widgetPicker = true
@@ -550,6 +625,12 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                         homeMenu = false
                         openCristalSettings()
                     })
+                    if (!onCover && cover.cover != null && cover.cover?.isDefault == false) {
+                        add(MenuAction(Icons.Rounded.Smartphone, "Tela externa") {
+                            homeMenu = false
+                            viewModel.openOnCover()
+                        })
+                    }
                     if (settings.coverTakeover && onCover) {
                         add(MenuAction(Icons.Rounded.Smartphone, "Tela Motorola") {
                             homeMenu = false
@@ -561,12 +642,27 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
             }
 
             if (widgetPicker) {
+                val providers = remember { viewModel.widgetHost.providers(settings.gridColumns, settings.gridRows) }
                 WidgetPicker(
                     onPick = { kind ->
                         widgetPicker = false
                         viewModel.addWidget(kind, (pagerState.currentPage - 1).coerceAtLeast(0))
                     },
                     onDismiss = { widgetPicker = false },
+                    providers = providers,
+                    onPickProvider = { entry ->
+                        widgetPicker = false
+                        pickAppWidget(entry)
+                    },
+                )
+            }
+
+            if (appPicker) {
+                AppPickerDialog(
+                    apps = home.apps,
+                    onHome = keysOnHome,
+                    onAdd = { app -> viewModel.addToHome(app, (pagerState.currentPage - 1).coerceAtLeast(0)) },
+                    onDismiss = { appPicker = false },
                 )
             }
 

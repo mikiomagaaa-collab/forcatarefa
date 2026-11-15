@@ -73,8 +73,9 @@ data class Settings(
     // Aparência
     val themeMode: ThemeMode = ThemeMode.AUTO,
     val glassQuality: GlassQuality = GlassQuality.LIQUID,
-    val glassIntensity: Float = 0.7f,
-    val dynamicLight: Boolean = false,
+    /** 0 = mais transparente, 0,5 = padrão, 1 = mais fosco. */
+    val glassIntensity: Float = 0.45f,
+    val dynamicLight: Boolean = true,
     val adaptivePerformance: Boolean = true,
     val refreshMode: RefreshMode = RefreshMode.AUTO,
     val haptics: Boolean = true,
@@ -84,6 +85,9 @@ data class Settings(
     val wallpaperPreset: Int = 0,
     val wallpaperDim: Float = 0.1f,
     val wallpaperParallax: Boolean = true,
+    val wallpaperBlur: Float = 0f,
+    /** Se a imagem escolhida é escura (pede texto claro sobre o vidro). */
+    val wallpaperImageDark: Boolean = true,
     /** Muda a cada troca de imagem para invalidar caches. */
     val wallpaperVersion: Long = 0,
 

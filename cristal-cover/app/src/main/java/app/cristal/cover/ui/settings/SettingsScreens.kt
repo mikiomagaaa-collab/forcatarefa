@@ -187,12 +187,13 @@ private fun MainPage(
 private fun AppearancePage(vm: SettingsViewModel, settings: Settings, wallpaper: ImageBitmap?, onBack: () -> Unit) {
     SettingsScaffold(SettingsPage.APPEARANCE.title, settings, wallpaper, onBack) {
         item {
-            SettingsCard("Tema") {
+            SettingsCard("Cor do vidro e do texto") {
                 ChoiceRow(
                     "Modo",
-                    listOf(ThemeMode.AUTO to "Automático", ThemeMode.LIGHT to "Claro", ThemeMode.DARK to "Escuro"),
+                    listOf(ThemeMode.AUTO to "Pelo papel de parede", ThemeMode.LIGHT to "Vidro claro", ThemeMode.DARK to "Vidro escuro"),
                     settings.themeMode,
                 ) { vm.setEnum(PrefKeys.THEME_MODE, it) }
+                InfoText("No automático, um papel de parede escuro usa vidro escuro com texto branco, e um claro usa vidro claro com texto escuro.")
             }
         }
         item {
@@ -209,12 +210,27 @@ private fun AppearancePage(vm: SettingsViewModel, settings: Settings, wallpaper:
                         GlassQuality.LIQUID -> "Desfoque, refração, dispersão de cor e brilho nas bordas (shader AGSL)."
                     },
                 )
+                ChoiceRow(
+                    "Transparência",
+                    listOf(0.12f to "Mais transparente", 0.45f to "Padrão", 0.85f to "Mais fosco"),
+                    listOf(0.12f, 0.45f, 0.85f).minByOrNull { kotlin.math.abs(it - settings.glassIntensity) } ?: 0.45f,
+                ) { vm.set(PrefKeys.GLASS_INTENSITY, it) }
                 SliderRow(
-                    "Intensidade",
+                    "Ajuste fino",
                     settings.glassIntensity,
                     0f..1f,
-                    label = { "${(it * 100).roundToInt()}%" },
+                    label = {
+                        when {
+                            it < 0.3f -> "transparente"
+                            it < 0.65f -> "padrão"
+                            else -> "fosco"
+                        }
+                    },
                 ) { vm.set(PrefKeys.GLASS_INTENSITY, it) }
+                InfoText(
+                    "O Liquid Glass é um vidro claro: o destaque vem da lente nas bordas e do brilho, não do desfoque. " +
+                        "Se algum texto ficar difícil de ler sobre o seu papel de parede, puxe para \"fosco\".",
+                )
                 SwitchRow(
                     title = "Reflexo acompanha o movimento",
                     subtitle = "Usa o sensor de gravidade para o brilho da borda se mover ao inclinar o aparelho.",
@@ -260,9 +276,9 @@ private fun WallpaperPage(vm: SettingsViewModel, settings: Settings, wallpaper: 
         item {
             SettingsCard("Presets") {
                 val presets = WallpaperPresets.all
-                for (rowStart in presets.indices step 4) {
+                for (rowStart in presets.indices step 3) {
                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        for (index in rowStart until rowStart + 4) {
+                        for (index in rowStart until rowStart + 3) {
                             if (index < presets.size) {
                                 PresetTile(
                                     index = index,
@@ -302,6 +318,13 @@ private fun WallpaperPage(vm: SettingsViewModel, settings: Settings, wallpaper: 
                     0f..0.7f,
                     label = { "${(it * 100).roundToInt()}%" },
                 ) { vm.set(PrefKeys.WALLPAPER_DIM, it) }
+                SliderRow(
+                    "Desfocar",
+                    settings.wallpaperBlur,
+                    0f..1f,
+                    label = { "${(it * 100).roundToInt()}%" },
+                ) { vm.set(PrefKeys.WALLPAPER_BLUR, it) }
+                InfoText("Um fundo levemente desfocado e escurecido deixa os ícones e o vidro mais nítidos.")
                 SwitchRow(
                     title = "Parallax entre páginas",
                     subtitle = "O fundo desliza de leve ao trocar de página.",
@@ -326,8 +349,8 @@ private fun PresetTile(index: Int, name: String, selected: Boolean, modifier: Mo
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(62.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .height(96.dp)
+                .clip(RoundedCornerShape(20.dp))
                 .border(
                     if (selected) 2.dp else 0.75.dp,
                     LocalContentColor.current.copy(alpha = if (selected) 1f else 0.3f),
@@ -551,6 +574,34 @@ private fun CoverPage(
     val shizukuReady = permissions.shizuku == ShizukuStatus.READY
     SettingsScaffold(SettingsPage.COVER.title, settings, wallpaper, onBack) {
         item {
+            SettingsCard("Usar o Cristal na tela externa") {
+                InfoText(
+                    "Há três caminhos. Use o que funcionar no seu aparelho; eles não se atrapalham.",
+                )
+                Text("1. Abrir agora", fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 6.dp))
+                InfoText("Envia o Cristal para a tela externa. Depois é só fechar o aparelho.")
+                GlassButton("Abrir na tela externa", Modifier.fillMaxWidth(), primary = true) { vm.openOnCover() }
+
+                Text("2. Bloco nos Ajustes rápidos", fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 12.dp))
+                InfoText("Adiciona um botão \"Cristal Cover\" aos Ajustes rápidos. Na tela externa, puxe os ajustes para baixo e toque nele.")
+                GlassButton("Adicionar o bloco", Modifier.fillMaxWidth()) {
+                    val ok = runCatching {
+                        val manager = context.getSystemService(android.app.StatusBarManager::class.java)
+                        manager.requestAddTileService(
+                            android.content.ComponentName(context, app.cristal.cover.service.CoverTileService::class.java),
+                            "Cristal Cover",
+                            android.graphics.drawable.Icon.createWithResource(context, app.cristal.cover.R.drawable.ic_tile_cristal),
+                            context.mainExecutor,
+                        ) { }
+                    }.isSuccess
+                    if (!ok) vm.message("Adicione manualmente: edite os Ajustes rápidos e arraste \"Cristal Cover\".")
+                }
+
+                Text("3. Painel de apps da Motorola", fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 12.dp))
+                InfoText("Em Configurações > Tela externa > Painéis, edite o painel Apps e adicione o Cristal Cover.")
+            }
+        }
+        item {
             SettingsCard("Telas detectadas") {
                 if (cover.displays.isEmpty()) InfoText("Nenhuma tela informada pelo sistema.")
                 for (d in cover.displays) {
@@ -579,8 +630,8 @@ private fun CoverPage(
             SettingsCard("Launcher na tela externa") {
                 SwitchRow(
                     title = "Assumir a tela externa",
-                    subtitle = "Sempre que a tela inicial da Motorola aparecer na tela externa, o Cristal abre por cima. " +
-                        "Precisa da acessibilidade. Para ver a tela original, toque longo no fundo > Tela Motorola.",
+                    subtitle = "Abre o Cristal sozinho ao fechar o aparelho e sempre que a tela inicial da Motorola aparecer na " +
+                        "tela externa. Precisa da acessibilidade. Para ver a tela original, toque longo no fundo > Tela Motorola.",
                     checked = settings.coverTakeover,
                     onChange = { vm.set(PrefKeys.COVER_TAKEOVER, it) },
                     enabled = permissions.accessibility || settings.coverTakeover,
@@ -589,7 +640,7 @@ private fun CoverPage(
                     val opened = vm.center.externalDisplaySettingsIntents().any { context.startSafely(it) }
                     if (!opened) vm.message("Não foi possível abrir as configurações do sistema.")
                 }
-                InfoText("Na Motorola, libere o Cristal e os apps desejados em Configurações > Tela externa > Apps.")
+                InfoText("Na Motorola, os apps da tela externa são escolhidos em Configurações > Tela externa > Painéis > Apps.")
             }
         }
         item {

@@ -6,7 +6,7 @@ Siga na ordem. Cada parte diz o que é obrigatório e o que é opcional.
 - [1. Conseguir o APK](#1-conseguir-o-apk)
 - [2. Instalar](#2-instalar)
 - [3. Primeira abertura](#3-primeira-abertura)
-- [4. Liberar o app na tela externa](#4-liberar-o-app-na-tela-externa)
+- [4. Usar o Cristal na tela externa](#4-usar-o-cristal-na-tela-externa)
 - [5. Shizuku (opcional, recomendado)](#5-shizuku-opcional-recomendado)
 - [6. ADB sem fio direto do celular (alternativa ao Shizuku)](#6-adb-sem-fio-direto-do-celular-alternativa-ao-shizuku)
 - [7. Ativar a tela de bloqueio](#7-ativar-a-tela-de-bloqueio)
@@ -91,22 +91,35 @@ bloqueio. O serviço **não lê o conteúdo das telas**: só fica sabendo qual a
   em Configurações > Clima.
 - **Launcher padrão**: só se quiser o Cristal também na tela de dentro. **Não é preciso** para a tela externa.
 
-## 4. Liberar o app na tela externa
+## 4. Usar o Cristal na tela externa
 
-A Motorola só mostra na tela externa os apps que você liberar.
+Há três caminhos. Use o que funcionar no seu aparelho; eles não se atrapalham. Os botões dos dois primeiros
+ficam em **Configurações do Cristal > Tela externa**.
 
-1. Abra **Configurações > Tela externa**.
-2. Procure a lista de **apps permitidos na tela externa** (o nome exato muda um pouco entre versões).
-3. Ative o **Cristal Cover** e os apps que você quer usar por lá.
-4. Feche o aparelho. Na tela externa, deslize até o **painel de apps** e toque em **Cristal Cover**.
+**Caminho 1: "Abrir na tela externa".** Com o aparelho aberto, toque em **Abrir na tela externa** e feche o
+aparelho. O mesmo botão aparece no toque longo no fundo da tela inicial (**Tela externa**).
+
+**Caminho 2: bloco nos Ajustes rápidos.** Toque em **Adicionar o bloco** e confirme. Depois, na tela externa,
+puxe os ajustes rápidos para baixo e toque em **Cristal Cover**. Esse caminho não depende do painel de apps da
+Motorola.
+
+**Caminho 3: painel de apps da Motorola.**
+
+1. Abra **Configurações > Tela externa > Painéis**.
+2. Edite o painel **Apps** e adicione o **Cristal Cover** (e os apps que você quer usar por lá).
+3. Feche o aparelho, deslize até o painel de apps e toque em **Cristal Cover**.
+
+Se nenhum dos três abrir, a Motorola está bloqueando o app na tela externa. Nesse caso ative o **Shizuku**
+(parte 5): com ele o Cristal pede a liberação ao sistema sozinho.
 
 ### Fazer o Cristal aparecer sozinho
 
 O gesto de "início" na tela externa sempre leva ao launcher da Motorola. Isso é do sistema e não dá para
 mudar sem root. Para contornar:
 
-- Em **Configurações do Cristal > Tela externa**, ligue **Assumir a tela externa**. Sempre que a tela inicial
-  da Motorola aparecer na tela externa, o Cristal abre por cima. Precisa do serviço de acessibilidade.
+- Em **Configurações do Cristal > Tela externa**, ligue **Assumir a tela externa**. O Cristal abre sozinho ao
+  fechar o aparelho e sempre que a tela inicial da Motorola aparecer na tela externa. Precisa do serviço de
+  acessibilidade.
 - Para ver a tela original da Motorola: toque longo no fundo do Cristal > **Tela Motorola**. Você tem 20
   segundos antes de o Cristal reassumir.
 

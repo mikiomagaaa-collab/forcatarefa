@@ -101,6 +101,7 @@ data class WidgetData(
     val agenda: AgendaState = AgendaState(),
     val tempUnit: TempUnit = TempUnit.CELSIUS,
     val notificationAccess: Boolean = false,
+    val torchOn: Boolean = false,
 )
 
 /** Ações disparadas pelos widgets; a tela que os hospeda decide o que fazer. */
@@ -116,6 +117,10 @@ class WidgetActions(
     val onMediaPlayPause: () -> Unit = {},
     val onMediaNext: () -> Unit = {},
     val onMediaPrevious: () -> Unit = {},
+    val onTorch: () -> Unit = {},
+    val onCamera: () -> Unit = {},
+    val onSearch: () -> Unit = {},
+    val onSettings: () -> Unit = {},
 )
 
 /** Locale atual, lido de forma que a tela se atualize se o idioma do sistema mudar. */
@@ -168,6 +173,10 @@ fun WidgetCard(
         WidgetKind.MUSIC -> actions.onMediaOpen
         WidgetKind.BATTERY -> actions.onBatteryClick
         WidgetKind.AGENDA -> if (data.agenda.hasPermission) actions.onAgendaClick else actions.onRequestCalendar
+        WidgetKind.ANALOG_CLOCK -> actions.onClockClick
+        WidgetKind.DATE -> actions.onAgendaClick
+        WidgetKind.SEARCH -> actions.onSearch
+        WidgetKind.SHORTCUTS, WidgetKind.APP_WIDGET -> ({})
     }
     GlassSurface(
         modifier = modifier,
@@ -183,6 +192,11 @@ fun WidgetCard(
             WidgetKind.MUSIC -> MusicContent(data, actions)
             WidgetKind.BATTERY -> BatteryContent(data.battery)
             WidgetKind.AGENDA -> AgendaContent(data.agenda)
+            WidgetKind.ANALOG_CLOCK -> AnalogClockContent()
+            WidgetKind.DATE -> DateContent()
+            WidgetKind.SHORTCUTS -> ShortcutsContent(data, actions)
+            WidgetKind.SEARCH -> SearchContent()
+            WidgetKind.APP_WIDGET -> Unit
         }
     }
 }

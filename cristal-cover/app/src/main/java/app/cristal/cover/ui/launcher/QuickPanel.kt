@@ -6,6 +6,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
@@ -34,7 +36,11 @@ import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.ClearAll
 import androidx.compose.material.icons.rounded.FlashlightOff
 import androidx.compose.material.icons.rounded.FlashlightOn
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Screenshot
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsNone
 import androidx.compose.material.icons.rounded.Settings
@@ -111,6 +117,10 @@ class QuickPanelActions(
     val onDismissNotification: (NotificationItem) -> Unit,
     val onClearAll: () -> Unit,
     val onRequestNotificationAccess: () -> Unit,
+    val onScreenshot: () -> Unit = {},
+    val onRecents: () -> Unit = {},
+    val onSearch: () -> Unit = {},
+    val onWallpaper: () -> Unit = {},
 )
 
 /** Painel que desce do topo: atalhos, volume, música e notificações em cards de vidro. */
@@ -175,8 +185,12 @@ fun QuickPanel(
                 contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
+                // Uma única fileira deslizante: sobra altura para as notificações na tela pequena.
                 item(key = "toggles") {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
                         if (quick.torchAvailable) {
                             QuickToggle(
                                 if (quick.torchOn) Icons.Rounded.FlashlightOn else Icons.Rounded.FlashlightOff,
@@ -194,6 +208,10 @@ fun QuickPanel(
                             !quick.ringerMuted,
                             actions.onRinger,
                         )
+                        QuickToggle(Icons.Rounded.Search, "Buscar", false, actions.onSearch)
+                        QuickToggle(Icons.Rounded.Screenshot, "Captura", false, actions.onScreenshot)
+                        QuickToggle(Icons.Rounded.History, "Recentes", false, actions.onRecents)
+                        QuickToggle(Icons.Rounded.Wallpaper, "Fundo", false, actions.onWallpaper)
                     }
                 }
                 item(key = "volume") {

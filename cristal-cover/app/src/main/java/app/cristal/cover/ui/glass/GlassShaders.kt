@@ -4,17 +4,16 @@ import android.graphics.RuntimeShader
 import app.cristal.cover.core.Logx
 
 /**
- * Shaders AGSL do Liquid Glass.
+ * Shader AGSL do Liquid Glass.
  *
- * O shader recebe o fundo (já borrado pelo RenderEffect anterior da cadeia) em `content` e produz
- * o corpo do vidro:
- *  1. máscara de retângulo arredondado por SDF, com borda suavizada;
- *  2. refração: perto da borda, a amostra é deslocada para dentro seguindo um perfil de lente
- *     esférica, o que "dobra" a imagem como em vidro grosso;
- *  3. dispersão: R, G e B são amostrados com deslocamentos levemente diferentes, criando a franja
- *     colorida na borda;
- *  4. brilho especular na borda, mais forte do lado de onde vem a luz, e um contra-brilho fraco
- *     do lado oposto;
+ * Recebe o fundo (já levemente desfocado pelo RenderEffect anterior da cadeia) em `content` e
+ * produz o corpo do vidro, seguindo o que define o material no iOS 26/27:
+ *  1. recorte de retângulo arredondado por SDF, com borda suavizada;
+ *  2. lente: o miolo amplia de leve o que está atrás e a borda "dobra" a imagem para dentro,
+ *     como em vidro grosso;
+ *  3. dispersão: R, G e B são amostrados com deslocamentos diferentes, criando a franja colorida;
+ *  4. borda em camadas: um fio de luz na beirada, uma faixa escurecida logo depois e o brilho
+ *     especular, mais forte do lado de onde vem a luz;
  *  5. reação ao toque: uma pequena lente e um brilho sob o dedo.
  */
 object GlassShaders {
@@ -60,6 +59,7 @@ half4 main(float2 xy) {
     float t = clamp(1.0 - inside / max(uBezel, 1.0), 0.0, 1.0);
     float bend = 1.0 - sqrt(max(1.0 - t * t, 0.0));
     float2 disp = -n * bend * uRefraction;
+    disp = disp - p * 0.035 * (1.0 - bend);
 
     float2 tv = xy - uTouch;
     float sigma = max(min(uSize.x, uSize.y) * 0.45, 24.0);
@@ -78,13 +78,18 @@ half4 main(float2 xy) {
     col = mix(float3(luma, luma, luma), col, uSaturation);
     col = mix(col, uTint.rgb, uTint.a);
 
-    float rim = 1.0 - smoothstep(0.0, max(uBezel * 0.4, 1.5), inside);
-    float hairline = 1.0 - smoothstep(0.0, 1.6, inside);
     float ndl = dot(n, uLight);
     float lit = clamp(ndl, 0.0, 1.0);
     float back = clamp(-ndl, 0.0, 1.0);
-    float spec = lit * lit + 0.35 * back * back * back;
-    float glow = rim * spec * uSpecular + hairline * (0.10 + 0.25 * spec) * uSpecular;
+    float spec = lit * lit + 0.45 * back * back;
+
+    float hairline = 1.0 - smoothstep(0.0, 1.4, inside);
+    float darkBand = smoothstep(0.8, 2.6, inside) * (1.0 - smoothstep(2.6, max(uBezel * 0.55, 6.0), inside));
+    float rim = 1.0 - smoothstep(0.0, max(uBezel * 0.45, 2.0), inside);
+
+    col = col * (1.0 - 0.20 * darkBand * (1.0 - 0.6 * lit));
+    float sheen = 1.0 - clamp(xy.y / max(uSize.y, 1.0), 0.0, 1.0);
+    float glow = rim * spec * uSpecular + hairline * (0.22 + 0.55 * spec) * uSpecular + sheen * sheen * 0.05 * uSpecular;
     col = col + float3(glow, glow, glow);
     col = col + float3(tg, tg, tg) * 0.10;
     col = clamp(col, float3(0.0, 0.0, 0.0), float3(1.0, 1.0, 1.0));

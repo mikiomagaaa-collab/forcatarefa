@@ -17,6 +17,7 @@ import app.cristal.cover.ui.glass.LocalGlassLight
 import app.cristal.cover.ui.glass.rememberGlassLight
 import app.cristal.cover.ui.onboarding.OnboardingScreen
 import app.cristal.cover.ui.theme.CristalTheme
+import app.cristal.cover.ui.widgets.LocalWidgetHost
 
 /** Raiz da activity do launcher: aplica tema e qualidade do vidro e decide entre onboarding e tela inicial. */
 @Composable
@@ -37,6 +38,7 @@ fun LauncherRoot(viewModel: LauncherViewModel, governor: PerformanceGovernor) {
         CompositionLocalProvider(
             LocalGlassLight provides light,
             LocalIconLook provides IconLook(settings.iconShape, settings.iconStyle),
+            LocalWidgetHost provides viewModel.widgetHost,
         ) {
             when {
                 !loaded -> Box(Modifier.fillMaxSize().background(Color.Black))

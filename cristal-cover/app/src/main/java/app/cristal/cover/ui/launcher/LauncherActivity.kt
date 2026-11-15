@@ -64,6 +64,17 @@ class LauncherActivity : ComponentActivity() {
         } ?: false
     }
 
+    override fun onStart() {
+        super.onStart()
+        // Widgets de outros apps só se atualizam enquanto o host está ouvindo.
+        viewModel.widgetHost.startListening()
+    }
+
+    override fun onStop() {
+        viewModel.widgetHost.stopListening()
+        super.onStop()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         // Tecla/gesto de início com o launcher já aberto: volta para a página principal.

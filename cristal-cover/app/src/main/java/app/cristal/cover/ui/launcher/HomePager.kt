@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.sp
 import app.cristal.cover.data.apps.AppInfo
 import app.cristal.cover.data.home.HomeItem
 import app.cristal.cover.data.home.HomeLayout
+import app.cristal.cover.data.home.WidgetKind
 import app.cristal.cover.data.prefs.Settings
 import app.cristal.cover.ui.components.AppIconImage
 import app.cristal.cover.ui.components.LocalIconLook
@@ -62,6 +63,7 @@ import app.cristal.cover.ui.components.WallpaperTextShadow
 import app.cristal.cover.ui.components.toShape
 import app.cristal.cover.ui.glass.GlassSurface
 import app.cristal.cover.ui.glass.Motion
+import app.cristal.cover.ui.widgets.AppWidgetCell
 import app.cristal.cover.ui.widgets.WidgetActions
 import app.cristal.cover.ui.widgets.WidgetCard
 import app.cristal.cover.ui.widgets.WidgetData
@@ -252,6 +254,20 @@ private fun WidgetHolder(
     val onHold by rememberUpdatedState(callbacks.onItemHold)
     val onDrag by rememberUpdatedState(callbacks.onItemDrag)
     val onRelease by rememberUpdatedState(callbacks.onItemRelease)
+    if (item.kind == WidgetKind.APP_WIDGET) {
+        // A view do widget fica com os toques; o menu abre pelo botão de três pontos.
+        AppWidgetCell(
+            appWidgetId = item.appWidgetId,
+            modifier = Modifier.fillMaxSize().padding(5.dp).onGloballyPositioned { coordinates = it },
+            onMenu = {
+                val c = coordinates?.takeIf { it.isAttached }
+                val at = c?.localToRoot(Offset(c.size.width / 2f, c.size.height / 2f)) ?: Offset.Zero
+                onHold(current, false, at)
+                onRelease()
+            },
+        )
+        return
+    }
     // O detector de arrasto vai "por dentro" do clique do card, para receber os toques primeiro.
     val dragModifier = Modifier
         .onGloballyPositioned { coordinates = it }

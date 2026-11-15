@@ -26,8 +26,8 @@ android {
         minSdk = 33
         targetSdk = 36
         // Cada build do GitHub Actions recebe um número maior, então sempre instala por cima.
-        versionCode = 100 + ciRunNumber
-        versionName = "1.0.0"
+        versionCode = 110 + ciRunNumber
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
     }

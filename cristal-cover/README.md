@@ -49,6 +49,9 @@ MVVM em camadas, um módulo (`app`), injeção com Hilt.
 - `ui/glass/GlassShaders.kt`: o shader recorta o retângulo arredondado por SDF, **refrata** a imagem
   perto da borda (perfil de lente), separa R/G/B (**dispersão**), desenha o **brilho especular** na
   borda conforme a direção da luz e reage ao **toque** com uma pequena lente sob o dedo.
+- O vidro é **claro**, como no iOS 26/27: pouco desfoque e pouca tinta; o destaque vem da lente, do fio de
+  luz e da faixa escurecida na borda. Um controle "mais transparente ↔ mais fosco" ajusta isso, e a cor do
+  texto acompanha o papel de parede (claro ou escuro).
 - Três níveis: **Líquido** (blur + shader), **Blur** e **Leve** (sem camada extra). Se o shader não
   compilar em algum aparelho, o app cai sozinho para Blur.
 - `ui/launcher/PerformanceGovernor.kt` mede o tempo real dos quadros: se passarem de 60 fps de
@@ -97,7 +100,8 @@ Dois modos, e em nenhum deles o bloqueio do Android é removido:
   Shizuku) e é desfeita ao voltar ao Cristal. É um recurso experimental.
 - **Apps instalados por APK** caem na "Configuração restrita" do Android ao ativar notificações e
   acessibilidade; o guia explica como liberar.
-- **Widgets de outros apps** (AppWidgetHost) não são suportados; os cinco widgets são embutidos.
+- **Widgets de outros apps** funcionam (AppWidgetHost), mas não foram testados em aparelho: alguns podem
+  não se ajustar bem ao tamanho da célula, e o menu deles abre pelo botão de três pontos no canto.
 - **`compileSdk` é 37** porque as bibliotecas AndroidX atuais exigem; o `targetSdk` continua 36.
 
 ## Compilar
@@ -281,9 +285,9 @@ cristal-cover/
 
 ## Melhorias futuras
 
-1. Widgets de outros apps (AppWidgetHost) em cards de vidro.
-2. Ler a cor dominante do papel de parede para escolher texto claro ou escuro automaticamente.
-3. Opção "Transparente / Fosco" para o vidro, como o ajuste do iOS 26.1.
+1. Redimensionar widgets arrastando as bordas.
+2. Extrair uma cor de destaque do papel de parede para botões e seleção.
+3. Brilho do vidro reagindo também ao conteúdo que passa por trás (adaptação por elemento).
 4. Atalhos de apps (app shortcuts) no menu do ícone e selo de notificações nos ícones.
 5. Arrastar apps direto da gaveta para a tela inicial e reordenar dentro das pastas.
 6. Respostas rápidas e ações das notificações no painel.

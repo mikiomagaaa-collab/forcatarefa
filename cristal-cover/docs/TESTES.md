@@ -26,8 +26,10 @@ Para relatar um problema, anote: o item, o que você esperava, o que aconteceu e
 
 ## 3. Tela externa
 
-- [ ] ⚠️ O Cristal aparece na lista de apps permitidos em Configurações > Tela externa.
-- [ ] ⚠️ O Cristal abre pelo painel de apps da tela externa.
+- [ ] ⚠️ "Abrir na tela externa" (Configurações do Cristal > Tela externa) leva o Cristal para lá.
+- [ ] ⚠️ O bloco "Cristal Cover" dos Ajustes rápidos abre o Cristal na tela externa.
+- [ ] ⚠️ O Cristal pode ser adicionado ao painel Apps em Configurações > Tela externa > Painéis.
+- [ ] ⚠️ Com "Assumir a tela externa" ligado, fechar o aparelho abre o Cristal sozinho.
 - [ ] O papel de parede ocupa a tela inteira, inclusive atrás das câmeras.
 - [ ] Nenhum ícone ou botão fica embaixo das lentes.
 - [ ] ⚠️ Com "Aproveitar a área ao lado das câmeras" ligado, o dock fica ao lado das lentes (se a Motorola
@@ -55,7 +57,10 @@ Para relatar um problema, anote: o item, o que você esperava, o que aconteceu e
 - [ ] Arrastar para o dock e tirar do dock funciona; com o dock cheio aparece o aviso.
 - [ ] Tocar em uma pasta abre; dá para renomear; tirar o penúltimo app desfaz a pasta.
 - [ ] Toque longo no fundo abre Widgets / Papel de parede / Configurações.
-- [ ] Adicionar cada um dos 5 widgets; toque longo no widget permite remover e arrastar.
+- [ ] Adicionar cada um dos 9 widgets embutidos; toque longo no widget permite remover e arrastar.
+- [ ] ⚠️ Adicionar um widget de outro app (Widgets > De outros apps); o sistema pede permissão na primeira vez.
+- [ ] O botão de três pontos no canto do widget de outro app abre o menu para remover.
+- [ ] Toque longo no fundo > Apps abre a lista; tocar em um app o coloca na página atual.
 - [ ] Mudar a grade para 3×3 e para 6×6 não perde nem sobrepõe itens.
 
 ## 6. Gaveta e busca

@@ -67,6 +67,7 @@ class AppLauncher @Inject constructor(
     private val allowedOnCover: MutableSet<String> = Collections.synchronizedSet(HashSet())
     private val compatApplied: MutableSet<String> = Collections.synchronizedSet(HashSet())
     @Volatile private var allowAllApplied = false
+    @Volatile private var selfAllowed = false
 
     /** Tela cuja densidade alteramos e a densidade original, para desfazer depois. */
     @Volatile private var scaledDisplayId: Int = Display.INVALID_DISPLAY
@@ -218,6 +219,39 @@ class AppLauncher @Inject constructor(
         }
     }
 
+    /** Pede ao serviço da Motorola (via Shizuku) que deixe o próprio Cristal aparecer na tela externa. */
+    suspend fun allowSelfOnCover() {
+        if (selfAllowed || !shizuku.isReady) return
+        selfAllowed = true
+        allowAllApplied = true
+        shizuku.execAll(
+            listOf(
+                "cmd climanager set-allow-all-oncli true",
+                "cmd climanager set-pkg-allowed-oncli ${context.packageName} true",
+            ),
+        )
+    }
+
+    /**
+     * Abre o launcher do Cristal na tela externa. Primeiro pelo caminho normal do Android; se o
+     * sistema recusar e o Shizuku estiver ativo, pelo `am start --display`.
+     */
+    suspend fun openSelfOnCover(): Boolean {
+        val cover = displayRepository.currentCover(settingsRepository.settings.value.coverDisplayOverride) ?: return false
+        if (cover.isDefault) return false
+        allowSelfOnCover()
+        val intent = Intent().setClassName(context, LAUNCHER_CLASS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val started = try {
+            context.startActivity(intent, optionsFor(cover.id))
+            true
+        } catch (e: Exception) {
+            Logx.w("Caminho normal recusou abrir o Cristal na tela ${cover.id}", e)
+            false
+        }
+        if (started || !shizuku.isReady) return started
+        return shizuku.exec("am start --display ${cover.id} -n '${context.packageName}/$LAUNCHER_CLASS'").ok
+    }
+
     fun optionsFor(displayId: Int): Bundle? {
         if (displayId == Display.INVALID_DISPLAY) return null
         return safely("montar ActivityOptions") {
@@ -255,6 +289,7 @@ class AppLauncher @Inject constructor(
     }
 
     companion object {
+        const val LAUNCHER_CLASS = "app.cristal.cover.ui.launcher.LauncherActivity"
         private val SAFE_PACKAGE = Regex("^[A-Za-z0-9_.]+$")
         private val SAFE_COMPONENT = Regex("^[A-Za-z0-9_.]+/[A-Za-z0-9_.$]+$")
 

@@ -28,7 +28,11 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Event
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material.icons.rounded.BatteryFull
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Schedule
@@ -72,6 +76,7 @@ import app.cristal.cover.data.home.WidgetKind
 import app.cristal.cover.data.launch.CompatLevel
 import app.cristal.cover.data.launch.CompatReason
 import app.cristal.cover.data.launch.CompatReport
+import app.cristal.cover.data.widgets.WidgetProviderEntry
 import app.cristal.cover.ui.components.AppIconImage
 import app.cristal.cover.ui.glass.GlassSurface
 import app.cristal.cover.ui.glass.LocalGlassSpec
@@ -412,39 +417,59 @@ private fun widgetInfo(kind: WidgetKind): Triple<ImageVector, String, String> = 
     WidgetKind.MUSIC -> Triple(Icons.Rounded.MusicNote, "Música", "Controle do player ativo")
     WidgetKind.BATTERY -> Triple(Icons.Rounded.BatteryFull, "Bateria", "Nível e estado de carga")
     WidgetKind.AGENDA -> Triple(Icons.Rounded.Event, "Agenda", "Próximos compromissos")
+    WidgetKind.ANALOG_CLOCK -> Triple(Icons.Rounded.Schedule, "Relógio de ponteiros", "Mostrador analógico")
+    WidgetKind.DATE -> Triple(Icons.Rounded.CalendarToday, "Data", "Dia do mês em destaque")
+    WidgetKind.SHORTCUTS -> Triple(Icons.Rounded.TouchApp, "Atalhos", "Lanterna, câmera, busca e ajustes")
+    WidgetKind.SEARCH -> Triple(Icons.Rounded.Search, "Busca", "Abre a gaveta de apps")
+    WidgetKind.APP_WIDGET -> Triple(Icons.Rounded.Widgets, "Widget de app", "De outro aplicativo")
 }
 
 @Composable
-fun WidgetPicker(onPick: (WidgetKind) -> Unit, onDismiss: () -> Unit) {
+fun WidgetPicker(
+    onPick: (WidgetKind) -> Unit,
+    onDismiss: () -> Unit,
+    providers: List<WidgetProviderEntry> = emptyList(),
+    onPickProvider: (WidgetProviderEntry) -> Unit = {},
+) {
     GlassDialog(onDismiss = onDismiss) {
         DialogTitle("Adicionar widget")
-        for (kind in WidgetKind.entries) {
+        for (kind in WidgetKind.entries.filter { it.builtIn }) {
             val (icon, name, description) = widgetInfo(kind)
-            val haptic = rememberHaptic()
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                    ) {
-                        haptic()
-                        onPick(kind)
-                    }
-                    .padding(vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(26.dp))
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(name, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    Text(
-                        "$description · ${kind.spanX}×${kind.spanY}",
-                        fontSize = 12.sp,
-                        color = LocalGlassSpec.current.secondaryContentColor,
-                    )
-                }
+            PickerRow(icon, name, "$description · ${kind.spanX}×${kind.spanY}") { onPick(kind) }
+        }
+        if (providers.isNotEmpty()) {
+            Text(
+                "DE OUTROS APPS",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = LocalGlassSpec.current.secondaryContentColor,
+                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+            )
+            for (entry in providers) {
+                PickerRow(Icons.Rounded.Widgets, entry.label, "${entry.appLabel} · ${entry.spanX}×${entry.spanY}") { onPickProvider(entry) }
             }
+        }
+    }
+}
+
+@Composable
+private fun PickerRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
+    val haptic = rememberHaptic()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                haptic()
+                onClick()
+            }
+            .padding(vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(26.dp))
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(subtitle, fontSize = 12.sp, color = LocalGlassSpec.current.secondaryContentColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

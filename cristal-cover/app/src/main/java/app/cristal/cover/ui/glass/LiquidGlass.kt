@@ -40,28 +40,36 @@ import app.cristal.cover.data.prefs.GlassQuality
 import kotlin.math.ceil
 import kotlin.math.min
 
-/** Parâmetros globais do vidro, derivados das configurações e do tema. */
+/**
+ * Parâmetros globais do vidro, derivados das configurações e do papel de parede.
+ *
+ * O Liquid Glass é um vidro CLARO: desfoca pouco, tinge pouco e chama atenção pela lente nas
+ * bordas e pelo brilho. [intensity] é o controle "mais transparente ↔ mais fosco" do iOS 27.
+ */
 @Immutable
 data class GlassSpec(
     val quality: GlassQuality = GlassQuality.LIQUID,
-    /** 0 = vidro quase limpo, 1 = bem fosco e com refração forte. */
-    val intensity: Float = 0.7f,
+    /** 0 = mais transparente, 0,5 = padrão, 1 = mais fosco. */
+    val intensity: Float = 0.45f,
+    /** `true` quando o fundo é escuro: película escura e texto claro. */
     val dark: Boolean = true,
 ) {
-    val blurDp: Float get() = 5f + 21f * intensity
-    val saturation: Float get() = 1f + 0.6f * intensity
-    val specular: Float get() = 0.30f + 0.40f * intensity
-    val dispersion: Float get() = 0.10f + 0.50f * intensity
-    val refractionScale: Float get() = 0.45f + 0.85f * intensity
+    val blurDp: Float get() = 1.5f + 22f * intensity
+    val saturation: Float get() = 1.55f - 0.3f * intensity
+    val specular: Float get() = 0.85f
+    val dispersion: Float get() = 0.65f - 0.3f * intensity
+    val refractionScale: Float get() = 1.5f - 0.35f * intensity
 
-    /** Película aplicada sobre o fundo borrado, para o conteúdo ficar legível. */
-    val tint: Color get() = if (dark) Color(0f, 0f, 0f, 0.26f) else Color(1f, 1f, 1f, 0.36f)
+    /** Película aplicada sobre o fundo, só o bastante para o conteúdo ficar legível. */
+    val tint: Color
+        get() = if (dark) Color(0f, 0f, 0f, 0.05f + 0.30f * intensity) else Color(1f, 1f, 1f, 0.10f + 0.42f * intensity)
 
     /** Preenchimento do modo leve (sem blur), mais opaco para compensar. */
-    val lightFill: Color get() = if (dark) Color(0.09f, 0.10f, 0.13f, 0.58f) else Color(1f, 1f, 1f, 0.66f)
+    val lightFill: Color
+        get() = if (dark) Color(0.09f, 0.10f, 0.13f, 0.42f + 0.25f * intensity) else Color(1f, 1f, 1f, 0.50f + 0.25f * intensity)
 
     val contentColor: Color get() = if (dark) Color.White else Color(0xFF14161A)
-    val secondaryContentColor: Color get() = contentColor.copy(alpha = 0.68f)
+    val secondaryContentColor: Color get() = contentColor.copy(alpha = 0.72f)
 }
 
 val LocalGlassSpec = staticCompositionLocalOf { GlassSpec() }
@@ -129,7 +137,7 @@ fun Modifier.liquidGlass(
 
     val cornerPx = with(density) { cornerRadius.toPx() }
     val blurPx = with(density) { spec.blurDp.dp.toPx() }
-    val bezelMaxPx = with(density) { 18.dp.toPx() }
+    val bezelMaxPx = with(density) { 24.dp.toPx() }
     val strokePx = with(density) { 1.dp.toPx() }
     val tintColor = if (tint.isSpecified) tint else spec.tint
 

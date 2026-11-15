@@ -44,6 +44,7 @@ import app.cristal.cover.data.system.SystemBridge
 import app.cristal.cover.data.system.ToggleResult
 import app.cristal.cover.data.wallpaper.WallpaperRepository
 import app.cristal.cover.data.weather.WeatherRepository
+import app.cristal.cover.data.widgets.WidgetHostManager
 import app.cristal.cover.ui.widgets.WidgetData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -103,6 +104,7 @@ class LauncherViewModel @Inject constructor(
     private val systemBridge: SystemBridge,
     private val permissionCenter: PermissionCenter,
     private val shizukuManager: ShizukuManager,
+    val widgetHost: WidgetHostManager,
     batteryRepository: BatteryRepository,
     coverDisplayRepository: CoverDisplayRepository,
     wallpaperRepository: WallpaperRepository,
@@ -135,7 +137,11 @@ class LauncherViewModel @Inject constructor(
         weatherRepository.state,
         mediaRepository.state,
         calendarRepository.state,
-        combine(settings.map { it.tempUnit }.distinctUntilChanged(), notificationRepository.connected) { u, c -> u to c },
+        combine(
+            settings.map { it.tempUnit }.distinctUntilChanged(),
+            notificationRepository.connected,
+            quickSettingsRepository.state.map { it.torchOn }.distinctUntilChanged(),
+        ) { unit, connected, torch -> Triple(unit, connected, torch) },
     ) { battery, weather, media, agenda, extra ->
         WidgetData(
             battery = battery,
@@ -144,6 +150,7 @@ class LauncherViewModel @Inject constructor(
             agenda = agenda,
             tempUnit = extra.first,
             notificationAccess = extra.second,
+            torchOn = extra.third,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WidgetData())
 
@@ -174,6 +181,8 @@ class LauncherViewModel @Inject constructor(
         calendarRepository.refresh()
         weatherRepository.refresh()
         appLauncher.restoreDisplayScale()
+        // Com Shizuku ativo, garante que a Motorola deixe o próprio Cristal aparecer na tela externa.
+        viewModelScope.launch { appLauncher.allowSelfOnCover() }
     }
 
     /** Volta ao estado inicial (tecla Home, tela apagada). */
@@ -248,7 +257,16 @@ class LauncherViewModel @Inject constructor(
     }
 
     fun removeItem(id: Long) {
+        // Widgets de outros apps também precisam ser liberados no host.
+        home.value.layout.pages.asSequence().flatten()
+            .filterIsInstance<HomeItem.Widget>()
+            .firstOrNull { it.id == id && it.appWidgetId >= 0 }
+            ?.let { widgetHost.delete(it.appWidgetId) }
         viewModelScope.launch { homeRepository.remove(id) }
+    }
+
+    fun addAppWidget(appWidgetId: Int, spanX: Int, spanY: Int, page: Int) {
+        viewModelScope.launch { homeRepository.addWidget(WidgetKind.APP_WIDGET, page, appWidgetId, spanX, spanY) }
     }
 
     fun moveToDesktop(id: Long, page: Int) {
@@ -390,6 +408,25 @@ class LauncherViewModel @Inject constructor(
         if (!systemBridge.goHome()) message("Use o gesto de início do sistema para ver a tela da Motorola.")
     }
 
+    fun takeScreenshot() {
+        if (!systemBridge.takeScreenshot()) message("Ative o serviço de acessibilidade do Cristal para capturar a tela por aqui.")
+    }
+
+    fun openRecents() {
+        if (!systemBridge.openRecents()) message("Ative o serviço de acessibilidade do Cristal para abrir os apps recentes.")
+    }
+
+    /** Manda o launcher para a tela externa (útil para abrir o Cristal lá sem depender do painel da Motorola). */
+    fun openOnCover() {
+        viewModelScope.launch {
+            val ok = appLauncher.openSelfOnCover()
+            message(
+                if (ok) "Cristal enviado para a tela externa. Feche o aparelho para ver."
+                else "Não foi possível abrir na tela externa. Veja Configurações > Tela externa.",
+            )
+        }
+    }
+
     val isShizukuReady: Boolean get() = shizukuManager.isReady
 
     fun message(text: String) {
@@ -424,7 +461,7 @@ class LauncherViewModel @Inject constructor(
             }
 
             ItemType.WIDGET -> WidgetKind.fromName(e.widgetKind)?.let {
-                HomeItem.Widget(e.id, e.page, e.cellX, e.cellY, e.spanX, e.spanY, it)
+                HomeItem.Widget(e.id, e.page, e.cellX, e.cellY, e.spanX, e.spanY, it, e.title?.toIntOrNull() ?: -1)
             }
 
             else -> null

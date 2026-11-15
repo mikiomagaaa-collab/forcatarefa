@@ -1,6 +1,5 @@
 package app.cristal.cover.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -16,6 +15,8 @@ import androidx.compose.ui.unit.em
 import app.cristal.cover.data.prefs.GlassQuality
 import app.cristal.cover.data.prefs.Settings
 import app.cristal.cover.data.prefs.ThemeMode
+import app.cristal.cover.data.prefs.WallpaperKind
+import app.cristal.cover.ui.components.WallpaperPresets
 import app.cristal.cover.ui.glass.GlassSpec
 import app.cristal.cover.ui.glass.LocalGlassSpec
 
@@ -86,8 +87,14 @@ fun CristalTheme(
     qualityOverride: GlassQuality? = null,
     content: @Composable () -> Unit,
 ) {
+    // "Automático" segue o papel de parede: fundo escuro pede texto claro sobre o vidro, e vice-versa.
+    val wallpaperDark = if (settings.wallpaperKind == WallpaperKind.PRESET) {
+        WallpaperPresets.get(settings.wallpaperPreset).dark
+    } else {
+        settings.wallpaperImageDark
+    }
     val dark = when (settings.themeMode) {
-        ThemeMode.AUTO -> isSystemInDarkTheme()
+        ThemeMode.AUTO -> wallpaperDark
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }

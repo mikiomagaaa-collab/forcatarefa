@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat
 import app.cristal.cover.core.Logx
 import app.cristal.cover.core.safely
 import app.cristal.cover.data.display.CoverDisplayRepository
+import app.cristal.cover.data.display.CoverState
 import app.cristal.cover.data.launch.AppLauncher
 import app.cristal.cover.data.prefs.SettingsRepository
 import app.cristal.cover.data.system.SystemBridge
@@ -26,6 +27,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -51,6 +53,7 @@ class CristalAccessibilityService : AccessibilityService() {
     private var receiverRegistered = false
     private var coverHomePackages: Set<String> = emptySet()
     private var lastTakeover = 0L
+    private var lastFolded: Boolean? = null
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -76,7 +79,12 @@ class CristalAccessibilityService : AccessibilityService() {
         val newScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         scope = newScope
         // Mantém o estado da tela externa "quente" para sabermos se o aparelho está fechado.
-        newScope.launch { displayRepository.state.collect { lockController.onCoverState(it) } }
+        newScope.launch {
+            displayRepository.state.collect { state ->
+                lockController.onCoverState(state)
+                onFoldChanged(state)
+            }
+        }
 
         if (!receiverRegistered) {
             val filter = IntentFilter().apply {
@@ -142,13 +150,38 @@ class CristalAccessibilityService : AccessibilityService() {
         }
     }
 
-    /** Pacotes que respondem como "home" de telas secundárias, mais os conhecidos da Motorola. */
+    /** Ao fechar o aparelho, abre o Cristal na tela externa (se "Assumir a tela externa" estiver ligado). */
+    private fun onFoldChanged(state: CoverState) {
+        val folded = state.folded ?: return
+        val justClosed = folded && lastFolded == false
+        lastFolded = folded
+        if (!justClosed || !settingsRepository.settings.value.coverTakeover) return
+        val cover = state.cover?.takeIf { !it.isDefault } ?: return
+        scope?.launch {
+            // Dá um instante para a Motorola terminar a transição para a tela externa.
+            delay(650)
+            if (SystemClock.elapsedRealtime() < bridge.takeoverPausedUntil) return@launch
+            if (getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true) return@launch
+            lastTakeover = SystemClock.elapsedRealtime()
+            try {
+                val intent = Intent(this@CristalAccessibilityService, LauncherActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+                startActivity(intent, ActivityOptions.makeBasic().setLaunchDisplayId(cover.id).toBundle())
+            } catch (t: Throwable) {
+                Logx.w("Não foi possível abrir o Cristal ao fechar o aparelho", t)
+            }
+        }
+    }
+
+    /** Pacotes que respondem como "home" (de qualquer tela), mais os conhecidos da Motorola. */
     private fun resolveCoverHomePackages(): Set<String> {
         val found = HashSet<String>(KNOWN_COVER_HOMES)
         safely("resolver SECONDARY_HOME") {
-            val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_SECONDARY_HOME)
-            packageManager.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(0))
-                .mapNotNullTo(found) { it.activityInfo?.packageName }
+            for (category in listOf(Intent.CATEGORY_SECONDARY_HOME, Intent.CATEGORY_HOME)) {
+                val intent = Intent(Intent.ACTION_MAIN).addCategory(category)
+                packageManager.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(0))
+                    .mapNotNullTo(found) { it.activityInfo?.packageName }
+            }
         }
         found.remove(packageName)
         return found
@@ -156,6 +189,6 @@ class CristalAccessibilityService : AccessibilityService() {
 
     private companion object {
         const val TAKEOVER_DEBOUNCE_MS = 700L
-        val KNOWN_COVER_HOMES = setOf("com.motorola.launcher.secondarydisplay")
+        val KNOWN_COVER_HOMES = setOf("com.motorola.launcher.secondarydisplay", "com.motorola.launcher3")
     }
 }
