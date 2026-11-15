@@ -1,0 +1,309 @@
+# Cristal Cover
+
+Launcher e tela de bloqueio em **vidro líquido** para a tela externa do Motorola Razr 40 Ultra
+(Android 16), com fallback para a tela interna. Kotlin + Jetpack Compose, um único APK.
+
+> **Este projeto é independente do site que divide o repositório com ele.** Tudo o que é do app está
+> dentro de `cristal-cover/`; o workflow `build.yml` só roda quando algo nessa pasta muda e não publica
+> nada no GitHub Pages.
+
+- Guia de instalação (só com o celular): [docs/GUIA.md](docs/GUIA.md)
+- Checklist de testes no aparelho: [docs/TESTES.md](docs/TESTES.md)
+
+## Estado real do projeto
+
+O que **foi verificado** durante o desenvolvimento:
+
+- compila do zero (debug e release com R8) com as versões estáveis atuais das ferramentas;
+- 37 testes automáticos em JVM passam: lógica da grade, detecção da tela externa, regras de
+  compatibilidade, segurança dos comandos de shell, backup, **compilação real do shader AGSL** e
+  **12 telas montadas e desenhadas** no tamanho da tela externa (422×426 dp) pelo pipeline de hardware;
+- lint sem erros.
+
+O que **não foi verificado**: o app **nunca rodou em um Razr de verdade**. Tudo o que depende de
+comportamento não documentado da Motorola está marcado com ⚠️ no [checklist](docs/TESTES.md) e precisa
+ser confirmado no aparelho.
+
+## Arquitetura
+
+MVVM em camadas, um módulo (`app`), injeção com Hilt.
+
+| Camada | Pasta | O que faz |
+| --- | --- | --- |
+| Núcleo | `core/` | Módulo Hilt, dispatchers, log, `safely { }` |
+| Dados | `data/` | Repositórios; cada um esconde um serviço do Android e nunca lança exceção para a UI |
+| Serviços | `service/` | NotificationListener, AccessibilityService, controle da tela de bloqueio, boot |
+| UI | `ui/` | Compose: vidro, launcher, bloqueio, widgets, configurações, onboarding |
+
+- **Estado**: `StateFlow` nos repositórios e ViewModels; a UI só observa.
+- **Persistência**: DataStore (preferências) e Room (tela inicial e ajustes por app).
+- **Erros**: toda chamada a serviço do sistema passa por `safely { }` ou `try/catch` e vira um estado
+  ("sem permissão", "indisponível") em vez de crash.
+
+### Liquid Glass
+
+- `ui/glass/GlassBackdrop.kt`: o "fundo" (papel de parede ou a cena inteira) é gravado em uma
+  `GraphicsLayer`.
+- `ui/glass/LiquidGlass.kt`: cada elemento redesenha essa camada dentro de si, deslocada para a própria
+  posição, e aplica um `RenderEffect` encadeado: **blur** e depois o **shader AGSL**.
+- `ui/glass/GlassShaders.kt`: o shader recorta o retângulo arredondado por SDF, **refrata** a imagem
+  perto da borda (perfil de lente), separa R/G/B (**dispersão**), desenha o **brilho especular** na
+  borda conforme a direção da luz e reage ao **toque** com uma pequena lente sob o dedo.
+- Três níveis: **Líquido** (blur + shader), **Blur** e **Leve** (sem camada extra). Se o shader não
+  compilar em algum aparelho, o app cai sozinho para Blur.
+- `ui/launcher/PerformanceGovernor.kt` mede o tempo real dos quadros: se passarem de 60 fps de
+  orçamento, reduz a qualidade; se não couberem em 144 Hz, deixa de pedir a taxa máxima.
+- Tipografia no espírito do Liquid Glass da Apple, com a fonte do sistema (a San Francisco não pode ser
+  distribuída): pesos firmes, espaçamento apertado em tamanhos grandes, numerais de largura fixa.
+
+### Tela externa
+
+- `data/display/CoverDisplayRepository.kt` detecta a tela externa pelo formato (pequena e quase
+  quadrada; no Razr é a tela 1) e acompanha o sensor da dobradiça.
+- `data/launch/AppLauncher.kt` abre apps com `LauncherApps.startMainActivity` +
+  `ActivityOptions.setLaunchDisplayId`. Com Shizuku, antes de abrir pede ao serviço `climanager` da
+  Motorola para liberar o pacote, e cai para `am start --display` se o caminho normal falhar.
+- `data/launch/CompatAdvisor.kt` avisa antes de abrir apps que tendem a não caber.
+- `ui/launcher/LauncherState.kt` (`rememberSafeLayout`) lê o recorte das câmeras e, se houver uma faixa
+  livre ao lado das lentes, põe o dock nela.
+
+### Tela de bloqueio
+
+Dois modos, e em nenhum deles o bloqueio do Android é removido:
+
+1. **Activity** (`ui/lock/LockActivity.kt`, recomendado): `setShowWhenLocked(true)`, o mesmo mecanismo
+   de alarmes e chamadas. Destravar chama `KeyguardManager.requestDismissKeyguard`, e quem pede
+   PIN/padrão/digital é o sistema.
+2. **Sobreposição** (`service/LockOverlay.kt`, experimental): janela `TYPE_ACCESSIBILITY_OVERLAY` sobre
+   o keyguard, para o caso de a Motorola não deixar a activity aparecer na tela externa.
+
+## Limitações reais (Android 16 e Motorola)
+
+- **Não dá para substituir a tela de bloqueio.** O Cristal desenha por cima. Com uma tela sobre o
+  bloqueio, o leitor de digital lateral só é ativado depois que o usuário desliza para destravar.
+- **Abrir a tela de bloqueio com o aparelho apagado exige o serviço de acessibilidade.** O Android
+  bloqueia activities iniciadas em segundo plano; serviços de acessibilidade são uma das exceções.
+- **O gesto de início na tela externa sempre vai para o launcher da Motorola.** O Cristal declara
+  `SECONDARY_HOME`, mas a Motorola fixa o dela. "Assumir a tela externa" reabre o Cristal quando o
+  launcher da Motorola aparece; não é uma substituição de verdade.
+- **A Motorola decide quais apps aparecem na tela externa.** A liberação por `cmd climanager` foi
+  documentada por terceiros no Razr+ 2024; no 40 Ultra com Android 16 os comandos podem ter outro nome
+  ou não existir. Nesse caso o comando falha em silêncio e vale a liberação manual nas Configurações.
+- **O vidro refrata o papel de parede do próprio Cristal.** Apps comuns não podem ler o papel de parede
+  do sistema.
+- **Wi-Fi, Bluetooth e dados** não podem ser alternados por apps comuns. Sem Shizuku, os botões abrem o
+  painel do sistema. **Brilho** não tem controle próprio.
+- **A "escala" de um app** muda a densidade da tela externa inteira enquanto ele está aberto (via
+  Shizuku) e é desfeita ao voltar ao Cristal. É um recurso experimental.
+- **Apps instalados por APK** caem na "Configuração restrita" do Android ao ativar notificações e
+  acessibilidade; o guia explica como liberar.
+- **Widgets de outros apps** (AppWidgetHost) não são suportados; os cinco widgets são embutidos.
+- **`compileSdk` é 37** porque as bibliotecas AndroidX atuais exigem; o `targetSdk` continua 36.
+
+## Compilar
+
+Pelo GitHub Actions (recomendado, veja o guia) ou localmente:
+
+```
+./gradlew testDebugUnitTest assembleRelease
+```
+
+O APK sai em `app/build/outputs/apk/release/`. Requisitos: JDK 21 e Android SDK com a plataforma 37.
+
+| Ferramenta | Versão |
+| --- | --- |
+| Gradle / AGP | 9.9.1 / 9.5.1 |
+| Kotlin / KSP | 2.4.21 / 2.3.14 |
+| Compose BOM | 2026.09.00 |
+| Hilt / Room / DataStore | 2.60.1 / 2.8.5 / 1.3.0 |
+| Shizuku API | 13.1.5 |
+
+`ci/build.yml` é a versão do workflow para um repositório em que este projeto fica na raiz.
+
+## Árvore de arquivos
+
+```
+cristal-cover/
+├── app/
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── aidl/
+│   │   │   │   └── app/
+│   │   │   │       └── cristal/
+│   │   │   │           └── cover/
+│   │   │   │               └── data/
+│   │   │   │                   └── shizuku/
+│   │   │   │                       └── IShellService.aidl
+│   │   │   ├── java/
+│   │   │   │   └── app/
+│   │   │   │       └── cristal/
+│   │   │   │           └── cover/
+│   │   │   │               ├── core/
+│   │   │   │               │   ├── AppModule.kt
+│   │   │   │               │   ├── Logx.kt
+│   │   │   │               │   └── Qualifiers.kt
+│   │   │   │               ├── data/
+│   │   │   │               │   ├── apps/
+│   │   │   │               │   │   ├── AppInfo.kt
+│   │   │   │               │   │   ├── AppRepository.kt
+│   │   │   │               │   │   ├── IconPackManager.kt
+│   │   │   │               │   │   └── IconRenderer.kt
+│   │   │   │               │   ├── backup/
+│   │   │   │               │   │   └── BackupManager.kt
+│   │   │   │               │   ├── battery/
+│   │   │   │               │   │   └── BatteryRepository.kt
+│   │   │   │               │   ├── calendar/
+│   │   │   │               │   │   └── CalendarRepository.kt
+│   │   │   │               │   ├── db/
+│   │   │   │               │   │   ├── CristalDatabase.kt
+│   │   │   │               │   │   ├── Daos.kt
+│   │   │   │               │   │   └── Entities.kt
+│   │   │   │               │   ├── display/
+│   │   │   │               │   │   └── CoverDisplayRepository.kt
+│   │   │   │               │   ├── home/
+│   │   │   │               │   │   ├── GridMath.kt
+│   │   │   │               │   │   ├── HomeMaintenance.kt
+│   │   │   │               │   │   ├── HomeModels.kt
+│   │   │   │               │   │   └── HomeRepository.kt
+│   │   │   │               │   ├── launch/
+│   │   │   │               │   │   ├── AppLauncher.kt
+│   │   │   │               │   │   └── CompatAdvisor.kt
+│   │   │   │               │   ├── media/
+│   │   │   │               │   │   └── MediaRepository.kt
+│   │   │   │               │   ├── notifications/
+│   │   │   │               │   │   └── NotificationRepository.kt
+│   │   │   │               │   ├── prefs/
+│   │   │   │               │   │   ├── Settings.kt
+│   │   │   │               │   │   └── SettingsRepository.kt
+│   │   │   │               │   ├── shizuku/
+│   │   │   │               │   │   ├── ShellService.kt
+│   │   │   │               │   │   └── ShizukuManager.kt
+│   │   │   │               │   ├── system/
+│   │   │   │               │   │   ├── PermissionCenter.kt
+│   │   │   │               │   │   ├── QuickSettingsRepository.kt
+│   │   │   │               │   │   └── SystemBridge.kt
+│   │   │   │               │   ├── wallpaper/
+│   │   │   │               │   │   └── WallpaperRepository.kt
+│   │   │   │               │   └── weather/
+│   │   │   │               │       └── WeatherRepository.kt
+│   │   │   │               ├── service/
+│   │   │   │               │   ├── BootReceiver.kt
+│   │   │   │               │   ├── CristalAccessibilityService.kt
+│   │   │   │               │   ├── CristalNotificationListener.kt
+│   │   │   │               │   ├── LockController.kt
+│   │   │   │               │   └── LockOverlay.kt
+│   │   │   │               ├── ui/
+│   │   │   │               │   ├── components/
+│   │   │   │               │   │   ├── AppIcon.kt
+│   │   │   │               │   │   ├── Common.kt
+│   │   │   │               │   │   └── Wallpaper.kt
+│   │   │   │               │   ├── glass/
+│   │   │   │               │   │   ├── GlassBackdrop.kt
+│   │   │   │               │   │   ├── GlassLight.kt
+│   │   │   │               │   │   ├── GlassShaders.kt
+│   │   │   │               │   │   ├── GlassSurface.kt
+│   │   │   │               │   │   ├── GlassTouch.kt
+│   │   │   │               │   │   ├── LiquidGlass.kt
+│   │   │   │               │   │   └── Motion.kt
+│   │   │   │               │   ├── launcher/
+│   │   │   │               │   │   ├── AppDrawer.kt
+│   │   │   │               │   │   ├── HomePager.kt
+│   │   │   │               │   │   ├── LauncherActivity.kt
+│   │   │   │               │   │   ├── LauncherRoot.kt
+│   │   │   │               │   │   ├── LauncherScreen.kt
+│   │   │   │               │   │   ├── LauncherState.kt
+│   │   │   │               │   │   ├── LauncherViewModel.kt
+│   │   │   │               │   │   ├── Overlays.kt
+│   │   │   │               │   │   ├── PerformanceGovernor.kt
+│   │   │   │               │   │   ├── QuickPanel.kt
+│   │   │   │               │   │   └── TodayPanel.kt
+│   │   │   │               │   ├── lock/
+│   │   │   │               │   │   ├── LockActivity.kt
+│   │   │   │               │   │   ├── LockOverlayContent.kt
+│   │   │   │               │   │   ├── LockPresenter.kt
+│   │   │   │               │   │   └── LockScreen.kt
+│   │   │   │               │   ├── onboarding/
+│   │   │   │               │   │   └── OnboardingScreen.kt
+│   │   │   │               │   ├── settings/
+│   │   │   │               │   │   ├── SettingsActivity.kt
+│   │   │   │               │   │   ├── SettingsComponents.kt
+│   │   │   │               │   │   ├── SettingsScreens.kt
+│   │   │   │               │   │   └── SettingsViewModel.kt
+│   │   │   │               │   ├── theme/
+│   │   │   │               │   │   └── Theme.kt
+│   │   │   │               │   └── widgets/
+│   │   │   │               │       └── Widgets.kt
+│   │   │   │               └── CristalApp.kt
+│   │   │   ├── res/
+│   │   │   │   ├── drawable/
+│   │   │   │   │   ├── ic_launcher_background.xml
+│   │   │   │   │   ├── ic_launcher_foreground.xml
+│   │   │   │   │   └── ic_launcher_monochrome.xml
+│   │   │   │   ├── mipmap-anydpi-v26/
+│   │   │   │   │   └── ic_launcher.xml
+│   │   │   │   ├── values/
+│   │   │   │   │   ├── strings.xml
+│   │   │   │   │   └── themes.xml
+│   │   │   │   └── xml/
+│   │   │   │       ├── accessibility_service.xml
+│   │   │   │       └── data_extraction_rules.xml
+│   │   │   └── AndroidManifest.xml
+│   │   └── test/
+│   │       └── java/
+│   │           └── app/
+│   │               └── cristal/
+│   │                   └── cover/
+│   │                       ├── CoverLogicTest.kt
+│   │                       ├── GlassShaderTest.kt
+│   │                       ├── GridMathTest.kt
+│   │                       └── ScreensSmokeTest.kt
+│   ├── build.gradle.kts
+│   └── proguard-rules.pro
+├── ci/
+│   └── build.yml
+├── docs/
+│   ├── GUIA.md
+│   └── TESTES.md
+├── gradle/
+│   ├── wrapper/
+│   │   ├── gradle-wrapper.jar
+│   │   └── gradle-wrapper.properties
+│   └── libs.versions.toml
+├── keystore/
+│   └── cristal-ci.jks
+├── .gitignore
+├── build.gradle.kts
+├── gradle.properties
+├── gradlew
+├── gradlew.bat
+└── settings.gradle.kts
+```
+
+## Melhorias futuras
+
+1. Widgets de outros apps (AppWidgetHost) em cards de vidro.
+2. Ler a cor dominante do papel de parede para escolher texto claro ou escuro automaticamente.
+3. Opção "Transparente / Fosco" para o vidro, como o ajuste do iOS 26.1.
+4. Atalhos de apps (app shortcuts) no menu do ícone e selo de notificações nos ícones.
+5. Arrastar apps direto da gaveta para a tela inicial e reordenar dentro das pastas.
+6. Respostas rápidas e ações das notificações no painel.
+7. Layouts separados para a tela externa e a interna.
+8. Mais estilos de relógio e personalização da tela de bloqueio.
+9. Controle de brilho e mais atalhos via Shizuku.
+10. Textos em `strings.xml` para tradução.
+11. Perfil de baseline para abrir mais rápido e testes instrumentados em aparelho.
+12. Empacotar uma fonte aberta parecida com a San Francisco (por exemplo, Inter).
+
+## Referências consultadas
+
+Usadas só como referência de funcionalidades; nenhum código ou recurso foi copiado.
+
+- [CoverScreen OS](https://ijp.app/apps/coverscreen-os/) e a
+  [discussão no XDA sobre o Razr 40 Ultra](https://xdaforums.com/t/coverscreen-os-now-ready-for-razr-40-ultra-a-mini-os-for-your-cover-screen.4737125/)
+- [Comet Launcher na Play Store](https://play.google.com/store/apps/details?id=com.vancod.launcher)
+- [launch-anything-on-Razr-2024-plus-cover-screen](https://github.com/dexuantang/launch-anything-on-Razr-2024-plus-cover-screen)
+  (tela 1, serviço `climanager`)
+- [Início de activities em segundo plano](https://developer.android.com/guide/components/activities/background-starts)
+- [Liquid Glass: ajustes Transparente e Fosco do iOS 26.1](https://www.iclarified.com/98836/ios-261-beta-4-adds-new-tinted-setting-to-reduce-liquid-glass-transparency)
+  e [visão geral da linguagem visual](https://www.createwithswift.com/exploring-a-new-visual-language-liquid-glass/)
+- [Open-Meteo](https://open-meteo.com/) (dados de clima)

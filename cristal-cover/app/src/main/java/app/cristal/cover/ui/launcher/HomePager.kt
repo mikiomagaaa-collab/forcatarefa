@@ -371,7 +371,7 @@ fun IconLabel(text: String, modifier: Modifier = Modifier, color: Color = Color.
         color = color,
         style = TextStyle(
             fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.SemiBold,
             shadow = if (color == Color.White) WallpaperTextShadow else null,
             textAlign = TextAlign.Center,
         ),

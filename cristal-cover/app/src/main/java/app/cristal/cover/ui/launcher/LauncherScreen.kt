@@ -431,6 +431,11 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                 },
             )
             CompositionLocalProvider(LocalGlassBackdrop provides sceneBackdrop) {
+              Box(
+                  Modifier.fillMaxSize().graphicsLayer {
+                      alpha = 1f - 0.92f * max(drawer.progress.value, panel.progress.value).coerceIn(0f, 1f)
+                  },
+              ) {
                 HomeContent(
                     settings = settings,
                     layout = layout,
@@ -443,6 +448,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                     callbacks = callbacks,
                     todayPanel = { TodayPanel(widgetData, widgetActions) },
                 )
+              }
             }
         }
 

@@ -90,6 +90,13 @@ android {
     testOptions {
         unitTests {
             isReturnDefaultValues = true
+            // Os testes de fumaça (Robolectric) abrem as telas de verdade e precisam dos recursos.
+            isIncludeAndroidResources = true
+            all {
+                // Renderiza com o pipeline de hardware do Android em JVM, para exercitar RenderEffect e AGSL.
+                it.systemProperty("robolectric.pixelCopyRenderMode", "hardware")
+                it.maxHeapSize = "2g"
+            }
         }
     }
 }
@@ -127,4 +134,9 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

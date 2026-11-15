@@ -12,7 +12,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.em
 import app.cristal.cover.data.prefs.GlassQuality
 import app.cristal.cover.data.prefs.Settings
 import app.cristal.cover.data.prefs.ThemeMode
@@ -25,23 +25,53 @@ val LocalIsDark = staticCompositionLocalOf { true }
 /** Se a vibração de toque está ligada nas configurações. */
 val LocalHapticsEnabled = staticCompositionLocalOf { true }
 
+/**
+ * Tipografia inspirada no Liquid Glass da Apple, usando a fonte do sistema (a San Francisco é
+ * exclusiva da Apple e não pode ser distribuída):
+ * - títulos e números em pesos firmes (semibold/bold), que continuam legíveis sobre vidro;
+ * - espaçamento entre letras apertado nos tamanhos grandes e neutro nos pequenos, como na SF;
+ * - nada de pesos finos, que somem sobre fundos coloridos.
+ */
+private fun TextStyle.glass(weight: FontWeight, tracking: Float): TextStyle =
+    copy(fontFamily = FontFamily.SansSerif, fontWeight = weight, letterSpacing = tracking.em)
+
 private val CristalTypography = Typography().let { base ->
     base.copy(
-        displayLarge = base.displayLarge.copy(fontWeight = FontWeight.Light, letterSpacing = (-1.5).sp),
-        displayMedium = base.displayMedium.copy(fontWeight = FontWeight.Light, letterSpacing = (-1).sp),
-        displaySmall = base.displaySmall.copy(fontWeight = FontWeight.Normal),
-        titleLarge = base.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-        titleMedium = base.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-        labelSmall = base.labelSmall.copy(letterSpacing = 0.sp),
+        displayLarge = base.displayLarge.glass(FontWeight.Bold, -0.035f),
+        displayMedium = base.displayMedium.glass(FontWeight.Bold, -0.03f),
+        displaySmall = base.displaySmall.glass(FontWeight.SemiBold, -0.025f),
+        headlineLarge = base.headlineLarge.glass(FontWeight.SemiBold, -0.022f),
+        headlineMedium = base.headlineMedium.glass(FontWeight.SemiBold, -0.02f),
+        headlineSmall = base.headlineSmall.glass(FontWeight.SemiBold, -0.018f),
+        titleLarge = base.titleLarge.glass(FontWeight.SemiBold, -0.015f),
+        titleMedium = base.titleMedium.glass(FontWeight.SemiBold, -0.01f),
+        titleSmall = base.titleSmall.glass(FontWeight.SemiBold, -0.005f),
+        bodyLarge = base.bodyLarge.glass(FontWeight.Normal, -0.008f),
+        bodyMedium = base.bodyMedium.glass(FontWeight.Normal, -0.004f),
+        bodySmall = base.bodySmall.glass(FontWeight.Normal, 0f),
+        labelLarge = base.labelLarge.glass(FontWeight.SemiBold, -0.004f),
+        labelMedium = base.labelMedium.glass(FontWeight.Medium, 0f),
+        labelSmall = base.labelSmall.glass(FontWeight.Medium, 0.01f),
     )
 }
 
-/** Estilo dos números grandes do relógio: finos e com largura fixa para não "dançar". */
+/**
+ * Números grandes (relógio, temperatura, bateria): semibold, bem juntos e com largura fixa por
+ * dígito, para a hora não "dançar" quando os minutos mudam.
+ */
 val ClockTextStyle = TextStyle(
     fontFamily = FontFamily.SansSerif,
-    fontWeight = FontWeight.Light,
+    fontWeight = FontWeight.SemiBold,
     fontFeatureSettings = "tnum",
-    letterSpacing = (-2).sp,
+    letterSpacing = (-0.04).em,
+)
+
+/** Relógio da tela de bloqueio: mais pesado e com um degradê sutil, como numerais de vidro. */
+val LockClockTextStyle = TextStyle(
+    fontFamily = FontFamily.SansSerif,
+    fontWeight = FontWeight.Bold,
+    fontFeatureSettings = "tnum",
+    letterSpacing = (-0.045).em,
 )
 
 /**

@@ -43,6 +43,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -67,7 +68,7 @@ import app.cristal.cover.ui.glass.glassBackdropSource
 import app.cristal.cover.ui.glass.rememberGlassBackdrop
 import app.cristal.cover.ui.launcher.NotificationCard
 import app.cristal.cover.ui.launcher.SwipeDismiss
-import app.cristal.cover.ui.theme.ClockTextStyle
+import app.cristal.cover.ui.theme.LockClockTextStyle
 import app.cristal.cover.ui.widgets.WidgetActions
 import app.cristal.cover.ui.widgets.WidgetCard
 import app.cristal.cover.ui.widgets.WidgetData
@@ -168,10 +169,13 @@ fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: Lock
                     elevation = 16.dp,
                 ) {
                     Row(Modifier.fillMaxSize().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+                        val ink = LocalGlassSpec.current.contentColor
                         Text(
                             formatTime(now, is24h),
-                            style = ClockTextStyle,
-                            fontSize = if (compact) 58.sp else 72.sp,
+                            style = LockClockTextStyle.copy(
+                                brush = Brush.verticalGradient(listOf(ink, ink.copy(alpha = 0.62f))),
+                            ),
+                            fontSize = if (compact) 60.sp else 76.sp,
                             maxLines = 1,
                         )
                         Spacer(Modifier.width(16.dp))

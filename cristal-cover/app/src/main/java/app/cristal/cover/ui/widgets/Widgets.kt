@@ -120,7 +120,7 @@ class WidgetActions(
 
 /** Locale atual, lido de forma que a tela se atualize se o idioma do sistema mudar. */
 @Composable
-fun currentLocale(): Locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+fun currentLocale(): Locale = LocalConfiguration.current.locales[0]
 
 /** Hora atual em milissegundos, atualizada na virada de cada minuto enquanto a tela está visível. */
 @Composable
@@ -463,36 +463,53 @@ private fun BatteryContent(battery: BatteryState) {
         else -> spec.contentColor
     }
     val track = spec.contentColor.copy(alpha = 0.16f)
-    Row(Modifier.fillMaxSize().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.fillMaxHeight().aspectRatio(1f, matchHeightConstraintsFirst = true), contentAlignment = Alignment.Center) {
-            Canvas(Modifier.fillMaxSize().padding(4.dp)) {
-                val stroke = size.minDimension * 0.11f
-                val inset = stroke / 2f
-                val arcSize = Size(size.width - stroke, size.height - stroke)
-                drawArc(track, -90f, 360f, false, Offset(inset, inset), arcSize, style = Stroke(stroke))
-                drawArc(
-                    ringColor,
-                    -90f,
-                    360f * battery.percent / 100f,
-                    false,
-                    Offset(inset, inset),
-                    arcSize,
-                    style = Stroke(stroke, cap = StrokeCap.Round),
-                )
+    val status = when {
+        battery.full -> "Carregada"
+        battery.charging -> "Carregando"
+        battery.powerSave -> "Economia"
+        else -> "Bateria"
+    }
+    BoxWithConstraints(Modifier.fillMaxSize().padding(12.dp)) {
+        if (maxWidth < 240.dp) {
+            // Célula estreita (2×2): anel com a porcentagem no centro e o estado embaixo.
+            Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) {
+                    BatteryRing(battery.percent, ringColor, track)
+                    Text("${battery.percent}%", style = ClockTextStyle, fontSize = 22.sp, maxLines = 1)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                    if (battery.charging) {
+                        Icon(Icons.Rounded.Bolt, contentDescription = null, tint = ringColor, modifier = Modifier.size(14.dp))
+                    }
+                    Text(status, fontSize = 12.sp, color = spec.secondaryContentColor, maxLines = 1)
+                }
             }
-            if (battery.charging) Icon(Icons.Rounded.Bolt, contentDescription = null, tint = ringColor, modifier = Modifier.size(22.dp))
-        }
-        Spacer(Modifier.width(10.dp))
-        Column {
-            Text("${battery.percent}%", style = ClockTextStyle, fontSize = 28.sp, maxLines = 1)
-            val status = when {
-                battery.full -> "Carregada"
-                battery.charging -> "Carregando"
-                battery.powerSave -> "Economia"
-                else -> "Bateria"
+        } else {
+            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.fillMaxHeight().aspectRatio(1f, matchHeightConstraintsFirst = true), contentAlignment = Alignment.Center) {
+                    BatteryRing(battery.percent, ringColor, track)
+                    if (battery.charging) {
+                        Icon(Icons.Rounded.Bolt, contentDescription = null, tint = ringColor, modifier = Modifier.size(22.dp))
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text("${battery.percent}%", style = ClockTextStyle, fontSize = 28.sp, maxLines = 1)
+                    Text(status, fontSize = 12.sp, color = spec.secondaryContentColor, maxLines = 1)
+                }
             }
-            Text(status, fontSize = 12.sp, color = spec.secondaryContentColor, maxLines = 1)
         }
+    }
+}
+
+@Composable
+private fun BatteryRing(percent: Int, color: Color, track: Color) {
+    Canvas(Modifier.fillMaxSize().padding(3.dp)) {
+        val stroke = size.minDimension * 0.11f
+        val inset = stroke / 2f
+        val arcSize = Size(size.width - stroke, size.height - stroke)
+        drawArc(track, -90f, 360f, false, Offset(inset, inset), arcSize, style = Stroke(stroke))
+        drawArc(color, -90f, 360f * percent / 100f, false, Offset(inset, inset), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
     }
 }
 
