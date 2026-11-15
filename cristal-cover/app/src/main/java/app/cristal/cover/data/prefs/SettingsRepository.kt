@@ -75,6 +75,13 @@ object PrefKeys {
     val LOCK_SHORTCUTS = booleanPreferencesKey("lock_shortcuts")
     val LOCK_MUSIC = booleanPreferencesKey("lock_music")
     val COVER_CLOCK_STYLE = stringPreferencesKey("cover_clock_style")
+    val COVER_CLOCK_FONT = stringPreferencesKey("cover_clock_font")
+    val COVER_CLOCK_LAYOUT = stringPreferencesKey("cover_clock_layout")
+    val COVER_CLOCK_ADAPTIVE = booleanPreferencesKey("cover_clock_adaptive")
+    val LOCK_CLOCK_FONT = stringPreferencesKey("lock_clock_font")
+    val LOCK_CLOCK_LAYOUT = stringPreferencesKey("lock_clock_layout")
+    val LOCK_CLOCK_ADAPTIVE = booleanPreferencesKey("lock_clock_adaptive")
+    val LOCK_CLOCK_CARD = booleanPreferencesKey("lock_clock_card")
     val COVER_CLOCK_SCALE = floatPreferencesKey("cover_clock_scale")
     val COVER_CLOCK_POSITION = stringPreferencesKey("cover_clock_position")
     val COVER_LOCK_MAX_NOTIFICATIONS = intPreferencesKey("cover_lock_max_notifications")
@@ -148,6 +155,13 @@ internal fun Preferences.toSettings(): Settings {
         lockShortcuts = this[PrefKeys.LOCK_SHORTCUTS] ?: d.lockShortcuts,
         lockMusic = this[PrefKeys.LOCK_MUSIC] ?: d.lockMusic,
         coverClockStyle = enumOr(PrefKeys.COVER_CLOCK_STYLE, d.coverClockStyle),
+        coverClockFont = enumOr(PrefKeys.COVER_CLOCK_FONT, ClockFont.fromCoverStyle(enumOr(PrefKeys.COVER_CLOCK_STYLE, d.coverClockStyle))),
+        coverClockLayout = enumOr(PrefKeys.COVER_CLOCK_LAYOUT, d.coverClockLayout),
+        coverClockAdaptive = this[PrefKeys.COVER_CLOCK_ADAPTIVE] ?: d.coverClockAdaptive,
+        lockClockFont = enumOr(PrefKeys.LOCK_CLOCK_FONT, d.lockClockFont),
+        lockClockLayout = enumOr(PrefKeys.LOCK_CLOCK_LAYOUT, d.lockClockLayout),
+        lockClockAdaptive = this[PrefKeys.LOCK_CLOCK_ADAPTIVE] ?: d.lockClockAdaptive,
+        lockClockCard = this[PrefKeys.LOCK_CLOCK_CARD] ?: d.lockClockCard,
         coverClockScale = (this[PrefKeys.COVER_CLOCK_SCALE] ?: d.coverClockScale).coerceIn(0.6f, 1.4f),
         coverClockPosition = enumOr(PrefKeys.COVER_CLOCK_POSITION, d.coverClockPosition),
         coverLockMaxNotifications = (this[PrefKeys.COVER_LOCK_MAX_NOTIFICATIONS] ?: d.coverLockMaxNotifications).coerceIn(0, 4),

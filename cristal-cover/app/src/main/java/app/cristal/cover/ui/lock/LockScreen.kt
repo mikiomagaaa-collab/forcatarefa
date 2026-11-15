@@ -70,7 +70,16 @@ import app.cristal.cover.ui.glass.rememberDeviceTilt
 import app.cristal.cover.ui.glass.rememberGlassBackdrop
 import app.cristal.cover.ui.launcher.NotificationCard
 import app.cristal.cover.ui.launcher.SwipeDismiss
-import app.cristal.cover.ui.theme.LockClockTextStyle
+import app.cristal.cover.ui.theme.clockStyle
+import app.cristal.cover.ui.components.AdaptiveClock
+import app.cristal.cover.ui.components.subjectTopFraction
+import app.cristal.cover.ui.components.wallpaperImageRect
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import app.cristal.cover.ui.widgets.WidgetActions
 import app.cristal.cover.ui.widgets.WidgetCard
 import app.cristal.cover.ui.widgets.WidgetData
@@ -164,10 +173,33 @@ fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: Lock
             tilt = { tilt.value },
             spatial = settings.wallpaperSpatial,
         )
-        // Efeito de profundidade: o relógio grande fica entre a foto e o objeto recortado dela.
+        // Relógio grande direto sobre a foto: com o efeito de profundidade (fica entre a foto e o
+        // objeto recortado dela) ou quando o cartão de vidro está desligado.
         val subject = state.subject
-        val depthClockHeight = if (compact) 150.dp else 214.dp
-        if (subject != null) {
+        val bigClock = subject != null || !settings.lockClockCard
+        val subjectTop by produceState<Float?>(null, subject) {
+            value = subject?.let { withContext(Dispatchers.Default) { subjectTopFraction(it) } }
+        }
+        val density = LocalDensity.current
+        val dateLine = 26.dp
+        val topGap = 18.dp
+        val clockHeight: Dp = run {
+            val default = if (compact) 150.dp else 214.dp
+            val top = subjectTop
+            if (subject == null || top == null || !settings.lockClockAdaptive) return@run default
+            // Formato adaptativo: o relógio cresce até passar um pouco por trás do objeto.
+            with(density) {
+                val rect = wallpaperImageRect(
+                    subject.width, subject.height, Size(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat()),
+                    settings.wallpaperZoom, settings.wallpaperOffsetX, settings.wallpaperOffsetY, settings.wallpaperSpatial,
+                )
+                val subjectY = (rect.top + top * rect.height).toDp()
+                val clockTop = insets.calculateTopPadding() + topGap + dateLine
+                val free = subjectY - clockTop
+                if (free < 56.dp) default else (free * 1.45f).coerceIn(110.dp, maxHeight * 0.46f)
+            }
+        }
+        if (bigClock) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -177,38 +209,40 @@ fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: Lock
                         translationY = p * size.height * 0.5f
                         alpha = (1f + p * 1.6f).coerceIn(0f, 1f)
                     }
-                    .padding(top = 18.dp)
-                    .height(depthClockHeight),
+                    .padding(top = topGap),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(
-                    formatDate(now).replaceFirstChar { it.titlecase(locale) },
-                    color = Color.White.copy(alpha = 0.92f),
-                    style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold, shadow = WallpaperTextShadow),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    formatTime(now, is24h),
-                    style = LockClockTextStyle.copy(
-                        brush = Brush.verticalGradient(listOf(Color.White, Color.White.copy(alpha = 0.72f))),
-                        shadow = WallpaperTextShadow,
-                    ),
-                    fontSize = if (compact) 96.sp else 132.sp,
-                    maxLines = 1,
-                    softWrap = false,
+                Box(Modifier.height(dateLine), contentAlignment = Alignment.Center) {
+                    Text(
+                        formatDate(now).replaceFirstChar { it.titlecase(locale) },
+                        color = Color.White.copy(alpha = 0.92f),
+                        style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold, shadow = WallpaperTextShadow),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                AdaptiveClock(
+                    time = formatTime(now, is24h),
+                    font = settings.lockClockFont,
+                    layout = settings.lockClockLayout,
+                    adaptive = settings.lockClockAdaptive,
+                    brush = Brush.verticalGradient(listOf(Color.White, Color.White.copy(alpha = 0.74f))),
+                    fixedSize = if (compact) 96.sp else 128.sp,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp).height(clockHeight),
                 )
             }
-            WallpaperSubjectLayer(
-                subject = subject,
-                dim = dim,
-                zoom = settings.wallpaperZoom,
-                offsetX = settings.wallpaperOffsetX,
-                offsetY = settings.wallpaperOffsetY,
-                saturation = settings.wallpaperSaturation,
-                tilt = { tilt.value },
-                spatial = settings.wallpaperSpatial,
-            )
+            if (subject != null) {
+                WallpaperSubjectLayer(
+                    subject = subject,
+                    dim = dim,
+                    zoom = settings.wallpaperZoom,
+                    offsetX = settings.wallpaperOffsetX,
+                    offsetY = settings.wallpaperOffsetY,
+                    saturation = settings.wallpaperSaturation,
+                    tilt = { tilt.value },
+                    spatial = settings.wallpaperSpatial,
+                )
+            }
         }
         CompositionLocalProvider(LocalGlassBackdrop provides backdrop) {
             Column(
@@ -223,9 +257,9 @@ fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: Lock
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                if (subject != null) {
-                    // O relógio já foi desenhado atrás do objeto; aqui só a bateria e o cadeado.
-                    Spacer(Modifier.height(depthClockHeight - 8.dp))
+                if (bigClock) {
+                    // O relógio já foi desenhado (atrás do objeto, se houver); aqui só reserva o espaço.
+                    Spacer(Modifier.height(topGap + dateLine + clockHeight - 8.dp))
                 } else {
                 // Relógio grande em vidro
                 GlassSurface(
@@ -238,11 +272,12 @@ fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: Lock
                         val ink = LocalGlassSpec.current.contentColor
                         Text(
                             formatTime(now, is24h),
-                            style = LockClockTextStyle.copy(
+                            style = settings.lockClockFont.clockStyle().copy(
                                 brush = Brush.verticalGradient(listOf(ink, ink.copy(alpha = 0.62f))),
                             ),
                             fontSize = if (compact) 60.sp else 76.sp,
                             maxLines = 1,
+                            softWrap = false,
                         )
                         Spacer(Modifier.width(16.dp))
                         Column(Modifier.weight(1f)) {

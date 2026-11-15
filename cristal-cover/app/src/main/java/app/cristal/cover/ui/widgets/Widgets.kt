@@ -82,6 +82,8 @@ import app.cristal.cover.ui.glass.GlassSurface
 import app.cristal.cover.ui.glass.LocalGlassSpec
 import app.cristal.cover.ui.glass.rememberHaptic
 import app.cristal.cover.ui.theme.ClockTextStyle
+import app.cristal.cover.ui.theme.clockStyle
+import app.cristal.cover.data.prefs.ClockFont
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -102,6 +104,8 @@ data class WidgetData(
     val tempUnit: TempUnit = TempUnit.CELSIUS,
     val notificationAccess: Boolean = false,
     val torchOn: Boolean = false,
+    /** Fonte escolhida para o relógio (a mesma do bloqueio interno). */
+    val clockFont: ClockFont = ClockFont.SYSTEM,
 )
 
 /** Ações disparadas pelos widgets; a tela que os hospeda decide o que fazer. */
@@ -214,7 +218,7 @@ private fun ClockContent(data: WidgetData) {
         val timeSize = (maxHeight.value * if (compact) 0.42f else 0.56f).coerceIn(26f, 92f)
         if (compact) {
             Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(formatTime(now, is24h), style = ClockTextStyle, fontSize = timeSize.sp, maxLines = 1)
+                Text(formatTime(now, is24h), style = data.clockFont.clockStyle(), fontSize = timeSize.sp, maxLines = 1, softWrap = false)
                 Text(
                     formatDate(now),
                     fontSize = 12.sp,
@@ -225,7 +229,7 @@ private fun ClockContent(data: WidgetData) {
             }
         } else {
             Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                Text(formatTime(now, is24h), style = ClockTextStyle, fontSize = timeSize.sp, maxLines = 1)
+                Text(formatTime(now, is24h), style = data.clockFont.clockStyle(), fontSize = timeSize.sp, maxLines = 1, softWrap = false)
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
                     Text(

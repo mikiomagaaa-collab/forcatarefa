@@ -1,5 +1,6 @@
 package app.cristal.cover.ui.settings
 
+import app.cristal.cover.data.prefs.ClockLayout
 import androidx.compose.runtime.mutableIntStateOf
 import android.Manifest
 import android.content.Intent
@@ -471,18 +472,41 @@ private fun LockPage(
             }
         }
         item {
+            SettingsCard("Relógio (bloqueio da tela interna)") {
+                Text("Fonte do relógio", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                ClockFontPicker(settings.lockClockFont, settings.lockClockLayout) { vm.setEnum(PrefKeys.LOCK_CLOCK_FONT, it) }
+                InfoText("A mesma fonte vale para o widget de relógio da tela inicial.")
+                SwitchRow(
+                    title = "Relógio em cartão de vidro",
+                    checked = settings.lockClockCard,
+                    onChange = { vm.set(PrefKeys.LOCK_CLOCK_CARD, it) },
+                    subtitle = "Desligado, os números ficam grandes direto sobre a foto (com o efeito de profundidade isso é automático).",
+                )
+                ChoiceRow("Forma", ClockLayout.entries.map { it to it.label }, settings.lockClockLayout) { vm.setEnum(PrefKeys.LOCK_CLOCK_LAYOUT, it) }
+                SwitchRow(
+                    title = "Formato adaptativo",
+                    checked = settings.lockClockAdaptive,
+                    onChange = { vm.set(PrefKeys.LOCK_CLOCK_ADAPTIVE, it) },
+                    subtitle = "Ajusta tamanho e forma ao espaço livre; com profundidade, cresce até passar por trás do objeto da foto.",
+                )
+            }
+        }
+        item {
             SettingsCard("Cover Clock (bloqueio da tela externa)") {
                 InfoText("Na tela externa o bloqueio mostra só papel de parede, relógio e notificações.")
+                Text("Fonte do relógio", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                ClockFontPicker(settings.coverClockFont, settings.coverClockLayout) { vm.setEnum(PrefKeys.COVER_CLOCK_FONT, it) }
                 ChoiceRow(
-                    "Estilo do relógio",
-                    listOf(
-                        CoverClockStyle.LIQUID to "Liquid",
-                        CoverClockStyle.MINIMAL to "Minimalista",
-                        CoverClockStyle.DIGITAL to "Digital",
-                        CoverClockStyle.CLASSIC to "Clássico",
-                    ),
-                    settings.coverClockStyle,
-                ) { vm.setEnum(PrefKeys.COVER_CLOCK_STYLE, it) }
+                    "Forma",
+                    ClockLayout.entries.map { it to it.label },
+                    settings.coverClockLayout,
+                ) { vm.setEnum(PrefKeys.COVER_CLOCK_LAYOUT, it) }
+                SwitchRow(
+                    title = "Formato adaptativo",
+                    checked = settings.coverClockAdaptive,
+                    onChange = { vm.set(PrefKeys.COVER_CLOCK_ADAPTIVE, it) },
+                    subtitle = "O relógio cresce, estica e empilha as horas sobre os minutos para ocupar o espaço livre. Com o efeito de profundidade, passa por trás da pessoa da foto.",
+                )
                 SliderRow(
                     "Tamanho",
                     settings.coverClockScale,

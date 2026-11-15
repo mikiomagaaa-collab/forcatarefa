@@ -7,6 +7,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -17,6 +19,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
@@ -267,20 +270,11 @@ private fun DrawScope.drawCroppedImage(
     spatial: Boolean = false,
 ) {
     if (image.width <= 0 || image.height <= 0) return
-    // 8% maior que a tela, para ter margem de deslocamento no parallax (16% no modo espacial).
-    val margin = if (spatial) 1.16f else 1.08f
-    val scale = max(size.width / image.width, size.height / image.height) * margin * zoom.coerceIn(1f, 4f)
-    val dw = image.width * scale
-    val dh = image.height * scale
-    val slackX = (dw - size.width) / 2f
-    val slackY = (dh - size.height) / 2f
-    // A posição escolhida vale primeiro; o parallax usa a folga que sobrar, sem descobrir a borda.
-    val x = offsetX.coerceIn(-1f, 1f)
-    val y = offsetY.coerceIn(-1f, 1f)
-    val tx = (x + shift * (1f - abs(x)) + tilt.x * 0.55f).coerceIn(-1f, 1f)
-    val ty = (y + tilt.y * 0.55f).coerceIn(-1f, 1f)
-    val dx = -slackX - tx * slackX
-    val dy = -slackY - ty * slackY
+    val r = wallpaperImageRect(image.width, image.height, size, zoom, offsetX, offsetY, spatial, shift, tilt)
+    val dw = r.width
+    val dh = r.height
+    val dx = r.left
+    val dy = r.top
     val filter = if (abs(saturation - 1f) > 0.01f) {
         ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(saturation.coerceIn(0f, 2f)) })
     } else {
@@ -293,6 +287,58 @@ private fun DrawScope.drawCroppedImage(
         colorFilter = filter,
         filterQuality = FilterQuality.Medium,
     )
+}
+
+/**
+ * Onde a imagem do papel de parede é desenhada na tela (pode passar das bordas). É a mesma conta para
+ * a foto e para o recorte do objeto, e o relógio adaptativo usa para saber onde o objeto começa.
+ */
+fun wallpaperImageRect(
+    imageWidth: Int,
+    imageHeight: Int,
+    screen: Size,
+    zoom: Float,
+    offsetX: Float,
+    offsetY: Float,
+    spatial: Boolean,
+    shift: Float = 0f,
+    tilt: Offset = Offset.Zero,
+): Rect {
+    // 8% maior que a tela, para ter margem de deslocamento no parallax (16% no modo espacial).
+    val margin = if (spatial) 1.16f else 1.08f
+    val scale = max(screen.width / imageWidth, screen.height / imageHeight) * margin * zoom.coerceIn(1f, 4f)
+    val dw = imageWidth * scale
+    val dh = imageHeight * scale
+    val slackX = (dw - screen.width) / 2f
+    val slackY = (dh - screen.height) / 2f
+    // A posição escolhida vale primeiro; o parallax usa a folga que sobrar, sem descobrir a borda.
+    val x = offsetX.coerceIn(-1f, 1f)
+    val y = offsetY.coerceIn(-1f, 1f)
+    val tx = (x + shift * (1f - abs(x)) + tilt.x * 0.55f).coerceIn(-1f, 1f)
+    val ty = (y + tilt.y * 0.55f).coerceIn(-1f, 1f)
+    val left = -slackX - tx * slackX
+    val top = -slackY - ty * slackY
+    return Rect(left, top, left + dw, top + dh)
+}
+
+/** Linha mais alta do objeto recortado, de 0 (topo da imagem) a 1, ou `null` se estiver vazio. */
+fun subjectTopFraction(subject: ImageBitmap): Float? {
+    val bitmap = runCatching { subject.asAndroidBitmap() }.getOrNull() ?: return null
+    val w = bitmap.width
+    val h = bitmap.height
+    if (w <= 0 || h <= 0) return null
+    val stepX = (w / 120).coerceAtLeast(1)
+    val stepY = (h / 240).coerceAtLeast(1)
+    var y = 0
+    while (y < h) {
+        var x = 0
+        while (x < w) {
+            if ((bitmap.getPixel(x, y) ushr 24) > 140) return y.toFloat() / h
+            x += stepX
+        }
+        y += stepY
+    }
+    return null
 }
 
 private fun DrawScope.drawPreset(preset: WallpaperPreset, shift: Float, tilt: Offset = Offset.Zero) {

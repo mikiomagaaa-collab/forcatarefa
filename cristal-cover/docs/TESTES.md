@@ -92,6 +92,13 @@ Para relatar um problema, anote: o item, o que você esperava, o que aconteceu e
 - [ ] Deslizar para o lado chega à página de notificações; deslizar uma notificação dispensa; tocar abre o app.
 - [ ] Com uma música tocando, o módulo mostra capa, título, artista e os botões funcionam.
 
+### Relógio
+
+- [ ] Configurações > Tela de bloqueio: a galeria mostra as 12 fontes; escolher uma muda o bloqueio interno e o widget de relógio.
+- [ ] "Relógio em cartão de vidro" desligado: números grandes direto sobre a foto.
+- [ ] Cover Clock no meio, sem notificações: o relógio empilha ("07" sobre "34") e ocupa o espaço; com notificações, encolhe.
+- [ ] Com o efeito de profundidade e o relógio em cima, ele cresce até passar por trás da pessoa da foto.
+
 ### Profundidade
 
 - [ ] Wallpaper Studio > uma área > imagem da galeria com uma pessoa ou pet: "Recortando o objeto…" e depois "Objeto recortado". ⚠️ (o Google Play Services baixa o módulo na primeira vez)

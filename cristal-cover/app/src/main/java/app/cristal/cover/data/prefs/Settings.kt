@@ -139,6 +139,15 @@ data class Settings(
 
     // Cover Clock (bloqueio da tela externa)
     val coverClockStyle: CoverClockStyle = CoverClockStyle.LIQUID,
+    val coverClockFont: ClockFont = ClockFont.SYSTEM,
+    val coverClockLayout: ClockLayout = ClockLayout.AUTO,
+    val coverClockAdaptive: Boolean = true,
+    /** Relógio do bloqueio interno (e do widget de relógio da tela inicial). */
+    val lockClockFont: ClockFont = ClockFont.SYSTEM,
+    val lockClockLayout: ClockLayout = ClockLayout.AUTO,
+    val lockClockAdaptive: Boolean = true,
+    /** Relógio dentro de um cartão de vidro (desligado: números grandes direto sobre a foto). */
+    val lockClockCard: Boolean = true,
     val coverClockScale: Float = 1f,
     val coverClockPosition: CoverClockPosition = CoverClockPosition.TOP,
     val coverLockMaxNotifications: Int = 3,

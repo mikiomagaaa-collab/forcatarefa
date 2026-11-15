@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,7 +56,17 @@ import app.cristal.cover.data.notifications.NotificationItem
 import app.cristal.cover.data.prefs.CoverClockPosition
 import app.cristal.cover.data.prefs.CoverClockStyle
 import app.cristal.cover.data.prefs.WallpaperKind
+import app.cristal.cover.ui.components.AdaptiveClock
 import app.cristal.cover.ui.components.WallpaperLayer
+import app.cristal.cover.ui.components.subjectTopFraction
+import app.cristal.cover.ui.components.wallpaperImageRect
+import app.cristal.cover.ui.theme.clockStyle
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import app.cristal.cover.ui.components.WallpaperSubjectLayer
 import app.cristal.cover.ui.components.WallpaperTextShadow
 import app.cristal.cover.ui.glass.GlassSurface
@@ -92,7 +103,7 @@ fun CoverLockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions:
 
     LaunchedEffect(resetKey) { slide.animateTo(0f, Motion.release) }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
@@ -138,6 +149,34 @@ fun CoverLockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions:
         )
         // O estado de "expandida" fica fora das camadas, para as duas medirem igual.
         var expandedKey by remember { mutableStateOf<String?>(null) }
+        val subjectNow = state.subject
+        val subjectTop by produceState<Float?>(null, subjectNow) {
+            value = subjectNow?.let { withContext(Dispatchers.Default) { subjectTopFraction(it) } }
+        }
+        val density = LocalDensity.current
+        // Formato adaptativo: o relógio ocupa o espaço que sobra (e, com o efeito de profundidade e o
+        // relógio em cima, cresce até passar por trás do objeto da foto).
+        val clockHeight: Dp? = if (!settings.coverClockAdaptive) {
+            null
+        } else {
+            val top = insets.calculateTopPadding() + 14.dp
+            val available = maxHeight - insets.calculateTopPadding() - insets.calculateBottomPadding() - 28.dp
+            val count = state.notifications.take(settings.coverLockMaxNotifications.coerceIn(0, 4)).size
+            val hidden = state.notifications.size > count
+            val notifications = if (count == 0) 0.dp else 14.dp + 46.dp * count + 8.dp * (count - 1) + if (hidden) 22.dp else 0.dp
+            val free = (available - 26.dp - notifications).coerceAtLeast(64.dp)
+            var h = free * if (settings.coverClockPosition == CoverClockPosition.CENTER) 0.8f else 0.62f
+            val frac = subjectTop
+            if (subjectNow != null && frac != null && settings.coverClockPosition == CoverClockPosition.TOP) {
+                val rect = wallpaperImageRect(
+                    subjectNow.width, subjectNow.height, Size(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat()),
+                    settings.wallpaperZoom, settings.wallpaperOffsetX, settings.wallpaperOffsetY, settings.wallpaperSpatial,
+                )
+                val room = with(density) { (rect.top + frac * rect.height).toDp() } - top
+                if (room > 48.dp) h = room * 1.45f
+            }
+            (h * settings.coverClockScale.coerceIn(0.6f, 1.4f)).coerceIn(64.dp, free)
+        }
         val column: @Composable (showClock: Boolean, showRest: Boolean) -> Unit = { showClock, showRest ->
             CoverClockColumn(
                 state = state,
@@ -150,6 +189,7 @@ fun CoverLockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions:
                 slide = { slide.value },
                 showClock = showClock,
                 showRest = showRest,
+                clockHeight = clockHeight,
                 expandedKey = expandedKey,
                 onToggle = { key -> expandedKey = if (expandedKey == key) null else key },
                 onOpen = actions.onOpenNotification,
@@ -188,6 +228,7 @@ private fun CoverClockColumn(
     slide: () -> Float,
     showClock: Boolean,
     showRest: Boolean,
+    clockHeight: Dp?,
     expandedKey: String?,
     onToggle: (String) -> Unit,
     onOpen: (NotificationItem) -> Unit,
@@ -209,37 +250,44 @@ private fun CoverClockColumn(
         val position = settings.coverClockPosition
         if (position != CoverClockPosition.TOP) Spacer(Modifier.weight(1f))
 
-        val base = when (settings.coverClockStyle) {
-            CoverClockStyle.LIQUID -> TextStyle(
-                fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, letterSpacing = (-0.045).em,
-                brush = Brush.verticalGradient(listOf(ink, ink.copy(alpha = 0.55f))),
+        val time = formatTime(now, is24h)
+        val glassInk = Brush.verticalGradient(listOf(ink, ink.copy(alpha = 0.62f)))
+        if (clockHeight != null) {
+            AdaptiveClock(
+                time = time,
+                font = settings.coverClockFont,
+                layout = settings.coverClockLayout,
+                adaptive = true,
+                brush = glassInk,
+                modifier = Modifier.fillMaxWidth().height(clockHeight).then(clockAlpha),
+                verticalAlignment = if (settings.coverClockPosition == CoverClockPosition.TOP) Alignment.Top else Alignment.CenterVertically,
             )
-            CoverClockStyle.MINIMAL -> TextStyle(
-                fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Thin, letterSpacing = (-0.02).em, color = ink,
+            Text(
+                formatDate(now).replaceFirstChar { it.titlecase(locale) },
+                color = ink.copy(alpha = 0.9f),
+                style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Medium, shadow = WallpaperTextShadow),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp).then(clockAlpha),
             )
-            CoverClockStyle.DIGITAL -> TextStyle(
-                fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium, letterSpacing = (-0.03).em, color = ink,
+        } else {
+            Text(
+                time,
+                style = settings.coverClockFont.clockStyle().copy(brush = glassInk, shadow = WallpaperTextShadow),
+                fontSize = (104f * settings.coverClockScale.coerceIn(0.6f, 1.4f)).sp,
+                maxLines = 1,
+                softWrap = false,
+                modifier = clockAlpha,
             )
-            CoverClockStyle.CLASSIC -> TextStyle(
-                fontFamily = FontFamily.Serif, fontWeight = FontWeight.Medium, letterSpacing = (-0.01).em, color = ink,
+            Text(
+                formatDate(now).replaceFirstChar { it.titlecase(locale) },
+                color = ink.copy(alpha = 0.9f),
+                style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Medium, shadow = WallpaperTextShadow),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 4.dp).then(clockAlpha),
             )
         }
-        Text(
-            formatTime(now, is24h),
-            style = base.copy(fontFeatureSettings = "tnum", shadow = WallpaperTextShadow),
-            fontSize = (104f * settings.coverClockScale.coerceIn(0.6f, 1.4f)).sp,
-            maxLines = 1,
-            softWrap = false,
-            modifier = clockAlpha,
-        )
-        Text(
-            formatDate(now).replaceFirstChar { it.titlecase(locale) },
-            color = ink.copy(alpha = 0.9f),
-            style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Medium, shadow = WallpaperTextShadow),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = 4.dp).then(clockAlpha),
-        )
 
         val shown = state.notifications.take(settings.coverLockMaxNotifications.coerceIn(0, 4))
         if (shown.isNotEmpty()) {

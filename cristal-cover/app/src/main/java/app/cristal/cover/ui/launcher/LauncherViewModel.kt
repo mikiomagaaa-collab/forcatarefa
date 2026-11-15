@@ -157,7 +157,7 @@ class LauncherViewModel @Inject constructor(
         mediaRepository.state,
         calendarRepository.state,
         combine(
-            settings.map { it.tempUnit }.distinctUntilChanged(),
+            settings.map { it.tempUnit to it.lockClockFont }.distinctUntilChanged(),
             notificationRepository.connected,
             quickSettingsRepository.state.map { it.torchOn }.distinctUntilChanged(),
         ) { unit, connected, torch -> Triple(unit, connected, torch) },
@@ -167,7 +167,8 @@ class LauncherViewModel @Inject constructor(
             weather = weather,
             media = media,
             agenda = agenda,
-            tempUnit = extra.first,
+            tempUnit = extra.first.first,
+            clockFont = extra.first.second,
             notificationAccess = extra.second,
             torchOn = extra.third,
         )

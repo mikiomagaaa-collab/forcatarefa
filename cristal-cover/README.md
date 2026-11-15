@@ -21,7 +21,8 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 | Vidro Liquid Glass (AGSL), tipografia, 12 papéis de parede | Feito |
 | Tela interna e externa com telas iniciais, grades e docks independentes | Feito |
 | Wallpaper Studio: 4 áreas independentes, enquadramento, filtros e "igual a outra área" | Feito |
-| Cover Clock: bloqueio minimalista da tela externa (4 estilos de relógio) | Feito |
+| Cover Clock: bloqueio minimalista da tela externa | Feito |
+| Relógio: 12 fontes (10 embutidas, licença OFL) e formato adaptativo (cresce, estica, empilha; com profundidade passa por trás do objeto) | Feito (1.3.0) |
 | Flip Transition: chegada com mola ao trocar de tela e recolhimento pela dobradiça | Primeira versão |
 | Widgets (9 embutidos + de outros apps), gaveta | Feito |
 | Liquid Control Center: 31 tipos de módulo, 6 tamanhos, páginas, editor, predefinições Liquid Flip/iOS/One UI, centrais separadas por tela | Feito (1.3.0) |

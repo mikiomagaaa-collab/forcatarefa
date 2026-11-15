@@ -127,3 +127,36 @@ class WallpaperKeys private constructor(slot: WallpaperSlot) {
 enum class CoverClockStyle { LIQUID, MINIMAL, DIGITAL, CLASSIC }
 
 enum class CoverClockPosition { TOP, CENTER, BOTTOM }
+
+/**
+ * Fontes do relógio. As do sistema não ocupam espaço; as outras vêm no APK (licença SIL OFL).
+ * @param condensed letras altas e estreitas: aguentam esticar mais no formato adaptativo.
+ */
+enum class ClockFont(val label: String, val condensed: Boolean = false, val maxStretch: Float = 1.35f) {
+    SYSTEM("Sistema"),
+    THIN("Fina"),
+    LIGHT("Leve"),
+    GEOMETRIC("Geométrica"),
+    GROTESK("Grotesca"),
+    TALL("Alta", condensed = true, maxStretch = 1.6f),
+    IMPACT("Impacto", condensed = true, maxStretch = 1.55f),
+    EDITORIAL("Editorial"),
+    CLASSIC("Clássica"),
+    FUTURE("Futurista", maxStretch = 1.25f),
+    DIGITAL("Digital"),
+    SCRIPT("Manuscrita", maxStretch = 1.12f),
+    ;
+
+    companion object {
+        /** Os quatro estilos antigos do Cover Clock viram fontes. */
+        fun fromCoverStyle(style: CoverClockStyle): ClockFont = when (style) {
+            CoverClockStyle.LIQUID -> SYSTEM
+            CoverClockStyle.MINIMAL -> THIN
+            CoverClockStyle.DIGITAL -> DIGITAL
+            CoverClockStyle.CLASSIC -> EDITORIAL
+        }
+    }
+}
+
+/** Forma do relógio: automática (escolhe pelo espaço livre), numa linha ou com as horas sobre os minutos. */
+enum class ClockLayout(val label: String) { AUTO("Automático"), LINE("Uma linha"), STACKED("Empilhado") }

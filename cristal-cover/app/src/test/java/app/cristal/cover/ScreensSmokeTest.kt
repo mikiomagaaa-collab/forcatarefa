@@ -1,5 +1,17 @@
 package app.cristal.cover
 
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import app.cristal.cover.ui.components.AdaptiveClock
+import app.cristal.cover.data.prefs.CoverClockPosition
+import app.cristal.cover.data.prefs.ClockLayout
+import app.cristal.cover.data.prefs.ClockFont
 import android.app.Notification
 import android.content.ComponentName
 import android.graphics.Bitmap
@@ -565,5 +577,54 @@ class ScreensSmokeTest {
         // As duas camadas medem igual: tocar expande a notificação da camada de cima.
         rule.onAllNodesWithText("Boletim escolar").onLast().performClick()
         rule.onAllNodesWithText("Abrir").onLast().assertExists()
+    }
+
+    @Test
+    @Config(sdk = [36], qualifiers = "w411dp-h1004dp-420dpi")
+    fun `galeria com todas as fontes de relogio`() {
+        rule.setContent {
+            Column(Modifier.fillMaxSize().background(Color(0xFF15121F)).padding(8.dp)) {
+                for (row in ClockFont.entries.chunked(3)) {
+                    Row(Modifier.fillMaxWidth().weight(1f)) {
+                        for (font in row) {
+                            Column(Modifier.weight(1f).fillMaxHeight().padding(4.dp)) {
+                                AdaptiveClock(
+                                    time = "10:42", font = font, layout = ClockLayout.AUTO, adaptive = true,
+                                    modifier = Modifier.fillMaxWidth().weight(1f),
+                                )
+                                Text(font.label, color = Color.White, fontSize = 11.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        shot("19-fontes-do-relogio")
+        rule.onNodeWithText("Manuscrita").assertExists()
+    }
+
+    @Test
+    @Config(sdk = [36], qualifiers = "w411dp-h1004dp-420dpi")
+    fun `bloqueio interno sem cartao com relogio alto`() {
+        val settings = Settings().copy(lockClockCard = false, lockClockFont = ClockFont.TALL)
+        val state = LockUiState(settings = settings, battery = BatteryState(percent = 76), notifications = notifications.take(1))
+        rule.setContent {
+            CristalTheme(settings = settings) {
+                LockScreen(state = state, secure = false, resetKey = 0, actions = LockActions({}, {}, {}, {}, {}, {}, {}, {}))
+            }
+        }
+        shot("20-bloqueio-relogio-adaptativo")
+    }
+
+    @Test
+    fun `cover clock empilhado com fonte impacto`() {
+        val settings = Settings().copy(coverClockFont = ClockFont.IMPACT, coverClockPosition = CoverClockPosition.CENTER)
+        val state = LockUiState(settings = settings, notifications = emptyList())
+        rule.setContent {
+            CristalTheme(settings = settings) {
+                LockScreen(state = state, secure = false, resetKey = 0, actions = LockActions({}, {}, {}, {}, {}, {}, {}, {}), coverMinimal = true)
+            }
+        }
+        shot("21-cover-clock-empilhado")
     }
 }
