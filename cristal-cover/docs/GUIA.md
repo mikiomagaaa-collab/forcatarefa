@@ -30,7 +30,8 @@ O APK é gerado pelo GitHub Actions, de graça, toda vez que algo muda na pasta 
 6. Abra o app **Arquivos** (Files), entre em **Downloads**, toque no `.zip` e escolha **Extrair**. Dentro
    está o arquivo `cristal-cover-1.0.0-N.apk`.
 
-> **Qual arquivo usar?** O `cristal-cover-apk` é a versão otimizada (cerca de 3 MB): é essa que você quer.
+> **Qual arquivo usar?** O `cristal-cover-apk` é a versão otimizada (cerca de 4 MB): é essa que você quer.
+> O teclado vem no artefato **lily-keyboard-apk** (arquivo `lily-keyboard-….apk`, sem `-debug`).
 > O `cristal-cover-apk-debug` é dezenas de vezes maior e mais lento; só serve para investigar problemas.
 
 ### Rodar o build de novo quando quiser
@@ -50,6 +51,13 @@ quiser que o APK fique na página **Releases**, onde dá para baixar o `.apk` di
 
 Para **atualizar**, basta instalar o APK novo por cima: as configurações são mantidas. (Isso funciona
 enquanto os APKs forem assinados com a mesma chave; veja a parte 8.)
+
+### Teclado (L.I.L.Y Keyboard)
+
+É um app separado: instale o `lily-keyboard-….apk` do mesmo jeito. Depois abra o **L.I.L.Y Keyboard**
+e siga os dois passos da tela (ligar em Configurações > Teclados e escolher como teclado). O Android
+mostra um aviso padrão de que "o teclado pode coletar o que você digita": ele aparece para qualquer
+teclado; o L.I.L.Y não tem acesso à internet.
 
 ## 3. Primeira abertura
 

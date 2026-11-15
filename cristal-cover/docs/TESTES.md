@@ -78,17 +78,26 @@ Para relatar um problema, anote: o item, o que você esperava, o que aconteceu e
 - [ ] Um app oculto some da gaveta e reaparece em Configurações > Apps ocultos > Reexibir.
 - [ ] Instalar e desinstalar um app atualiza a gaveta sem reabrir o Cristal.
 
-## 7. Painel rápido e notificações
+## 7. Central de Controle e notificações
 
-- [ ] Deslizar para baixo abre o painel; a alça de baixo e o gesto de voltar fecham.
-- [ ] A lanterna liga e desliga e o botão reflete o estado.
-- [ ] O controle de volume muda o volume de mídia.
-- [ ] "Som/Vibrar" alterna o modo de toque.
-- [ ] Sem Shizuku: Wi-Fi, Bluetooth e Dados abrem o painel do sistema. Com Shizuku: alternam direto.
-- [ ] Uma notificação nova aparece em até 1 s; deslizar para o lado dispensa; tocar abre o app.
-- [ ] "Limpar" remove as notificações dispensáveis.
-- [ ] Com uma música tocando, o card mostra capa, título e os botões funcionam.
-- [ ] O botão de cadeado bloqueia a tela (precisa da acessibilidade).
+- [ ] Deslizar para baixo abre a central; a alça de baixo e o gesto de voltar fecham.
+- [ ] Lanterna, Som/Vibrar e volume funcionam e mostram o estado.
+- [ ] Brilho: o primeiro toque pede "Alterar configurações do sistema"; depois o controle muda o brilho de verdade.
+- [ ] Rotação e Não perturbe: pedem a permissão uma vez e depois alternam direto.
+- [ ] Sem Shizuku: Wi-Fi, Bluetooth, Dados, Avião, Localização, NFC, Modo escuro e Economia abrem o ajuste do sistema. Com Shizuku: alternam direto. ⚠️
+- [ ] Toque longo num controle abre o ajuste dele.
+- [ ] Lápis: o modo de edição balança os módulos; tocar num módulo mostra mover, tamanho, próxima página e remover; "Concluir" salva.
+- [ ] Predefinições (Liquid Flip, iOS, One UI) trocam a central só da tela em que você está.
+- [ ] A central da tela externa e a da interna são diferentes.
+- [ ] Deslizar para o lado chega à página de notificações; deslizar uma notificação dispensa; tocar abre o app.
+- [ ] Com uma música tocando, o módulo mostra capa, título, artista e os botões funcionam.
+
+### Profundidade
+
+- [ ] Wallpaper Studio > uma área > imagem da galeria com uma pessoa ou pet: "Recortando o objeto…" e depois "Objeto recortado". ⚠️ (o Google Play Services baixa o módulo na primeira vez)
+- [ ] No bloqueio interno o relógio grande fica atrás da pessoa; no Cover Clock também.
+- [ ] Com "Desfocar" acima de 5% o efeito some (aviso aparece no Studio).
+- [ ] "Papel de parede espacial": inclinar o aparelho move a imagem de leve; segurar parado volta ao centro.
 
 ## 8. Vidro e desempenho
 
@@ -166,3 +175,19 @@ Teste pelo menos: WhatsApp, YouTube, Spotify, Google Maps, Chrome, Câmera, um a
 - [ ] Reiniciar o aparelho: notificações e acessibilidade reconectam sozinhos.
 - [ ] Atualizar o APK por cima mantém a tela inicial e as configurações.
 - [ ] Modo avião: o widget de clima mostra o último valor ou a mensagem de erro, sem travar.
+
+## 13. L.I.L.Y Keyboard
+
+- [ ] Instalar o `lily-keyboard-….apk`; abrir o app; os dois passos de ativação ficam com ✓.
+- [ ] Digitar no WhatsApp: a primeira letra sai maiúscula, "nao " vira "não ", apagar logo depois desfaz.
+- [ ] "vc" fica "vc" no estilo Natural (com "você" sugerido) e vira "você" no Formal.
+- [ ] Deslizar o dedo por "obrigado", "trabalho", "amanhã": a palavra certa aparece.
+- [ ] Arrastar o espaço move o cursor; arrastar o apagar para a esquerda apaga palavras.
+- [ ] Toque longo no "a" mostra á ã â à; no "q" mostra o 1.
+- [ ] Campo de senha: nada sublinhado, sem sugestões.
+- [ ] Copiar um texto e abrir o painel da área de transferência: o texto aparece; um código de 6 dígitos não.
+- [ ] Emojis: busca "coração", favoritos com toque longo.
+- [ ] Voz: pede o microfone na primeira vez; com o idioma baixado, funciona sem internet. ⚠️
+- [ ] Modo de uma mão, temas e fundo da galeria no Keyboard Studio.
+- [ ] Na tela externa (app aberto na tela de fora), o teclado fica compacto. ⚠️
+- [ ] Latência: digitar rápido com dois polegares não perde letras.

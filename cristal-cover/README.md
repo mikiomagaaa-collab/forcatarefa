@@ -1,7 +1,8 @@
 # Cristal Cover
 
-Launcher e tela de bloqueio em **vidro líquido** para a tela externa do Motorola Razr 40 Ultra
-(Android 16), com fallback para a tela interna. Kotlin + Jetpack Compose, um único APK.
+Launcher e tela de bloqueio em **vidro líquido** para o Motorola Razr 40 Ultra (Android 16), na tela
+externa e na interna, e o **L.I.L.Y Keyboard**, um teclado completo (app separado, pasta `keyboard/`).
+Kotlin + Jetpack Compose.
 
 > **Este projeto é independente do site que divide o repositório com ele.** Tudo o que é do app está
 > dentro de `cristal-cover/`; o workflow `build.yml` só roda quando algo nessa pasta muda e não publica
@@ -22,14 +23,17 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 | Wallpaper Studio: 4 áreas independentes, enquadramento, filtros e "igual a outra área" | Feito |
 | Cover Clock: bloqueio minimalista da tela externa (4 estilos de relógio) | Feito |
 | Flip Transition: chegada com mola ao trocar de tela e recolhimento pela dobradiça | Primeira versão |
-| Widgets (9 embutidos + de outros apps), gaveta, painel rápido | Feito |
-| Liquid Control Center modular (módulos, páginas, editor, brilho) | Não iniciado |
+| Widgets (9 embutidos + de outros apps), gaveta | Feito |
+| Liquid Control Center: 31 tipos de módulo, 6 tamanhos, páginas, editor, predefinições Liquid Flip/iOS/One UI, centrais separadas por tela | Feito (1.3.0) |
+| Controles reais: brilho, rotação, Não perturbe, avião, localização, NFC, modo escuro, economia de bateria | Feito (API do Android, Shizuku ou ajuste do sistema) |
+| Depth Effect: objeto da foto recortado no aparelho (ML Kit) na frente do relógio, no bloqueio interno e no Cover Clock | Feito (1.3.0) |
+| Papel de parede espacial (move com a inclinação; presets com camadas de profundidade) | Feito (1.3.0) |
+| L.I.L.Y Keyboard (teclado, L.I.L.Y Correct, deslize, emojis, área de transferência, voz, Keyboard Studio) | Feito (1.0.0), sem IA |
 | Liquid Island (cápsula contextual) | Não iniciado |
-| Depth Effect (assunto da foto à frente do relógio) | Não iniciado |
 | Sistema de ícones por app, materiais de vidro por componente, temas salvos | Não iniciado |
-| L.I.L.Y AI (modelos locais) | Não iniciado: exige medições no aparelho real |
+| L.I.L.Y AI (modelos locais) e as ferramentas de escrita com IA do teclado | Adiado a pedido; exige medições no aparelho real |
 
-Sobre a L.I.L.Y: nenhum motor ou modelo foi incluído. O próprio requisito pede testes no Razr 40
+Sobre a L.I.L.Y AI: nenhum motor ou modelo foi incluído (o teclado funciona sem ela). O próprio requisito pede testes no Razr 40
 Ultra antes de integrar qualquer coisa, e este projeto nunca foi executado no aparelho durante o
 desenvolvimento. Incluir um runtime pesado sem medir memória, temperatura e latência seria chute.
 
@@ -38,15 +42,36 @@ desenvolvimento. Incluir um runtime pesado sem medir memória, temperatura e lat
 O que **foi verificado** durante o desenvolvimento:
 
 - compila do zero (debug e release com R8) com as versões estáveis atuais das ferramentas;
-- 43 testes automáticos em JVM passam: lógica da grade, detecção da tela externa, regras de
-  compatibilidade, segurança dos comandos de shell, backup, papéis de parede por área,
-  **compilação real do shader AGSL** e **14 telas montadas e desenhadas** pelo pipeline de hardware,
-  no tamanho da tela externa (422×426 dp) e da interna (411×1004 dp);
+- 78 testes automáticos em JVM passam. No launcher: lógica da grade, detecção da tela externa,
+  regras de compatibilidade, segurança dos comandos de shell, backup, papéis de parede por área,
+  encaixe e edição da Central de Controle, **compilação real do shader AGSL** e **16 telas montadas e
+  desenhadas** pelo pipeline de hardware (incluindo a central e o efeito de profundidade), no tamanho
+  da tela externa (422×426 dp) e da interna (411×1004 dp). No teclado: o corretor com o dicionário
+  real, a digitação por deslize com traços simulados, o controlador de texto num campo de mentira
+  (correção, desfazer, maiúsculas, pontuação, senha) e 6 telas desenhadas;
 - lint sem erros.
 
 O que **não foi verificado**: o app **nunca rodou em um Razr de verdade**. Tudo o que depende de
 comportamento não documentado da Motorola está marcado com ⚠️ no [checklist](docs/TESTES.md) e precisa
 ser confirmado no aparelho.
+
+## L.I.L.Y Keyboard (pasta `keyboard/`)
+
+App próprio (`app.lily.keyboard`), instalado e atualizado separado do launcher. Não tem permissão de
+internet. Ativa-se pelo mecanismo oficial (Configurações > Teclados); nada é trocado sem você.
+
+| Parte | Como funciona |
+| --- | --- |
+| Teclas | Um só Canvas com vidro desenhado (reflexo, borda clara, sombra), vários dedos ao mesmo tempo, prévia da tecla, toque longo com acentos e números |
+| Layouts | QWERTY PT-BR e inglês, símbolos (2 páginas), números e telefone, teclas de apoio em e-mail/endereço, fileira de números e Ç opcionais |
+| L.I.L.Y Correct | Dicionário de frequências (wordfreq, 90 mil palavras PT, 60 mil EN), distância entre teclas vizinhas, acentos esquecidos, contexto da palavra anterior ("não esta" → "não está"), estilos formal/natural/informal, dicionário pessoal; só troca quando é claro, e apagar logo depois desfaz |
+| Gestos | Digitação por deslize (decodificador próprio), cursor arrastando o espaço, apagar palavras deslizando o apagar |
+| Painéis | Emojis com busca em português, recentes e favoritos; área de transferência (1 hora, fixados, sem senhas e códigos); edição de texto; ditado por voz no aparelho |
+| Ergonomia | 3 tamanhos + altura fina, margens, subir o teclado, modo de uma mão (lado e largura), última fileira maior; compacto sozinho na tela externa |
+| Keyboard Studio | 11 temas (Liquid Glass, One UI, Minimalista, AMOLED, Clássico, Lavanda, Violeta, Prata, Aurora…), editor de cores, vidro, transparência, cantos, espaçamento, fundo da galeria, prévia antes de aplicar, exportar/importar |
+
+Não tem (de propósito): ferramentas de escrita com IA, botão da L.I.L.Y, gramática e concordância
+(dependem da L.I.L.Y AI), GIFs e tradução (exigem internet).
 
 ## Arquitetura
 
@@ -152,158 +177,194 @@ O APK sai em `app/build/outputs/apk/release/`. Requisitos: JDK 21 e Android SDK 
 
 ```
 cristal-cover/
+├── README.md
 ├── app/
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── aidl/
-│   │   │   │   └── app/
-│   │   │   │       └── cristal/
-│   │   │   │           └── cover/
-│   │   │   │               └── data/
-│   │   │   │                   └── shizuku/
-│   │   │   │                       └── IShellService.aidl
-│   │   │   ├── java/
-│   │   │   │   └── app/
-│   │   │   │       └── cristal/
-│   │   │   │           └── cover/
-│   │   │   │               ├── core/
-│   │   │   │               │   ├── AppModule.kt
-│   │   │   │               │   ├── Logx.kt
-│   │   │   │               │   └── Qualifiers.kt
-│   │   │   │               ├── data/
-│   │   │   │               │   ├── apps/
-│   │   │   │               │   │   ├── AppInfo.kt
-│   │   │   │               │   │   ├── AppRepository.kt
-│   │   │   │               │   │   ├── IconPackManager.kt
-│   │   │   │               │   │   └── IconRenderer.kt
-│   │   │   │               │   ├── backup/
-│   │   │   │               │   │   └── BackupManager.kt
-│   │   │   │               │   ├── battery/
-│   │   │   │               │   │   └── BatteryRepository.kt
-│   │   │   │               │   ├── calendar/
-│   │   │   │               │   │   └── CalendarRepository.kt
-│   │   │   │               │   ├── db/
-│   │   │   │               │   │   ├── CristalDatabase.kt
-│   │   │   │               │   │   ├── Daos.kt
-│   │   │   │               │   │   └── Entities.kt
-│   │   │   │               │   ├── display/
-│   │   │   │               │   │   └── CoverDisplayRepository.kt
-│   │   │   │               │   ├── home/
-│   │   │   │               │   │   ├── GridMath.kt
-│   │   │   │               │   │   ├── HomeMaintenance.kt
-│   │   │   │               │   │   ├── HomeModels.kt
-│   │   │   │               │   │   └── HomeRepository.kt
-│   │   │   │               │   ├── launch/
-│   │   │   │               │   │   ├── AppLauncher.kt
-│   │   │   │               │   │   └── CompatAdvisor.kt
-│   │   │   │               │   ├── media/
-│   │   │   │               │   │   └── MediaRepository.kt
-│   │   │   │               │   ├── notifications/
-│   │   │   │               │   │   └── NotificationRepository.kt
-│   │   │   │               │   ├── prefs/
-│   │   │   │               │   │   ├── Settings.kt
-│   │   │   │               │   │   └── SettingsRepository.kt
-│   │   │   │               │   ├── shizuku/
-│   │   │   │               │   │   ├── ShellService.kt
-│   │   │   │               │   │   └── ShizukuManager.kt
-│   │   │   │               │   ├── system/
-│   │   │   │               │   │   ├── PermissionCenter.kt
-│   │   │   │               │   │   ├── QuickSettingsRepository.kt
-│   │   │   │               │   │   └── SystemBridge.kt
-│   │   │   │               │   ├── wallpaper/
-│   │   │   │               │   │   └── WallpaperRepository.kt
-│   │   │   │               │   └── weather/
-│   │   │   │               │       └── WeatherRepository.kt
-│   │   │   │               ├── service/
-│   │   │   │               │   ├── BootReceiver.kt
-│   │   │   │               │   ├── CristalAccessibilityService.kt
-│   │   │   │               │   ├── CristalNotificationListener.kt
-│   │   │   │               │   ├── LockController.kt
-│   │   │   │               │   └── LockOverlay.kt
-│   │   │   │               ├── ui/
-│   │   │   │               │   ├── components/
-│   │   │   │               │   │   ├── AppIcon.kt
-│   │   │   │               │   │   ├── Common.kt
-│   │   │   │               │   │   └── Wallpaper.kt
-│   │   │   │               │   ├── glass/
-│   │   │   │               │   │   ├── GlassBackdrop.kt
-│   │   │   │               │   │   ├── GlassLight.kt
-│   │   │   │               │   │   ├── GlassShaders.kt
-│   │   │   │               │   │   ├── GlassSurface.kt
-│   │   │   │               │   │   ├── GlassTouch.kt
-│   │   │   │               │   │   ├── LiquidGlass.kt
-│   │   │   │               │   │   └── Motion.kt
-│   │   │   │               │   ├── launcher/
-│   │   │   │               │   │   ├── AppDrawer.kt
-│   │   │   │               │   │   ├── HomePager.kt
-│   │   │   │               │   │   ├── LauncherActivity.kt
-│   │   │   │               │   │   ├── LauncherRoot.kt
-│   │   │   │               │   │   ├── LauncherScreen.kt
-│   │   │   │               │   │   ├── LauncherState.kt
-│   │   │   │               │   │   ├── LauncherViewModel.kt
-│   │   │   │               │   │   ├── Overlays.kt
-│   │   │   │               │   │   ├── PerformanceGovernor.kt
-│   │   │   │               │   │   ├── QuickPanel.kt
-│   │   │   │               │   │   └── TodayPanel.kt
-│   │   │   │               │   ├── lock/
-│   │   │   │               │   │   ├── LockActivity.kt
-│   │   │   │               │   │   ├── LockOverlayContent.kt
-│   │   │   │               │   │   ├── LockPresenter.kt
-│   │   │   │               │   │   └── LockScreen.kt
-│   │   │   │               │   ├── onboarding/
-│   │   │   │               │   │   └── OnboardingScreen.kt
-│   │   │   │               │   ├── settings/
-│   │   │   │               │   │   ├── SettingsActivity.kt
-│   │   │   │               │   │   ├── SettingsComponents.kt
-│   │   │   │               │   │   ├── SettingsScreens.kt
-│   │   │   │               │   │   └── SettingsViewModel.kt
-│   │   │   │               │   ├── theme/
-│   │   │   │               │   │   └── Theme.kt
-│   │   │   │               │   └── widgets/
-│   │   │   │               │       └── Widgets.kt
-│   │   │   │               └── CristalApp.kt
-│   │   │   ├── res/
-│   │   │   │   ├── drawable/
-│   │   │   │   │   ├── ic_launcher_background.xml
-│   │   │   │   │   ├── ic_launcher_foreground.xml
-│   │   │   │   │   └── ic_launcher_monochrome.xml
-│   │   │   │   ├── mipmap-anydpi-v26/
-│   │   │   │   │   └── ic_launcher.xml
-│   │   │   │   ├── values/
-│   │   │   │   │   ├── strings.xml
-│   │   │   │   │   └── themes.xml
-│   │   │   │   └── xml/
-│   │   │   │       ├── accessibility_service.xml
-│   │   │   │       └── data_extraction_rules.xml
-│   │   │   └── AndroidManifest.xml
-│   │   └── test/
-│   │       └── java/
-│   │           └── app/
-│   │               └── cristal/
-│   │                   └── cover/
-│   │                       ├── CoverLogicTest.kt
-│   │                       ├── GlassShaderTest.kt
-│   │                       ├── GridMathTest.kt
-│   │                       └── ScreensSmokeTest.kt
 │   ├── build.gradle.kts
-│   └── proguard-rules.pro
+│   ├── proguard-rules.pro
+│   └── src/
+│       ├── main/
+│       │   ├── AndroidManifest.xml
+│       │   ├── aidl/app/cristal/cover/data/shizuku/
+│       │   │   └── IShellService.aidl
+│       │   ├── java/app/cristal/cover/
+│       │   │   ├── CristalApp.kt
+│       │   │   ├── core/
+│       │   │   │   ├── AppModule.kt
+│       │   │   │   ├── Logx.kt
+│       │   │   │   └── Qualifiers.kt
+│       │   │   ├── data/
+│       │   │   │   ├── apps/
+│       │   │   │   │   ├── AppInfo.kt
+│       │   │   │   │   ├── AppRepository.kt
+│       │   │   │   │   ├── IconPackManager.kt
+│       │   │   │   │   └── IconRenderer.kt
+│       │   │   │   ├── backup/
+│       │   │   │   │   └── BackupManager.kt
+│       │   │   │   ├── battery/
+│       │   │   │   │   └── BatteryRepository.kt
+│       │   │   │   ├── calendar/
+│       │   │   │   │   └── CalendarRepository.kt
+│       │   │   │   ├── control/
+│       │   │   │   │   ├── ControlCenterRepository.kt
+│       │   │   │   │   └── ControlModels.kt
+│       │   │   │   ├── db/
+│       │   │   │   │   ├── CristalDatabase.kt
+│       │   │   │   │   ├── Daos.kt
+│       │   │   │   │   └── Entities.kt
+│       │   │   │   ├── display/
+│       │   │   │   │   └── CoverDisplayRepository.kt
+│       │   │   │   ├── home/
+│       │   │   │   │   ├── GridMath.kt
+│       │   │   │   │   ├── HomeMaintenance.kt
+│       │   │   │   │   ├── HomeModels.kt
+│       │   │   │   │   └── HomeRepository.kt
+│       │   │   │   ├── launch/
+│       │   │   │   │   ├── AppLauncher.kt
+│       │   │   │   │   └── CompatAdvisor.kt
+│       │   │   │   ├── media/
+│       │   │   │   │   └── MediaRepository.kt
+│       │   │   │   ├── notifications/
+│       │   │   │   │   └── NotificationRepository.kt
+│       │   │   │   ├── prefs/
+│       │   │   │   │   ├── Settings.kt
+│       │   │   │   │   ├── SettingsRepository.kt
+│       │   │   │   │   └── Wallpapers.kt
+│       │   │   │   ├── shizuku/
+│       │   │   │   │   ├── ShellService.kt
+│       │   │   │   │   └── ShizukuManager.kt
+│       │   │   │   ├── system/
+│       │   │   │   │   ├── PermissionCenter.kt
+│       │   │   │   │   ├── QuickSettingsRepository.kt
+│       │   │   │   │   └── SystemBridge.kt
+│       │   │   │   ├── wallpaper/
+│       │   │   │   │   ├── SubjectDetector.kt
+│       │   │   │   │   └── WallpaperRepository.kt
+│       │   │   │   ├── weather/
+│       │   │   │   │   └── WeatherRepository.kt
+│       │   │   │   └── widgets/
+│       │   │   │       └── WidgetHostManager.kt
+│       │   │   ├── service/
+│       │   │   │   ├── BootReceiver.kt
+│       │   │   │   ├── CoverTileService.kt
+│       │   │   │   ├── CristalAccessibilityService.kt
+│       │   │   │   ├── CristalNotificationListener.kt
+│       │   │   │   ├── LockController.kt
+│       │   │   │   └── LockOverlay.kt
+│       │   │   └── ui/
+│       │   │       ├── components/
+│       │   │       │   ├── AppIcon.kt
+│       │   │       │   ├── Common.kt
+│       │   │       │   └── Wallpaper.kt
+│       │   │       ├── glass/
+│       │   │       │   ├── GlassBackdrop.kt
+│       │   │       │   ├── GlassLight.kt
+│       │   │       │   ├── GlassShaders.kt
+│       │   │       │   ├── GlassSurface.kt
+│       │   │       │   ├── GlassTouch.kt
+│       │   │       │   ├── LiquidGlass.kt
+│       │   │       │   └── Motion.kt
+│       │   │       ├── launcher/
+│       │   │       │   ├── AppDrawer.kt
+│       │   │       │   ├── AppPicker.kt
+│       │   │       │   ├── ControlCenter.kt
+│       │   │       │   ├── HomePager.kt
+│       │   │       │   ├── LauncherActivity.kt
+│       │   │       │   ├── LauncherRoot.kt
+│       │   │       │   ├── LauncherScreen.kt
+│       │   │       │   ├── LauncherState.kt
+│       │   │       │   ├── LauncherViewModel.kt
+│       │   │       │   ├── Overlays.kt
+│       │   │       │   ├── PerformanceGovernor.kt
+│       │   │       │   ├── QuickPanel.kt
+│       │   │       │   └── TodayPanel.kt
+│       │   │       ├── lock/
+│       │   │       │   ├── CoverLockScreen.kt
+│       │   │       │   ├── LockActivity.kt
+│       │   │       │   ├── LockOverlayContent.kt
+│       │   │       │   ├── LockPresenter.kt
+│       │   │       │   └── LockScreen.kt
+│       │   │       ├── onboarding/
+│       │   │       │   └── OnboardingScreen.kt
+│       │   │       ├── settings/
+│       │   │       │   ├── SettingsActivity.kt
+│       │   │       │   ├── SettingsComponents.kt
+│       │   │       │   ├── SettingsScreens.kt
+│       │   │       │   ├── SettingsViewModel.kt
+│       │   │       │   └── WallpaperStudio.kt
+│       │   │       ├── theme/
+│       │   │       │   └── Theme.kt
+│       │   │       └── widgets/
+│       │   │           ├── AppWidgetCell.kt
+│       │   │           ├── MoreWidgets.kt
+│       │   │           └── Widgets.kt
+│       │   └── res/
+│       └── test/java/app/cristal/cover/
+│           ├── ControlCenterTest.kt
+│           ├── CoverLogicTest.kt
+│           ├── GlassShaderTest.kt
+│           ├── GridMathTest.kt
+│           └── ScreensSmokeTest.kt
+├── build.gradle.kts
 ├── ci/
 │   └── build.yml
 ├── docs/
 │   ├── GUIA.md
 │   └── TESTES.md
 ├── gradle/
-│   ├── wrapper/
-│   │   ├── gradle-wrapper.jar
-│   │   └── gradle-wrapper.properties
 │   └── libs.versions.toml
-├── keystore/
-│   └── cristal-ci.jks
-├── .gitignore
-├── build.gradle.kts
 ├── gradle.properties
 ├── gradlew
 ├── gradlew.bat
+├── keyboard/
+│   ├── build.gradle.kts
+│   ├── proguard-rules.pro
+│   └── src/
+│       ├── main/
+│       │   ├── AndroidManifest.xml
+│       │   ├── assets/
+│       │   │   ├── emoji.tsv
+│       │   │   ├── en.dict
+│       │   │   └── pt_br.dict
+│       │   ├── java/app/lily/keyboard/
+│       │   │   ├── LilyApp.kt
+│       │   │   ├── clipboard/
+│       │   │   │   └── ClipboardHistory.kt
+│       │   │   ├── core/
+│       │   │   │   ├── KeyLayouts.kt
+│       │   │   │   ├── KeyboardSettings.kt
+│       │   │   │   └── KeyboardStore.kt
+│       │   │   ├── emoji/
+│       │   │   │   └── EmojiData.kt
+│       │   │   ├── engine/
+│       │   │   │   ├── Corrector.kt
+│       │   │   │   ├── Dictionary.kt
+│       │   │   │   ├── GestureDecoder.kt
+│       │   │   │   ├── InputController.kt
+│       │   │   │   ├── LanguageModels.kt
+│       │   │   │   ├── TextTools.kt
+│       │   │   │   └── UserDictionary.kt
+│       │   │   ├── ime/
+│       │   │   │   └── LilyInputMethodService.kt
+│       │   │   ├── studio/
+│       │   │   │   ├── PreviewKeyboard.kt
+│       │   │   │   ├── StudioActivity.kt
+│       │   │   │   ├── StudioComponents.kt
+│       │   │   │   └── VoicePermissionActivity.kt
+│       │   │   ├── ui/
+│       │   │   │   ├── Feedback.kt
+│       │   │   │   ├── KeyGeometry.kt
+│       │   │   │   ├── KeyboardRoot.kt
+│       │   │   │   ├── KeysPad.kt
+│       │   │   │   └── Panels.kt
+│       │   │   └── voice/
+│       │   │       └── VoiceInput.kt
+│       │   └── res/
+│       └── test/java/app/lily/keyboard/
+│           ├── EngineTest.kt
+│           ├── InputControllerTest.kt
+│           └── KeyboardScreensTest.kt
+├── keystore/
+│   └── cristal-ci.jks
 └── settings.gradle.kts
 ```
 

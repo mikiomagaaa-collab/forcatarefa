@@ -77,10 +77,12 @@ jobs:
       - name: Nomear os arquivos
         id: info
         run: |
-          versao="1.2.0-${GITHUB_RUN_NUMBER}"
+          versao="1.3.0-${GITHUB_RUN_NUMBER}"
           mkdir -p saida
           cp app/build/outputs/apk/release/app-release.apk "saida/cristal-cover-${versao}.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "saida/cristal-cover-${versao}-debug.apk"
+          cp keyboard/build/outputs/apk/release/keyboard-release.apk "saida/lily-keyboard-${versao}.apk"
+          cp keyboard/build/outputs/apk/debug/keyboard-debug.apk "saida/lily-keyboard-${versao}-debug.apk"
           ls -la saida
           echo "versao=${versao}" >> "$GITHUB_OUTPUT"
           {
@@ -88,6 +90,8 @@ jobs:
             echo ""
             echo "Baixe o artefato **cristal-cover-apk** no fim desta página, extraia o .zip e instale o arquivo"
             echo "\`cristal-cover-${versao}.apk\` (é a versão otimizada; a \`-debug\` é só para diagnóstico)."
+            echo ""
+            echo "O teclado é um app separado: artefato **lily-keyboard-apk**, arquivo \`lily-keyboard-${versao}.apk\`."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publicar o APK como artefato
@@ -106,6 +110,14 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Publicar o APK do teclado
+        uses: actions/upload-artifact@v4
+        with:
+          name: lily-keyboard-apk
+          path: saida/lily-keyboard-${{ steps.info.outputs.versao }}*.apk
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Lint (informativo)
         if: always()
         continue-on-error: true
@@ -117,7 +129,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cristal-cover-lint
-          path: app/build/reports/lint-results-debug.html
+          path: |
+            app/build/reports/lint-results-debug.html
+            keyboard/build/reports/lint-results-debug.html
           if-no-files-found: ignore
           retention-days: 14
 
@@ -136,6 +150,12 @@ jobs:
           name: cristal-cover-apk
           path: apk
 
+      - name: Baixar o APK do teclado
+        uses: actions/download-artifact@v4
+        with:
+          name: lily-keyboard-apk
+          path: apk
+
       - name: Criar a Release
         uses: softprops/action-gh-release@v2
         with:
@@ -143,9 +163,12 @@ jobs:
           name: Cristal Cover ${{ needs.build.outputs.versao }}
           target_commitish: ${{ github.sha }}
           body: |
-            APK do Cristal Cover, launcher e tela de bloqueio em vidro líquido para a tela externa do Razr.
+            APK do Cristal Cover, launcher e tela de bloqueio em vidro líquido para a tela externa do Razr,
+            e do L.I.L.Y Keyboard, o teclado (app separado).
 
             Baixe o arquivo `.apk` abaixo no celular e toque nele para instalar.
             Guia completo: `docs/GUIA.md`.
-          files: apk/*.apk
+          files: |
+            apk/cristal-cover-*.apk
+            apk/lily-keyboard-*[0-9].apk
           fail_on_unmatched_files: true

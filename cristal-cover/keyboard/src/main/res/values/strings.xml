@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">L.I.L.Y Keyboard</string>
+    <string name="ime_name">L.I.L.Y Keyboard</string>
+    <string name="subtype_pt">Português (Brasil)</string>
+    <string name="subtype_en">English (US)</string>
+</resources>
