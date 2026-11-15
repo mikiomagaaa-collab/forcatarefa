@@ -3,6 +3,8 @@ package app.cristal.cover.data.wallpaper
 import android.content.Context
 import android.graphics.Bitmap
 import app.cristal.cover.core.Logx
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.moduleinstall.InstallStatusListener
 import com.google.android.gms.common.moduleinstall.ModuleInstall
 import com.google.android.gms.common.moduleinstall.ModuleInstallRequest
@@ -35,21 +37,27 @@ sealed interface SubjectResult {
 class SubjectDetector(private val context: Context) {
 
     suspend fun detect(bitmap: Bitmap): SubjectResult {
+        val play = runCatching { GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context) }.getOrNull()
+        if (play != null && play != ConnectionResult.SUCCESS && play != ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED) {
+            return SubjectResult.Unavailable("O Google Play Services não está disponível neste aparelho (código $play).")
+        }
         val segmenter: SubjectSegmenter = try {
             SubjectSegmentation.getClient(SubjectSegmenterOptions.Builder().enableForegroundBitmap().build())
         } catch (t: Throwable) {
             Logx.w("Segmentação de assunto indisponível", t)
-            return SubjectResult.Unavailable("O Google Play Services não está disponível.")
+            return SubjectResult.Unavailable("Não foi possível iniciar o recorte (${describe(t)}).")
         }
         try {
             if (!ensureModule(segmenter)) {
-                return SubjectResult.Unavailable("Não foi possível baixar o módulo de recorte do Google Play Services.")
+                return SubjectResult.Unavailable(
+                    "Não foi possível baixar o módulo de recorte do Google Play Services. Ligue a internet e toque em \"Recortar objeto\" de novo.",
+                )
             }
             val result = try {
                 segmenter.process(InputImage.fromBitmap(bitmap, 0)).await()
             } catch (t: Throwable) {
                 Logx.w("Falha ao recortar o objeto", t)
-                return SubjectResult.Unavailable("O recorte falhou neste aparelho.")
+                return SubjectResult.Unavailable("O recorte falhou (${describe(t)}). Tente de novo com internet ligada na primeira vez.")
             }
             val fg = result.foregroundBitmap ?: return SubjectResult.NoSubject
             return if (coverage(fg) < MIN_COVERAGE) SubjectResult.NoSubject else SubjectResult.Found(fg)
@@ -78,6 +86,12 @@ class SubjectDetector(private val context: Context) {
         val ok = withTimeoutOrNull(INSTALL_TIMEOUT_MS) { done.await() } ?: false
         runCatching { client.unregisterListener(listener) }
         return ok
+    }
+
+    /** Nome curto do erro, para o usuário poder relatar o que aconteceu. */
+    private fun describe(t: Throwable): String {
+        val root = generateSequence(t) { it.cause }.last()
+        return listOfNotNull(root.javaClass.simpleName, root.message?.take(120)).joinToString(": ")
     }
 
     /** Fração dos pixels que pertencem ao objeto, medida numa grade esparsa. */

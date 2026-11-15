@@ -25,3 +25,15 @@
 # Mantém nomes de linhas nos stack traces para facilitar relatos de erro.
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# ML Kit (recorte do objeto para o efeito de profundidade). O ML Kit cria os "registrars" por
+# reflexão a partir do manifesto; no modo completo do R8 o construtor vazio deles era removido e
+# a segmentação não iniciava ("Google Play Services não está disponível" no aparelho).
+-keep class * implements com.google.firebase.components.ComponentRegistrar { <init>(); }
+-keep class com.google.firebase.components.** { *; }
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.android.gms.internal.mlkit_vision_subject_segmentation.** { *; }
+-keep class com.google.android.gms.internal.mlkit_vision_common.** { *; }
+-keep class com.google.android.gms.internal.mlkit_common.** { *; }
+-keep class com.google.android.datatransport.** { *; }
+-dontwarn com.google.mlkit.**
