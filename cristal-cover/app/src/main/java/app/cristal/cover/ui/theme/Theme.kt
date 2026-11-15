@@ -9,7 +9,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import app.cristal.cover.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.em
 import app.cristal.cover.data.prefs.GlassQuality
@@ -27,14 +29,24 @@ val LocalIsDark = staticCompositionLocalOf { true }
 val LocalHapticsEnabled = staticCompositionLocalOf { true }
 
 /**
- * Tipografia inspirada no Liquid Glass da Apple, usando a fonte do sistema (a San Francisco é
- * exclusiva da Apple e não pode ser distribuída):
+ * Fonte da interface: Inter (licença OFL), a mais próxima da San Francisco do iPhone que pode ser
+ * distribuída. Vem no APK só com os caracteres latinos.
+ */
+val UiFont = FontFamily(
+    Font(R.font.ui_inter_regular, FontWeight.Normal),
+    Font(R.font.ui_inter_medium, FontWeight.Medium),
+    Font(R.font.ui_inter_semibold, FontWeight.SemiBold),
+    Font(R.font.ui_inter_bold, FontWeight.Bold),
+)
+
+/**
+ * Tipografia inspirada no Liquid Glass da Apple, com a Inter:
  * - títulos e números em pesos firmes (semibold/bold), que continuam legíveis sobre vidro;
  * - espaçamento entre letras apertado nos tamanhos grandes e neutro nos pequenos, como na SF;
  * - nada de pesos finos, que somem sobre fundos coloridos.
  */
 private fun TextStyle.glass(weight: FontWeight, tracking: Float): TextStyle =
-    copy(fontFamily = FontFamily.SansSerif, fontWeight = weight, letterSpacing = tracking.em)
+    copy(fontFamily = UiFont, fontWeight = weight, letterSpacing = tracking.em)
 
 private val CristalTypography = Typography().let { base ->
     base.copy(
@@ -61,7 +73,7 @@ private val CristalTypography = Typography().let { base ->
  * dígito, para a hora não "dançar" quando os minutos mudam.
  */
 val ClockTextStyle = TextStyle(
-    fontFamily = FontFamily.SansSerif,
+    fontFamily = UiFont,
     fontWeight = FontWeight.SemiBold,
     fontFeatureSettings = "tnum",
     letterSpacing = (-0.04).em,

@@ -1,5 +1,6 @@
 package app.cristal.cover.ui.settings
 
+import androidx.compose.material.icons.rounded.Lens
 import app.cristal.cover.data.prefs.LockPlacement
 import app.cristal.cover.data.prefs.LockWidget
 import app.cristal.cover.data.prefs.ClockLayout
@@ -94,6 +95,7 @@ enum class SettingsPage(val title: String) {
     HOME("Tela inicial e ícones"),
     GESTURES("Gestos"),
     LOCK("Tela de bloqueio"),
+    ISLAND("Liquid Island"),
     COVER("Tela externa"),
     WEATHER("Clima"),
     PERMISSIONS("Permissões"),
@@ -134,6 +136,7 @@ fun SettingsRoot(viewModel: SettingsViewModel, initialPage: SettingsPage, onExit
         SettingsPage.GESTURES -> GesturesPage(viewModel, settings, wallpaper, permissions, back)
         SettingsPage.LOCK -> LockPage(viewModel, settings, wallpaper, permissions, back) { page = SettingsPage.PERMISSIONS }
         SettingsPage.COVER -> CoverPage(viewModel, settings, wallpaper, permissions, cover, back)
+        SettingsPage.ISLAND -> IslandPage(viewModel, settings, wallpaper, permissions, back) { page = SettingsPage.PERMISSIONS }
         SettingsPage.WEATHER -> WeatherPage(viewModel, settings, wallpaper, permissions, back)
         SettingsPage.PERMISSIONS -> PermissionsPage(viewModel, settings, wallpaper, permissions, back, onExit)
         SettingsPage.BACKUP -> BackupPage(viewModel, settings, wallpaper, back)
@@ -174,6 +177,7 @@ private fun MainPage(
             SettingsCard("Comportamento") {
                 NavRow(Icons.Rounded.TouchApp, "Gestos", "O que cada gesto faz") { open(SettingsPage.GESTURES) }
                 NavRow(Icons.Rounded.Lock, "Tela de bloqueio", "Relógio, notificações e atalhos sobre o bloqueio do sistema") { open(SettingsPage.LOCK) }
+                NavRow(Icons.Rounded.Lens, "Liquid Island", "Ilha dinâmica em volta da câmera: música, chamadas e avisos") { open(SettingsPage.ISLAND) }
                 NavRow(Icons.Rounded.Smartphone, "Tela externa", "Assumir a tela externa, liberar apps e compatibilidade") { open(SettingsPage.COVER) }
                 NavRow(Icons.Rounded.WbSunny, "Clima", "Cidade e unidade de temperatura") { open(SettingsPage.WEATHER) }
             }
@@ -1077,6 +1081,61 @@ private fun ControlCenterCard(permissions: PermissionState) {
         )
         if (permissions.shizuku != app.cristal.cover.data.shizuku.ShizukuStatus.READY) {
             InfoText("Shizuku desligado: os botões de rádio abrem o ajuste do sistema em vez de ligar direto.")
+        }
+    }
+}
+
+@Composable
+private fun IslandPage(
+    vm: SettingsViewModel,
+    settings: Settings,
+    wallpaper: ImageBitmap?,
+    permissions: PermissionState,
+    onBack: () -> Unit,
+    openPermissions: () -> Unit,
+) {
+    SettingsScaffold(SettingsPage.ISLAND.title, settings, wallpaper, onBack) {
+        item {
+            SettingsCard {
+                InfoText(
+                    "Uma cápsula preta em volta da câmera da tela interna, por cima de qualquer app, como a Dynamic Island do " +
+                        "iPhone. Mostra a música (capa e ondinha), chamadas e timers em andamento, o carregamento, o modo " +
+                        "silencioso e as notificações que chegam. Toque para abrir; segure ou puxe para baixo para expandir a " +
+                        "música; deslize para cima para recolher.",
+                )
+                SwitchRow(
+                    title = "Ativar a Liquid Island",
+                    checked = settings.islandEnabled,
+                    onChange = { vm.set(PrefKeys.ISLAND_ENABLED, it) },
+                    subtitle = if (permissions.accessibility) null else "Precisa do serviço de acessibilidade do Cristal ligado.",
+                )
+                if (!permissions.accessibility) {
+                    GlassButton("Ligar a acessibilidade", Modifier.fillMaxWidth().padding(top = 4.dp), primary = true, onClick = openPermissions)
+                }
+                SwitchRow(
+                    title = "Mostrar sempre",
+                    checked = settings.islandAlwaysVisible,
+                    onChange = { vm.set(PrefKeys.ISLAND_ALWAYS, it) },
+                    subtitle = "A cápsula fica visível mesmo sem nada acontecendo.",
+                )
+                GlassButton("Ver demonstração", Modifier.fillMaxWidth().padding(top = 6.dp)) { vm.islandDemo() }
+            }
+        }
+        item {
+            SettingsCard("O que aparece") {
+                SwitchRow(title = "Música", checked = settings.islandMedia, onChange = { vm.set(PrefKeys.ISLAND_MEDIA, it) })
+                SwitchRow(title = "Notificações que chegam", checked = settings.islandAlerts, onChange = { vm.set(PrefKeys.ISLAND_ALERTS, it) })
+                SwitchRow(title = "Chamadas e timers", checked = settings.islandCalls, onChange = { vm.set(PrefKeys.ISLAND_CALLS, it) })
+                SwitchRow(title = "Carregando", checked = settings.islandCharging, onChange = { vm.set(PrefKeys.ISLAND_CHARGING, it) })
+                SwitchRow(title = "Som e silencioso", checked = settings.islandRinger, onChange = { vm.set(PrefKeys.ISLAND_RINGER, it) })
+                InfoText("Música e notificações precisam do acesso às notificações. Com o aparelho bloqueado, as notificações mostram só o nome do app.")
+            }
+        }
+        item {
+            SettingsCard("Alinhamento") {
+                SliderRow("Altura", settings.islandOffsetY, -16f..24f, label = { "${it.roundToInt()} dp" }) { vm.set(PrefKeys.ISLAND_OFFSET_Y, it) }
+                InfoText("Use para centralizar a câmera dentro da cápsula, se precisar.")
+            }
         }
     }
 }

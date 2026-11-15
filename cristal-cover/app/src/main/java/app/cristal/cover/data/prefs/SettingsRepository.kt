@@ -89,6 +89,14 @@ object PrefKeys {
     val LOCK_MEDIA_POSITION = stringPreferencesKey("lock_media_position")
     val LOCK_WIDGETS = stringPreferencesKey("lock_widgets")
     val LOCK_WIDGETS_POSITION = stringPreferencesKey("lock_widgets_position")
+    val ISLAND_ENABLED = booleanPreferencesKey("island_enabled")
+    val ISLAND_ALWAYS = booleanPreferencesKey("island_always")
+    val ISLAND_MEDIA = booleanPreferencesKey("island_media")
+    val ISLAND_ALERTS = booleanPreferencesKey("island_alerts")
+    val ISLAND_CHARGING = booleanPreferencesKey("island_charging")
+    val ISLAND_CALLS = booleanPreferencesKey("island_calls")
+    val ISLAND_RINGER = booleanPreferencesKey("island_ringer")
+    val ISLAND_OFFSET_Y = floatPreferencesKey("island_offset_y")
     val COVER_CLOCK_SCALE = floatPreferencesKey("cover_clock_scale")
     val COVER_CLOCK_POSITION = stringPreferencesKey("cover_clock_position")
     val COVER_LOCK_MAX_NOTIFICATIONS = intPreferencesKey("cover_lock_max_notifications")
@@ -177,6 +185,14 @@ internal fun Preferences.toSettings(): Settings {
         lockWidgets = this[PrefKeys.LOCK_WIDGETS]?.split(',')?.mapNotNull { n -> LockWidget.entries.firstOrNull { it.name == n } }?.distinct()
             ?: d.lockWidgets,
         lockWidgetsPosition = enumOr(PrefKeys.LOCK_WIDGETS_POSITION, d.lockWidgetsPosition),
+        islandEnabled = this[PrefKeys.ISLAND_ENABLED] ?: d.islandEnabled,
+        islandAlwaysVisible = this[PrefKeys.ISLAND_ALWAYS] ?: d.islandAlwaysVisible,
+        islandMedia = this[PrefKeys.ISLAND_MEDIA] ?: d.islandMedia,
+        islandAlerts = this[PrefKeys.ISLAND_ALERTS] ?: d.islandAlerts,
+        islandCharging = this[PrefKeys.ISLAND_CHARGING] ?: d.islandCharging,
+        islandCalls = this[PrefKeys.ISLAND_CALLS] ?: d.islandCalls,
+        islandRinger = this[PrefKeys.ISLAND_RINGER] ?: d.islandRinger,
+        islandOffsetY = (this[PrefKeys.ISLAND_OFFSET_Y] ?: d.islandOffsetY).coerceIn(-16f, 24f),
         coverClockScale = (this[PrefKeys.COVER_CLOCK_SCALE] ?: d.coverClockScale).coerceIn(0.6f, 1.8f),
         coverClockPosition = enumOr(PrefKeys.COVER_CLOCK_POSITION, d.coverClockPosition),
         coverLockMaxNotifications = (this[PrefKeys.COVER_LOCK_MAX_NOTIFICATIONS] ?: d.coverLockMaxNotifications).coerceIn(0, 4),

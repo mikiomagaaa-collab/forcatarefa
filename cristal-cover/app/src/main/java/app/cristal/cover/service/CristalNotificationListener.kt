@@ -158,6 +158,10 @@ class CristalNotificationListener : NotificationListenerService() {
             contentIntent = n.contentIntent,
             appIcon = appRepository.apps.value.firstOrNull { it.packageName == sbn.packageName }?.icon,
             largeIcon = largeIconOf(n),
+            category = n.category,
+            ongoing = n.flags and Notification.FLAG_ONGOING_EVENT != 0,
+            chronometerBase = if (extras?.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER) == true && n.`when` > 0) n.`when` else null,
+            countDown = extras?.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN) == true,
         )
     }
 

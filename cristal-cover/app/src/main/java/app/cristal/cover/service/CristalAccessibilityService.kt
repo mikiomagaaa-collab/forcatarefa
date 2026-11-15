@@ -17,7 +17,12 @@ import app.cristal.cover.core.Logx
 import app.cristal.cover.core.safely
 import app.cristal.cover.data.display.CoverDisplayRepository
 import app.cristal.cover.data.display.CoverState
+import app.cristal.cover.data.island.IslandRepository
 import app.cristal.cover.data.launch.AppLauncher
+import app.cristal.cover.data.media.MediaRepository
+import app.cristal.cover.data.notifications.NotificationRepository
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import app.cristal.cover.data.prefs.SettingsRepository
 import app.cristal.cover.data.system.SystemBridge
 import app.cristal.cover.ui.launcher.LauncherActivity
@@ -48,6 +53,11 @@ class CristalAccessibilityService : AccessibilityService() {
     @Inject lateinit var displayRepository: CoverDisplayRepository
     @Inject lateinit var lockController: LockController
     @Inject lateinit var appLauncher: AppLauncher
+    @Inject lateinit var islandRepository: IslandRepository
+    @Inject lateinit var mediaRepository: MediaRepository
+    @Inject lateinit var notificationRepository: NotificationRepository
+
+    private var island: IslandOverlay? = null
 
     private var scope: CoroutineScope? = null
     private var receiverRegistered = false
@@ -85,6 +95,14 @@ class CristalAccessibilityService : AccessibilityService() {
                 onFoldChanged(state)
             }
         }
+        // Liquid Island: liga e desliga conforme a configuração.
+        val overlay = island ?: IslandOverlay(this, islandRepository, settingsRepository, mediaRepository, notificationRepository)
+            .also { island = it }
+        newScope.launch {
+            settingsRepository.settings.map { it.islandEnabled }.distinctUntilChanged().collect { enabled ->
+                if (enabled) overlay.show() else overlay.hide()
+            }
+        }
 
         if (!receiverRegistered) {
             val filter = IntentFilter().apply {
@@ -120,6 +138,7 @@ class CristalAccessibilityService : AccessibilityService() {
     }
 
     private fun cleanup() {
+        island?.hide()
         lockController.detachHost()
         bridge.detach()
         scope?.cancel()

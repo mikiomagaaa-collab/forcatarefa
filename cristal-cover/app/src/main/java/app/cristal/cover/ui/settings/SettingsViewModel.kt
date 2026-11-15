@@ -1,5 +1,8 @@
 package app.cristal.cover.ui.settings
 
+import app.cristal.cover.data.island.IslandActivity
+import app.cristal.cover.data.island.IslandRepository
+import app.cristal.cover.data.notifications.NotificationItem
 import android.net.Uri
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.datastore.preferences.core.Preferences
@@ -59,12 +62,34 @@ class SettingsViewModel @Inject constructor(
     private val backupManager: BackupManager,
     private val appPrefDao: AppPrefDao,
     private val appLauncher: AppLauncher,
+    private val islandRepository: IslandRepository,
     appRepository: AppRepository,
     coverDisplayRepository: CoverDisplayRepository,
     @DefaultDispatcher private val default: CoroutineDispatcher,
 ) : ViewModel() {
 
     val settings: StateFlow<Settings> = settingsRepository.settings
+
+    /** Mostra a Liquid Island funcionando: carregando, depois uma notificação de exemplo. */
+    fun islandDemo() {
+        viewModelScope.launch {
+            islandRepository.flash(IslandActivity.Charging(76), 2_600)
+            kotlinx.coroutines.delay(3_000)
+            islandRepository.flash(
+                IslandActivity.Alert(
+                    NotificationItem(
+                        key = "demo", packageName = "app.cristal.cover", appLabel = "Cristal", title = "Liquid Island",
+                        text = "É assim que as notificações chegam. Toque para abrir, deslize para cima para fechar.",
+                        postTime = System.currentTimeMillis(), color = 0, isClearable = false, autoCancel = false,
+                        lockVisibility = android.app.Notification.VISIBILITY_PUBLIC, contentIntent = null, appIcon = null, largeIcon = null,
+                    ),
+                ),
+                4_200,
+            )
+            kotlinx.coroutines.delay(4_600)
+            islandRepository.flash(IslandActivity.Ringer(true), 2_000)
+        }
+    }
     val permissions: StateFlow<PermissionState> = permissionCenter.state
     val cover: StateFlow<CoverState> = coverDisplayRepository.state
     val wallpapers: StateFlow<WallpaperImages> = wallpaperRepository.images

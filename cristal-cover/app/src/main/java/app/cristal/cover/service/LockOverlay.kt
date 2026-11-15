@@ -96,7 +96,7 @@ internal class LockOverlay(
 }
 
 /** Dono de ciclo de vida mínimo para o Compose funcionar fora de uma Activity. */
-private class OverlayOwner : LifecycleOwner, SavedStateRegistryOwner, ViewModelStoreOwner {
+internal class OverlayOwner : LifecycleOwner, SavedStateRegistryOwner, ViewModelStoreOwner {
     private val registry = LifecycleRegistry(this)
     private val controller = SavedStateRegistryController.create(this)
 

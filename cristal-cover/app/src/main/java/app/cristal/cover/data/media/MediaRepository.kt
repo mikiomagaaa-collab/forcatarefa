@@ -14,6 +14,7 @@ import android.os.Looper
 import android.view.Display
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.scale
 import app.cristal.cover.core.safely
@@ -33,7 +34,22 @@ data class MediaState(
     val isPlaying: Boolean,
     val canSkipNext: Boolean,
     val canSkipPrevious: Boolean,
-)
+    /** Posição e duração em ms (0 quando o player não informa), para a barra de progresso. */
+    val position: Long = 0L,
+    val duration: Long = 0L,
+    /** Quando a posição foi medida (SystemClock.elapsedRealtime) e a velocidade de reprodução. */
+    val positionAt: Long = 0L,
+    val speed: Float = 1f,
+    /** Cor predominante da capa (ARGB), para tingir a Liquid Island e o widget. */
+    val tint: Int? = null,
+) {
+    /** Posição estimada agora, contando o tempo desde a última medição. */
+    fun positionNow(nowElapsed: Long): Long {
+        if (duration <= 0L) return 0L
+        val delta = if (isPlaying && positionAt > 0L) ((nowElapsed - positionAt) * speed).toLong() else 0L
+        return (position + delta).coerceIn(0L, duration)
+    }
+}
 
 /**
  * Acompanha a sessão de mídia ativa (Spotify, YouTube Music etc.) usando o [MediaSessionManager].
@@ -126,14 +142,20 @@ class MediaRepository @Inject constructor(
             ?: ""
         if (title.isBlank() && artist.isBlank() && !isPlaying(playback)) return@safely null
         val actions = playback?.actions ?: 0L
+        val art = artOf(metadata)
         MediaState(
             packageName = controller.packageName.orEmpty(),
             title = title,
             artist = artist,
-            art = artOf(metadata),
+            art = art,
             isPlaying = isPlaying(playback),
             canSkipNext = actions and PlaybackState.ACTION_SKIP_TO_NEXT != 0L,
             canSkipPrevious = actions and PlaybackState.ACTION_SKIP_TO_PREVIOUS != 0L,
+            position = playback?.position?.coerceAtLeast(0L) ?: 0L,
+            duration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION)?.coerceAtLeast(0L) ?: 0L,
+            positionAt = playback?.lastPositionUpdateTime ?: 0L,
+            speed = playback?.playbackSpeed?.takeIf { it > 0f } ?: 1f,
+            tint = lastTint,
         )
     }
 
@@ -144,6 +166,7 @@ class MediaRepository @Inject constructor(
         if (source == null) {
             lastArtSource = null
             lastArt = null
+            lastTint = null
             return null
         }
         if (source === lastArtSource) return lastArt
@@ -165,7 +188,29 @@ class MediaRepository @Inject constructor(
         }
         lastArtSource = source
         lastArt = converted
+        lastTint = converted?.let { tintOf(it) }
         return converted
+    }
+
+    private var lastTint: Int? = null
+
+    /** Cor média da capa, um pouco mais viva (para tingir a ilha e o widget). */
+    private fun tintOf(art: ImageBitmap): Int? = safely("cor da capa") {
+        val small = art.asAndroidBitmap().scale(12, 12)
+        var r = 0L
+        var g = 0L
+        var b = 0L
+        for (y in 0 until 12) for (x in 0 until 12) {
+            val c = small.getPixel(x, y)
+            r += (c shr 16) and 0xFF
+            g += (c shr 8) and 0xFF
+            b += c and 0xFF
+        }
+        val hsv = FloatArray(3)
+        android.graphics.Color.RGBToHSV((r / 144).toInt(), (g / 144).toInt(), (b / 144).toInt(), hsv)
+        hsv[1] = (hsv[1] * 1.3f).coerceIn(0f, 1f)
+        hsv[2] = hsv[2].coerceIn(0.35f, 0.85f)
+        android.graphics.Color.HSVToColor(hsv)
     }
 
     fun playPause() {

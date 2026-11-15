@@ -158,6 +158,18 @@ data class Settings(
     val lockMediaPosition: LockPlacement = LockPlacement.BELOW_CLOCK,
     val lockWidgets: List<LockWidget> = emptyList(),
     val lockWidgetsPosition: LockPlacement = LockPlacement.BOTTOM,
+
+    // Liquid Island (ilha dinâmica em volta da câmera da tela interna)
+    val islandEnabled: Boolean = false,
+    /** Mostra a cápsula preta mesmo sem nada acontecendo (como no iPhone). */
+    val islandAlwaysVisible: Boolean = false,
+    val islandMedia: Boolean = true,
+    val islandAlerts: Boolean = true,
+    val islandCharging: Boolean = true,
+    val islandCalls: Boolean = true,
+    val islandRinger: Boolean = true,
+    /** Ajuste fino da altura, em dp, para alinhar com a câmera. */
+    val islandOffsetY: Float = 0f,
     val coverClockScale: Float = 1f,
     val coverClockPosition: CoverClockPosition = CoverClockPosition.TOP,
     val coverLockMaxNotifications: Int = 3,

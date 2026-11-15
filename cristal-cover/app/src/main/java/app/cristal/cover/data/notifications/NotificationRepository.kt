@@ -35,7 +35,15 @@ data class NotificationItem(
     val contentIntent: PendingIntent?,
     val appIcon: ImageBitmap?,
     val largeIcon: ImageBitmap?,
+    /** Categoria do Android (ex.: "call", "alarm"), para a Liquid Island. */
+    val category: String? = null,
+    /** Notificação contínua (chamada em andamento, timer, gravação). */
+    val ongoing: Boolean = false,
+    /** Início (ou fim, se [countDown]) do cronômetro mostrado pela notificação, em ms de relógio. */
+    val chronometerBase: Long? = null,
+    val countDown: Boolean = false,
 ) {
+    val isCall: Boolean get() = category == Notification.CATEGORY_CALL && ongoing
     val isSecret: Boolean get() = lockVisibility == Notification.VISIBILITY_SECRET
     val isPublic: Boolean get() = lockVisibility == Notification.VISIBILITY_PUBLIC
 }
