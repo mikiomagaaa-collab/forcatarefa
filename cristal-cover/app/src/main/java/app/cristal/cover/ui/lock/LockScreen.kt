@@ -98,7 +98,12 @@ class LockActions(
  * @param resetKey muda quando um pedido de desbloqueio é cancelado, para a tela voltar ao lugar.
  */
 @Composable
-fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: LockActions) {
+fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: LockActions, coverMinimal: Boolean = false) {
+    if (coverMinimal) {
+        // Na tela externa o bloqueio é o Cover Clock: só papel de parede, relógio e notificações.
+        CoverLockScreen(state, secure, resetKey, actions)
+        return
+    }
     val settings = state.settings
     val backdrop = rememberGlassBackdrop()
     val scope = rememberCoroutineScope()
@@ -146,6 +151,11 @@ fun LockScreen(state: LockUiState, secure: Boolean, resetKey: Int, actions: Lock
             image = if (settings.wallpaperKind == WallpaperKind.IMAGE) state.wallpaper else null,
             presetIndex = settings.wallpaperPreset,
             dim = (settings.wallpaperDim + 0.12f).coerceAtMost(0.8f),
+            blur = settings.wallpaperBlur,
+            zoom = settings.wallpaperZoom,
+            offsetX = settings.wallpaperOffsetX,
+            offsetY = settings.wallpaperOffsetY,
+            saturation = settings.wallpaperSaturation,
             modifier = Modifier.glassBackdropSource(backdrop),
         )
         CompositionLocalProvider(LocalGlassBackdrop provides backdrop) {

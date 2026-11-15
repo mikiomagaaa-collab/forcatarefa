@@ -231,6 +231,7 @@ class ScreensSmokeTest {
     private fun Scene(
         settings: Settings,
         initialPage: Int = 1,
+        sceneLayout: HomeLayout = layout,
         overlay: @Composable () -> Unit = {},
     ) {
         CristalTheme(settings = settings) {
@@ -238,7 +239,7 @@ class ScreensSmokeTest {
                 val sceneBackdrop = rememberGlassBackdrop()
                 val overlayBackdrop = rememberGlassBackdrop()
                 val drag = remember { DragController() }
-                val pagerState = rememberPagerState(initialPage = initialPage) { 1 + layout.pageCount }
+                val pagerState = rememberPagerState(initialPage = initialPage) { 1 + sceneLayout.pageCount }
                 Box(Modifier.fillMaxSize().background(Color.Black)) {
                     Box(Modifier.fillMaxSize().glassBackdropSource(overlayBackdrop)) {
                         WallpaperLayer(
@@ -250,7 +251,7 @@ class ScreensSmokeTest {
                         CompositionLocalProvider(LocalGlassBackdrop provides sceneBackdrop) {
                             HomeContent(
                                 settings = settings,
-                                layout = layout,
+                                layout = sceneLayout,
                                 pagerState = pagerState,
                                 safe = SafeLayout(),
                                 drag = drag,
@@ -435,5 +436,53 @@ class ScreensSmokeTest {
         rule.onNodeWithText("Conteúdo oculto").assertExists()
         rule.onNodeWithText("Oi! Você vem hoje?").assertDoesNotExist()
         rule.onNodeWithText("Boletim escolar").assertExists()
+    }
+
+    @Test
+    fun `cover clock mostra so relogio e notificacoes`() {
+        val state = LockUiState(
+            settings = Settings(), battery = BatteryState(percent = 76, charging = true), media = widgetData.media,
+            notifications = notifications, torchAvailable = true, torchOn = false,
+        )
+        rule.setContent {
+            CristalTheme(settings = state.settings) {
+                LockScreen(
+                    state = state, secure = true, resetKey = 0,
+                    actions = LockActions({}, {}, {}, {}, {}, {}, {}, {}), coverMinimal = true,
+                )
+            }
+        }
+        shot("15-cover-clock")
+        // Minimalista de propósito: nada de música, atalhos ou dica de deslizar.
+        rule.onNodeWithText("Garota de Ipanema").assertDoesNotExist()
+        rule.onNodeWithText("Deslize para desbloquear").assertDoesNotExist()
+        rule.onNodeWithText("Boletim escolar").assertExists()
+        // A notificação privada mostra só o nome do app; tocar expande.
+        rule.onNodeWithText("Oi! Você vem hoje?").assertDoesNotExist()
+        rule.onNodeWithText("Boletim escolar").performClick()
+        rule.onNodeWithText("Abrir").assertExists()
+        shot("15b-cover-clock-expandido")
+    }
+
+    @Test
+    @Config(sdk = [36], qualifiers = "w411dp-h1004dp-420dpi")
+    fun `tela interna tem grade propria e mais alta`() {
+        val inner = HomeLayout(
+            pages = listOf(
+                listOf(
+                    HomeItem.Widget(1, 0, 0, 0, 4, 2, WidgetKind.CLOCK),
+                    HomeItem.Widget(2, 0, 0, 2, 2, 2, WidgetKind.WEATHER),
+                    HomeItem.Widget(3, 0, 2, 2, 2, 2, WidgetKind.DATE),
+                    appItem(4, 0, 0, 4), appItem(5, 1, 1, 4), appItem(6, 3, 2, 4), appItem(7, 4, 3, 4),
+                    appItem(8, 5, 0, 5), appItem(9, 6, 1, 5), appItem(10, 9, 2, 5), folder.copy(cellX = 3, cellY = 5),
+                    appItem(11, 7, 0, 6), appItem(12, 8, 1, 6), appItem(13, 10, 2, 6), appItem(14, 11, 3, 6),
+                    appItem(15, 14, 0, 7), appItem(16, 15, 1, 7),
+                ),
+            ),
+            dock = layout.dock,
+        )
+        rule.setContent { Scene(Settings().forScreen(onCover = false), sceneLayout = inner) }
+        shot("16-tela-interna")
+        rule.onAllNodesWithText("Parcialmente nublado").onFirst().assertExists()
     }
 }

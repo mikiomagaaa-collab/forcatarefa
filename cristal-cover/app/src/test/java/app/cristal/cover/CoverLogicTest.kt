@@ -7,6 +7,11 @@ import app.cristal.cover.data.backup.BackupItem
 import app.cristal.cover.data.backup.BackupManager
 import app.cristal.cover.data.display.CoverDisplayRepository
 import app.cristal.cover.data.display.DisplayDesc
+import app.cristal.cover.data.home.HomeProfile
+import app.cristal.cover.data.prefs.Settings
+import app.cristal.cover.data.prefs.WallpaperConfig
+import app.cristal.cover.data.prefs.WallpaperKind
+import app.cristal.cover.data.prefs.WallpaperSlot
 import app.cristal.cover.data.launch.AppLauncher
 import app.cristal.cover.data.launch.CompatAdvisor
 import app.cristal.cover.data.launch.CompatLevel
@@ -154,5 +159,58 @@ class CoverLogicTest {
         val future = text.replaceFirst("{", "{\"campoNovo\":123,")
         assertEquals(original, json.decodeFromString(BackupFile.serializer(), future))
         assertEquals(BackupManager.APP_MARKER, original.app)
+    }
+
+    // --- Papéis de parede por área e telas iniciais separadas ----------------------------------------
+
+    @Test
+    fun `por padrao as outras areas acompanham a tela inicial interna`() {
+        val settings = Settings()
+        for (slot in WallpaperSlot.entries) assertEquals(WallpaperSlot.HOME_INNER, settings.resolvedSlot(slot))
+    }
+
+    @Test
+    fun `area com papel de parede proprio nao muda as outras`() {
+        val own = WallpaperConfig(kind = WallpaperKind.PRESET, preset = 5, dim = 0.3f, follows = null)
+        val settings = Settings().let { it.copy(wallpapers = it.wallpapers + (WallpaperSlot.LOCK_COVER to own)) }
+        val lockCover = settings.forSlot(WallpaperSlot.LOCK_COVER)
+        assertEquals(WallpaperSlot.LOCK_COVER, lockCover.wallpaperSlot)
+        assertEquals(5, lockCover.wallpaperPreset)
+        assertEquals(0.3f, lockCover.wallpaperDim, 0.0001f)
+        // As demais continuam com o padrão da tela inicial interna.
+        assertEquals(0, settings.forSlot(WallpaperSlot.HOME_COVER).wallpaperPreset)
+        assertEquals(WallpaperSlot.HOME_INNER, settings.forSlot(WallpaperSlot.LOCK_INNER).wallpaperSlot)
+    }
+
+    @Test
+    fun `sincronizacao em cadeia e em circulo nao trava`() {
+        val base = Settings()
+        val chained = base.copy(
+            wallpapers = base.wallpapers +
+                (WallpaperSlot.HOME_COVER to WallpaperConfig(preset = 9, follows = null)) +
+                (WallpaperSlot.LOCK_INNER to WallpaperConfig(follows = WallpaperSlot.LOCK_COVER)) +
+                (WallpaperSlot.LOCK_COVER to WallpaperConfig(follows = WallpaperSlot.HOME_COVER)),
+        )
+        assertEquals(WallpaperSlot.HOME_COVER, chained.resolvedSlot(WallpaperSlot.LOCK_INNER))
+        assertEquals(9, chained.forSlot(WallpaperSlot.LOCK_INNER).wallpaperPreset)
+        val circular = base.copy(
+            wallpapers = base.wallpapers +
+                (WallpaperSlot.HOME_INNER to WallpaperConfig(follows = WallpaperSlot.LOCK_INNER)) +
+                (WallpaperSlot.LOCK_INNER to WallpaperConfig(follows = WallpaperSlot.HOME_INNER)),
+        )
+        // Não importa onde para; importa que para.
+        assertTrue(circular.resolvedSlot(WallpaperSlot.HOME_INNER) in WallpaperSlot.entries)
+    }
+
+    @Test
+    fun `cada tela tem grade e conteineres proprios`() {
+        val settings = Settings(gridColumns = 5, gridRows = 4, innerGridColumns = 4, innerGridRows = 7)
+        assertEquals(5 to 4, settings.columns(true) to settings.rows(true))
+        assertEquals(4 to 7, settings.columns(false) to settings.rows(false))
+        val inner = settings.forScreen(onCover = false)
+        assertEquals(4 to 7, inner.gridColumns to inner.gridRows)
+        assertEquals(5 to 4, settings.forScreen(onCover = true).let { it.gridColumns to it.gridRows })
+        assertTrue(HomeProfile.INNER.desktop != HomeProfile.COVER.desktop && HomeProfile.INNER.dock != HomeProfile.COVER.dock)
+        assertTrue(HomeProfile.isDock(HomeProfile.COVER.dock) && !HomeProfile.isDock(HomeProfile.COVER.desktop))
     }
 }

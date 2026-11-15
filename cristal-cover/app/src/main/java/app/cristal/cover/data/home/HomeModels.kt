@@ -2,6 +2,21 @@ package app.cristal.cover.data.home
 
 import androidx.compose.runtime.Immutable
 import app.cristal.cover.data.apps.AppInfo
+import app.cristal.cover.data.db.Container
+
+/**
+ * Cada tela tem a sua própria tela inicial. Os itens são separados pelo contêiner, sem mudar o
+ * formato do banco: os contêineres que já existiam ficam com a tela interna.
+ */
+enum class HomeProfile(val desktop: Long, val dock: Long) {
+    INNER(Container.DESKTOP, Container.DOCK),
+    COVER(Container.DESKTOP_COVER, Container.DOCK_COVER);
+
+    companion object {
+        fun of(onCover: Boolean): HomeProfile = if (onCover) COVER else INNER
+        fun isDock(container: Long): Boolean = entries.any { it.dock == container }
+    }
+}
 
 /** Widgets embutidos, com o tamanho padrão em células (colunas × linhas). */
 enum class WidgetKind(val spanX: Int, val spanY: Int) {

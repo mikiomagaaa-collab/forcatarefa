@@ -15,6 +15,10 @@ object ItemType {
 object Container {
     const val DESKTOP = -100L
     const val DOCK = -101L
+
+    /** Área de trabalho e dock da tela externa (os de cima são da tela interna). */
+    const val DESKTOP_COVER = -200L
+    const val DOCK_COVER = -201L
 }
 
 /**

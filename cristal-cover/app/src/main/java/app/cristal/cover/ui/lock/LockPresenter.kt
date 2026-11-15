@@ -11,6 +11,8 @@ import app.cristal.cover.data.notifications.NotificationItem
 import app.cristal.cover.data.notifications.NotificationRepository
 import app.cristal.cover.data.prefs.Settings
 import app.cristal.cover.data.prefs.SettingsRepository
+import app.cristal.cover.data.prefs.WallpaperImages
+import app.cristal.cover.data.prefs.WallpaperSlot
 import app.cristal.cover.data.system.QuickSettingsRepository
 import app.cristal.cover.data.wallpaper.WallpaperRepository
 import javax.inject.Inject
@@ -31,7 +33,14 @@ data class LockUiState(
     val torchAvailable: Boolean = false,
     val torchOn: Boolean = false,
     val wallpaper: ImageBitmap? = null,
-)
+    val images: WallpaperImages = emptyMap(),
+) {
+    /** Este estado "visto" da tela de bloqueio interna ou externa, com o papel de parede dela. */
+    fun forDisplay(onCover: Boolean): LockUiState {
+        val view = settings.forSlot(WallpaperSlot.lock(onCover))
+        return copy(settings = view, wallpaper = images[view.wallpaperSlot])
+    }
+}
 
 /**
  * Estado e ações da tela de bloqueio, compartilhados entre a activity e o modo de sobreposição
@@ -52,7 +61,7 @@ class LockPresenter @Inject constructor(
         batteryRepository.state,
         mediaRepository.state,
         notificationRepository.items,
-        combine(quickSettingsRepository.state, wallpaperRepository.image) { quick, image -> quick to image },
+        combine(quickSettingsRepository.state, wallpaperRepository.images) { quick, images -> quick to images },
     ) { settings, battery, media, notifications, extra ->
         LockUiState(
             settings = settings,
@@ -65,7 +74,7 @@ class LockPresenter @Inject constructor(
             },
             torchAvailable = extra.first.torchAvailable,
             torchOn = extra.first.torchOn,
-            wallpaper = extra.second,
+            images = extra.second,
         )
     }.stateIn(scope, SharingStarted.WhileSubscribed(5_000), LockUiState(settings = settingsRepository.settings.value))
 

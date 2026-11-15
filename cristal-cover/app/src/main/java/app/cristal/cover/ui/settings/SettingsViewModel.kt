@@ -19,6 +19,9 @@ import app.cristal.cover.data.launch.AppLauncher
 import app.cristal.cover.data.prefs.PrefKeys
 import app.cristal.cover.data.prefs.Settings
 import app.cristal.cover.data.prefs.SettingsRepository
+import app.cristal.cover.data.prefs.WallpaperConfig
+import app.cristal.cover.data.prefs.WallpaperImages
+import app.cristal.cover.data.prefs.WallpaperSlot
 import app.cristal.cover.data.shizuku.ShizukuManager
 import app.cristal.cover.data.system.PermissionCenter
 import app.cristal.cover.data.system.PermissionState
@@ -38,6 +41,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -62,7 +66,12 @@ class SettingsViewModel @Inject constructor(
     val settings: StateFlow<Settings> = settingsRepository.settings
     val permissions: StateFlow<PermissionState> = permissionCenter.state
     val cover: StateFlow<CoverState> = coverDisplayRepository.state
-    val wallpaper: StateFlow<ImageBitmap?> = wallpaperRepository.image
+    val wallpapers: StateFlow<WallpaperImages> = wallpaperRepository.images
+
+    /** Imagem da tela inicial interna, usada como fundo das próprias telas de configuração. */
+    val wallpaper: StateFlow<ImageBitmap?> = wallpaperRepository.images
+        .map { it[WallpaperSlot.HOME_INNER] }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
     val weather: StateFlow<WeatherState> = weatherRepository.state
 
     private val _iconPacks = MutableStateFlow<List<IconPackInfo>>(emptyList())
@@ -149,17 +158,21 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { _iconPacks.value = withContext(default) { iconPackManager.installedPacks() } }
     }
 
-    fun setWallpaperImage(uri: Uri) {
+    fun setWallpaperImage(slot: WallpaperSlot, uri: Uri) {
         viewModelScope.launch {
             _busy.value = true
-            val ok = wallpaperRepository.setFromUri(uri)
+            val ok = wallpaperRepository.setFromUri(slot, uri)
             _busy.value = false
             message(if (ok) "Papel de parede aplicado." else "Não foi possível ler essa imagem.")
         }
     }
 
-    fun useWallpaperPreset(index: Int) {
-        viewModelScope.launch { wallpaperRepository.usePreset(index) }
+    fun useWallpaperPreset(slot: WallpaperSlot, index: Int) {
+        viewModelScope.launch { wallpaperRepository.usePreset(slot, index) }
+    }
+
+    fun updateWallpaper(slot: WallpaperSlot, change: (WallpaperConfig) -> WallpaperConfig) {
+        viewModelScope.launch { wallpaperRepository.update(slot, change) }
     }
 
     // --- Clima -------------------------------------------------------------------------------------

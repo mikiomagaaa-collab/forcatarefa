@@ -14,7 +14,8 @@ import kotlinx.coroutines.launch
 
 /**
  * Tarefas de manutenção da tela inicial que precisam acontecer mesmo sem nenhuma tela aberta:
- * criar o layout inicial, reorganizar quando a grade muda e limpar atalhos de apps desinstalados.
+ * criar o layout inicial de cada tela (interna e externa), reorganizar quando a grade muda e
+ * limpar atalhos de apps desinstalados.
  */
 @Singleton
 class HomeMaintenance @Inject constructor(
@@ -31,24 +32,33 @@ class HomeMaintenance @Inject constructor(
 
         scope.launch {
             appRepository.loaded.first { it }
-            homeRepository.ensureDefaultLayout(appRepository.apps.value)
+            val settings = settingsRepository.current()
+            for (profile in HomeProfile.entries) {
+                homeRepository.ensureDefaultLayout(appRepository.apps.value, profile)
+                // Não muda nada se tudo já cabe; realoca o que ficou fora depois de uma atualização do app.
+                val cover = profile == HomeProfile.COVER
+                homeRepository.reflow(settings.columns(cover), settings.rows(cover), profile)
+            }
         }
-        scope.launch {
-            // Garante que o primeiro valor veio do disco antes de observar mudanças.
-            settingsRepository.current()
-            settingsRepository.settings
-                .map { it.gridColumns to it.gridRows }
-                .distinctUntilChanged()
-                .drop(1)
-                .collect { (cols, rows) -> homeRepository.reflow(cols, rows) }
-        }
-        scope.launch {
-            settingsRepository.current()
-            settingsRepository.settings
-                .map { it.dockCount }
-                .distinctUntilChanged()
-                .drop(1)
-                .collect { homeRepository.trimDock(it) }
+        for (profile in HomeProfile.entries) {
+            val cover = profile == HomeProfile.COVER
+            scope.launch {
+                // Garante que o primeiro valor veio do disco antes de observar mudanças.
+                settingsRepository.current()
+                settingsRepository.settings
+                    .map { it.columns(cover) to it.rows(cover) }
+                    .distinctUntilChanged()
+                    .drop(1)
+                    .collect { (cols, rows) -> homeRepository.reflow(cols, rows, profile) }
+            }
+            scope.launch {
+                settingsRepository.current()
+                settingsRepository.settings
+                    .map { it.dockCount }
+                    .distinctUntilChanged()
+                    .drop(1)
+                    .collect { homeRepository.trimDock(it, profile) }
+            }
         }
         scope.launch {
             appRepository.removedPackages.collect { homeRepository.removePackage(it) }

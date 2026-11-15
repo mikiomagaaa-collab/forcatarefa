@@ -8,10 +8,10 @@ import android.provider.Settings as SystemSettings
 import app.cristal.cover.core.IoDispatcher
 import app.cristal.cover.core.safely
 import app.cristal.cover.data.apps.AppInfo
-import app.cristal.cover.data.db.Container
 import app.cristal.cover.data.db.HomeDao
 import app.cristal.cover.data.db.HomeItemEntity
 import app.cristal.cover.data.db.ItemType
+import app.cristal.cover.data.prefs.PrefKeys
 import app.cristal.cover.data.prefs.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -26,8 +26,11 @@ import kotlinx.coroutines.withContext
 enum class DropResult { MOVED, FOLDER_CREATED, ADDED_TO_FOLDER, SWAPPED, REJECTED }
 
 /**
- * Guarda e edita a tela inicial. Todas as operações são serializadas por um mutex, para que dois
- * gestos rápidos nunca deixem dois itens na mesma célula.
+ * Guarda e edita as telas iniciais. A tela interna e a externa têm layouts independentes
+ * ([HomeProfile]): cada uma com a sua área de trabalho, o seu dock e a sua grade.
+ *
+ * Todas as operações são serializadas por um mutex, para que dois gestos rápidos nunca deixem dois
+ * itens na mesma célula.
  */
 @Singleton
 class HomeRepository @Inject constructor(
@@ -40,70 +43,75 @@ class HomeRepository @Inject constructor(
 
     val items: Flow<List<HomeItemEntity>> = dao.observeAll()
 
-    private val cols: Int get() = settingsRepository.settings.value.gridColumns
-    private val rows: Int get() = settingsRepository.settings.value.gridRows
+    private fun cols(profile: HomeProfile): Int = settingsRepository.settings.value.columns(profile == HomeProfile.COVER)
+    private fun rows(profile: HomeProfile): Int = settingsRepository.settings.value.rows(profile == HomeProfile.COVER)
     private val dockCapacity: Int get() = settingsRepository.settings.value.dockCount
 
     private suspend fun <T> locked(block: suspend () -> T): T = withContext(io) { mutex.withLock { block() } }
 
-    private suspend fun desktop(): List<HomeItemEntity> = dao.getByContainer(Container.DESKTOP)
+    private suspend fun desktop(profile: HomeProfile): List<HomeItemEntity> = dao.getByContainer(profile.desktop)
 
-    /** Cria a tela inicial padrão na primeira execução. Não faz nada se já houver itens. */
-    suspend fun ensureDefaultLayout(apps: List<AppInfo>) = locked {
-        if (dao.count() > 0 || apps.isEmpty()) return@locked
+    /**
+     * Cria o layout inicial de uma tela, uma única vez. Quem apagou tudo de propósito não recebe os
+     * itens de volta: o que vale é o marcador gravado depois da primeira criação.
+     */
+    suspend fun ensureDefaultLayout(apps: List<AppInfo>, profile: HomeProfile) = locked {
+        if (apps.isEmpty()) return@locked
+        val seededKey = if (profile == HomeProfile.COVER) PrefKeys.HOME_SEEDED_COVER else PrefKeys.HOME_SEEDED_INNER
+        if (settingsRepository.get(seededKey) == true) return@locked
+        val empty = dao.getByContainer(profile.desktop).isEmpty() && dao.getByContainer(profile.dock).isEmpty()
+        if (empty) dao.insertAll(buildDefault(apps, profile))
+        settingsRepository.set(seededKey, true)
+    }
+
+    private suspend fun buildDefault(apps: List<AppInfo>, profile: HomeProfile): List<HomeItemEntity> {
         val settings = settingsRepository.current()
-        val c = settings.gridColumns
-        val r = settings.gridRows
+        val cover = profile == HomeProfile.COVER
+        val c = settings.columns(cover)
+        val r = settings.rows(cover)
         val picks = DefaultApps.resolve(context, apps)
         val items = ArrayList<HomeItemEntity>()
+
+        fun widget(kind: WidgetKind, x: Int, y: Int, spanX: Int, spanY: Int) = HomeItemEntity(
+            type = ItemType.WIDGET, container = profile.desktop, page = 0, cellX = x, cellY = y,
+            spanX = spanX, spanY = spanY, widgetKind = kind.name,
+        )
 
         // Dock: telefone, mensagens, navegador, câmera (ou o que houver).
         val dockApps = picks.dock.take(settings.dockCount)
         dockApps.forEachIndexed { index, app ->
-            items += HomeItemEntity(type = ItemType.APP, container = Container.DOCK, cellX = index, componentKey = app.key)
+            items += HomeItemEntity(type = ItemType.APP, container = profile.dock, cellX = index, componentKey = app.key)
         }
 
-        // Página 1: relógio no topo e os favoritos logo abaixo.
-        val clockSpanX = WidgetKind.CLOCK.spanX.coerceAtMost(c)
+        // Relógio no topo. Na tela interna, que é alta, cabem também clima e data logo abaixo.
         val clockSpanY = WidgetKind.CLOCK.spanY.coerceAtMost(r - 1).coerceAtLeast(1)
-        items += HomeItemEntity(
-            type = ItemType.WIDGET,
-            container = Container.DESKTOP,
-            page = 0,
-            cellX = 0,
-            cellY = 0,
-            spanX = clockSpanX,
-            spanY = clockSpanY,
-            widgetKind = WidgetKind.CLOCK.name,
-        )
+        items += widget(WidgetKind.CLOCK, 0, 0, WidgetKind.CLOCK.spanX.coerceAtMost(c), clockSpanY)
+        var firstAppRow = clockSpanY
+        if (!cover && c >= 4 && r >= 6) {
+            items += widget(WidgetKind.WEATHER, 0, clockSpanY, 2, 2)
+            items += widget(WidgetKind.DATE, 2, clockSpanY, 2, 2)
+            firstAppRow = clockSpanY + 2
+        }
+
         val dockKeys = dockApps.map { it.key }.toSet()
-        val favorites = picks.favorites.filter { it.key !in dockKeys }.take(c * (r - clockSpanY))
+        val favorites = picks.favorites.filter { it.key !in dockKeys }
         var index = 0
-        for (y in clockSpanY until r) {
+        for (y in firstAppRow until r) {
             for (x in 0 until c) {
                 val app = favorites.getOrNull(index++) ?: break
                 items += HomeItemEntity(
-                    type = ItemType.APP,
-                    container = Container.DESKTOP,
-                    page = 0,
-                    cellX = x,
-                    cellY = y,
-                    componentKey = app.key,
+                    type = ItemType.APP, container = profile.desktop, page = 0, cellX = x, cellY = y, componentKey = app.key,
                 )
             }
         }
-        dao.insertAll(items)
+        return items
     }
 
-    suspend fun addAppToDesktop(key: String, preferredPage: Int = 0): Boolean = locked {
-        val slot = GridMath.firstFree(desktop(), cols, rows, startPage = preferredPage.coerceAtLeast(0))
+    suspend fun addAppToDesktop(key: String, preferredPage: Int, profile: HomeProfile): Boolean = locked {
+        val slot = GridMath.firstFree(desktop(profile), cols(profile), rows(profile), startPage = preferredPage.coerceAtLeast(0))
         dao.insert(
             HomeItemEntity(
-                type = ItemType.APP,
-                container = Container.DESKTOP,
-                page = slot.page,
-                cellX = slot.x,
-                cellY = slot.y,
+                type = ItemType.APP, container = profile.desktop, page = slot.page, cellX = slot.x, cellY = slot.y,
                 componentKey = key,
             ),
         )
@@ -111,29 +119,30 @@ class HomeRepository @Inject constructor(
     }
 
     /** Adiciona ao dock. Devolve `false` se o dock estiver cheio. */
-    suspend fun addAppToDock(key: String): Boolean = locked {
-        val dock = dao.getByContainer(Container.DOCK)
+    suspend fun addAppToDock(key: String, profile: HomeProfile): Boolean = locked {
+        val dock = dao.getByContainer(profile.dock)
         if (dock.size >= dockCapacity) return@locked false
-        dao.insert(
-            HomeItemEntity(type = ItemType.APP, container = Container.DOCK, cellX = dock.size, componentKey = key),
-        )
+        dao.insert(HomeItemEntity(type = ItemType.APP, container = profile.dock, cellX = dock.size, componentKey = key))
         true
     }
 
     suspend fun addWidget(
         kind: WidgetKind,
-        preferredPage: Int = 0,
+        preferredPage: Int,
+        profile: HomeProfile,
         appWidgetId: Int = -1,
         spanX: Int = kind.spanX,
         spanY: Int = kind.spanY,
     ): Boolean = locked {
-        val sx = spanX.coerceIn(1, cols)
-        val sy = spanY.coerceIn(1, rows)
-        val slot = GridMath.firstFree(desktop(), cols, rows, sx, sy, startPage = preferredPage.coerceAtLeast(0))
+        val c = cols(profile)
+        val r = rows(profile)
+        val sx = spanX.coerceIn(1, c)
+        val sy = spanY.coerceIn(1, r)
+        val slot = GridMath.firstFree(desktop(profile), c, r, sx, sy, startPage = preferredPage.coerceAtLeast(0))
         dao.insert(
             HomeItemEntity(
                 type = ItemType.WIDGET,
-                container = Container.DESKTOP,
+                container = profile.desktop,
                 page = slot.page,
                 cellX = slot.x,
                 cellY = slot.y,
@@ -153,7 +162,7 @@ class HomeRepository @Inject constructor(
         if (item.type == ItemType.FOLDER) dao.deleteByContainer(item.id)
         dao.deleteById(id)
         if (item.container > 0) collapseFolderIfNeeded(item.container)
-        if (item.container == Container.DOCK) renumber(Container.DOCK)
+        if (HomeProfile.isDock(item.container)) renumber(item.container)
         normalizePages()
     }
 
@@ -163,17 +172,17 @@ class HomeRepository @Inject constructor(
     }
 
     /**
-     * Solta o item [id] na célula indicada da área de trabalho.
+     * Solta o item [id] na célula indicada da área de trabalho de [profile].
      * - célula livre: move;
      * - célula com app: cria uma pasta com os dois (se o item solto também for um app);
      * - célula com pasta: entra na pasta;
      * - caso contrário, troca de lugar quando os tamanhos permitem.
      */
-    suspend fun dropOnCell(id: Long, page: Int, x: Int, y: Int): DropResult = locked {
+    suspend fun dropOnCell(id: Long, page: Int, x: Int, y: Int, profile: HomeProfile): DropResult = locked {
         val item = dao.getById(id) ?: return@locked DropResult.REJECTED
-        val c = cols
-        val r = rows
-        val all = desktop()
+        val c = cols(profile)
+        val r = rows(profile)
+        val all = desktop(profile)
         val sx = item.spanX.coerceAtMost(c)
         val sy = item.spanY.coerceAtMost(r)
         val tx = x.coerceIn(0, c - sx)
@@ -191,12 +200,8 @@ class HomeRepository @Inject constructor(
                 ItemType.APP -> {
                     val folderId = dao.insert(
                         HomeItemEntity(
-                            type = ItemType.FOLDER,
-                            container = Container.DESKTOP,
-                            page = target.page,
-                            cellX = target.cellX,
-                            cellY = target.cellY,
-                            title = "",
+                            type = ItemType.FOLDER, container = profile.desktop, page = target.page,
+                            cellX = target.cellX, cellY = target.cellY, title = "",
                         ),
                     )
                     dao.update(target.copy(container = folderId, page = 0, cellX = 0, cellY = 0))
@@ -207,12 +212,12 @@ class HomeRepository @Inject constructor(
         }
 
         if (GridMath.canPlace(all, page, tx, ty, sx, sy, c, r, ignoreId = id)) {
-            moveInto(item, Container.DESKTOP, page = page, x = tx, y = ty, spanX = sx, spanY = sy)
+            moveInto(item, profile.desktop, page = page, x = tx, y = ty, spanX = sx, spanY = sy)
             return@locked DropResult.MOVED
         }
 
-        // Troca simples: só entre itens do mesmo tamanho que já estão na área de trabalho.
-        if (target != null && item.container == Container.DESKTOP &&
+        // Troca simples: só entre itens do mesmo tamanho que já estão nesta área de trabalho.
+        if (target != null && item.container == profile.desktop &&
             target.spanX == item.spanX && target.spanY == item.spanY
         ) {
             dao.updateAll(
@@ -226,14 +231,14 @@ class HomeRepository @Inject constructor(
         DropResult.REJECTED
     }
 
-    /** Solta o item no dock, na posição [index]. Só apps e pastas cabem no dock. */
-    suspend fun dropOnDock(id: Long, index: Int): DropResult = locked {
+    /** Solta o item no dock de [profile], na posição [index]. Só apps e pastas cabem no dock. */
+    suspend fun dropOnDock(id: Long, index: Int, profile: HomeProfile): DropResult = locked {
         val item = dao.getById(id) ?: return@locked DropResult.REJECTED
         if (item.type == ItemType.WIDGET) return@locked DropResult.REJECTED
-        val dock = dao.getByContainer(Container.DOCK).filter { it.id != id }.toMutableList()
-        val fromDock = item.container == Container.DOCK
+        val dock = dao.getByContainer(profile.dock).filter { it.id != id }.toMutableList()
+        val fromDock = item.container == profile.dock
         if (!fromDock && dock.size >= dockCapacity) {
-            // Dock cheio: solta sobre um app para criar pasta, ou recusa.
+            // Dock cheio: solta sobre uma pasta para entrar nela, ou recusa.
             val target = dock.getOrNull(index.coerceIn(0, dock.lastIndex.coerceAtLeast(0)))
             if (target != null && item.type == ItemType.APP && target.type == ItemType.FOLDER) {
                 moveInto(item, container = target.id, rank = dao.getByContainer(target.id).size)
@@ -245,7 +250,7 @@ class HomeRepository @Inject constructor(
         dock.add(index.coerceIn(0, dock.size), item)
         dao.updateAll(
             dock.mapIndexed { i, e ->
-                e.copy(container = Container.DOCK, page = 0, cellX = i, cellY = 0, spanX = 1, spanY = 1)
+                e.copy(container = profile.dock, page = 0, cellX = i, cellY = 0, spanX = 1, spanY = 1)
             },
         )
         if (oldContainer > 0) collapseFolderIfNeeded(oldContainer)
@@ -254,16 +259,16 @@ class HomeRepository @Inject constructor(
     }
 
     /** Move um item do dock (ou de dentro de uma pasta) para a primeira célula livre da área de trabalho. */
-    suspend fun moveToDesktop(id: Long, preferredPage: Int = 0) = locked {
+    suspend fun moveToDesktop(id: Long, preferredPage: Int, profile: HomeProfile) = locked {
         val item = dao.getById(id) ?: return@locked
-        if (item.container == Container.DESKTOP) return@locked
-        val slot = GridMath.firstFree(desktop(), cols, rows, startPage = preferredPage.coerceAtLeast(0))
-        moveInto(item, Container.DESKTOP, page = slot.page, x = slot.x, y = slot.y)
+        if (item.container == profile.desktop) return@locked
+        val slot = GridMath.firstFree(desktop(profile), cols(profile), rows(profile), startPage = preferredPage.coerceAtLeast(0))
+        moveInto(item, profile.desktop, page = slot.page, x = slot.x, y = slot.y)
     }
 
-    /** Reorganiza tudo depois que o usuário muda o tamanho da grade. */
-    suspend fun reflow(newCols: Int, newRows: Int) = locked {
-        val all = desktop()
+    /** Ajusta os itens de uma tela depois que a grade dela muda. Não faz nada se tudo já cabe. */
+    suspend fun reflow(newCols: Int, newRows: Int, profile: HomeProfile) = locked {
+        val all = desktop(profile)
         if (all.isEmpty()) return@locked
         val before = all.associateBy { it.id }
         val changed = GridMath.reflow(all, newCols, newRows).filter { it != before[it.id] }
@@ -271,19 +276,19 @@ class HomeRepository @Inject constructor(
     }
 
     /** Devolve para a área de trabalho o que não couber mais no dock. */
-    suspend fun trimDock(capacity: Int) = locked {
-        val dock = dao.getByContainer(Container.DOCK)
+    suspend fun trimDock(capacity: Int, profile: HomeProfile) = locked {
+        val dock = dao.getByContainer(profile.dock)
         if (dock.size <= capacity) return@locked
         for (extra in dock.drop(capacity)) {
-            val slot = GridMath.firstFree(desktop(), cols, rows)
-            dao.update(extra.copy(container = Container.DESKTOP, page = slot.page, cellX = slot.x, cellY = slot.y))
+            val slot = GridMath.firstFree(desktop(profile), cols(profile), rows(profile))
+            dao.update(extra.copy(container = profile.desktop, page = slot.page, cellX = slot.x, cellY = slot.y))
         }
     }
 
     suspend fun removePackage(packageName: String) = locked {
         dao.deleteByPackage(packageName)
         for (folder in dao.getAll().filter { it.type == ItemType.FOLDER }) collapseFolderIfNeeded(folder.id)
-        renumber(Container.DOCK)
+        for (profile in HomeProfile.entries) renumber(profile.dock)
         normalizePages()
     }
 
@@ -311,7 +316,7 @@ class HomeRepository @Inject constructor(
         }
         dao.update(updated)
         if (oldContainer > 0 && oldContainer != container) collapseFolderIfNeeded(oldContainer)
-        if (oldContainer == Container.DOCK && container != Container.DOCK) renumber(Container.DOCK)
+        if (HomeProfile.isDock(oldContainer) && container != oldContainer) renumber(oldContainer)
         normalizePages()
     }
 
@@ -324,12 +329,7 @@ class HomeRepository @Inject constructor(
             0 -> dao.deleteById(folderId)
             1 -> {
                 dao.update(
-                    children[0].copy(
-                        container = folder.container,
-                        page = folder.page,
-                        cellX = folder.cellX,
-                        cellY = folder.cellY,
-                    ),
+                    children[0].copy(container = folder.container, page = folder.page, cellX = folder.cellX, cellY = folder.cellY),
                 )
                 dao.deleteById(folderId)
             }
@@ -344,13 +344,15 @@ class HomeRepository @Inject constructor(
         if (fixed.isNotEmpty()) dao.updateAll(fixed)
     }
 
-    /** Elimina páginas vazias no meio. */
+    /** Elimina páginas vazias no meio, em cada tela. */
     private suspend fun normalizePages() {
-        val all = desktop()
-        val compacted = GridMath.compactPages(all)
-        if (compacted !== all) {
-            val changed = compacted.filterIndexed { i, e -> e.page != all[i].page }
-            if (changed.isNotEmpty()) dao.updateAll(changed)
+        for (profile in HomeProfile.entries) {
+            val all = desktop(profile)
+            val compacted = GridMath.compactPages(all)
+            if (compacted !== all) {
+                val changed = compacted.filterIndexed { i, e -> e.page != all[i].page }
+                if (changed.isNotEmpty()) dao.updateAll(changed)
+            }
         }
     }
 }
@@ -369,11 +371,9 @@ internal object DefaultApps {
             byPackage[pkg]?.firstOrNull()
         }
 
-        fun byCategory(category: String): AppInfo? =
-            byIntent(Intent(Intent.ACTION_MAIN).addCategory(category))
+        fun byCategory(category: String): AppInfo? = byIntent(Intent(Intent.ACTION_MAIN).addCategory(category))
 
-        fun byPackages(vararg names: String): AppInfo? =
-            names.firstNotNullOfOrNull { byPackage[it]?.firstOrNull() }
+        fun byPackages(vararg names: String): AppInfo? = names.firstNotNullOfOrNull { byPackage[it]?.firstOrNull() }
 
         val phone = byIntent(Intent(Intent.ACTION_DIAL)) ?: byPackages("com.google.android.dialer", "com.android.dialer")
         val messages = byCategory(Intent.CATEGORY_APP_MESSAGING) ?: byPackages("com.google.android.apps.messaging")

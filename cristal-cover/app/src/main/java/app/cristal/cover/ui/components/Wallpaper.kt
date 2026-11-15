@@ -10,6 +10,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.TileMode
@@ -18,6 +20,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -155,6 +158,8 @@ object WallpaperPresets {
 /**
  * Desenha o papel de parede do launcher (imagem do usuário ou preset).
  *
+ * @param zoom ampliação da imagem (1 = preenche a tela); [offsetX] e [offsetY], de -1 a 1, movem o enquadramento.
+ * @param saturation 0 = preto e branco, 1 = original, 2 = cores fortes (só para imagens).
  * @param blur desfoque de 0 a 1 aplicado à própria imagem (um fundo mais calmo realça o vidro).
  * @param parallax deslocamento horizontal de -1 a 1, lido só na fase de desenho, para que trocar
  * de página não provoque recomposição.
@@ -166,6 +171,10 @@ fun WallpaperLayer(
     dim: Float,
     modifier: Modifier = Modifier,
     blur: Float = 0f,
+    zoom: Float = 1f,
+    offsetX: Float = 0f,
+    offsetY: Float = 0f,
+    saturation: Float = 1f,
     parallax: () -> Float = { 0f },
 ) {
     val preset = WallpaperPresets.get(presetIndex)
@@ -178,7 +187,7 @@ fun WallpaperLayer(
             }
             .drawBehind {
                 val shift = parallax().coerceIn(-1f, 1f)
-                if (image != null) drawCroppedImage(image, shift) else drawPreset(preset, shift)
+                if (image != null) drawCroppedImage(image, shift, zoom, offsetX, offsetY, saturation) else drawPreset(preset, shift)
                 // Vinheta suave: escurece os cantos e dá profundidade.
                 val longest = max(size.width, size.height)
                 drawRect(
@@ -193,18 +202,36 @@ fun WallpaperLayer(
     )
 }
 
-private fun DrawScope.drawCroppedImage(image: ImageBitmap, shift: Float) {
+private fun DrawScope.drawCroppedImage(
+    image: ImageBitmap,
+    shift: Float,
+    zoom: Float,
+    offsetX: Float,
+    offsetY: Float,
+    saturation: Float,
+) {
     if (image.width <= 0 || image.height <= 0) return
     // 8% maior que a tela, para ter margem de deslocamento no parallax.
-    val scale = max(size.width / image.width, size.height / image.height) * 1.08f
+    val scale = max(size.width / image.width, size.height / image.height) * 1.08f * zoom.coerceIn(1f, 4f)
     val dw = image.width * scale
     val dh = image.height * scale
-    val dx = (size.width - dw) / 2f - shift * (dw - size.width) / 2f
-    val dy = (size.height - dh) / 2f
+    val slackX = (dw - size.width) / 2f
+    val slackY = (dh - size.height) / 2f
+    // A posição escolhida vale primeiro; o parallax usa a folga que sobrar, sem descobrir a borda.
+    val x = offsetX.coerceIn(-1f, 1f)
+    val tx = (x + shift * (1f - abs(x))).coerceIn(-1f, 1f)
+    val dx = -slackX - tx * slackX
+    val dy = -slackY - offsetY.coerceIn(-1f, 1f) * slackY
+    val filter = if (abs(saturation - 1f) > 0.01f) {
+        ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(saturation.coerceIn(0f, 2f)) })
+    } else {
+        null
+    }
     drawImage(
         image = image,
         dstOffset = IntOffset(dx.roundToInt(), dy.roundToInt()),
         dstSize = IntSize(dw.roundToInt(), dh.roundToInt()),
+        colorFilter = filter,
         filterQuality = FilterQuality.Medium,
     )
 }

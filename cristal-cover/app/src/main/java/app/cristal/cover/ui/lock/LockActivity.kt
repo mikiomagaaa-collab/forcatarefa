@@ -21,6 +21,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -57,6 +58,7 @@ class LockActivity : ComponentActivity() {
     private val keyguard: KeyguardManager? by lazy { getSystemService(KeyguardManager::class.java) }
     private val powerManager: PowerManager? by lazy { getSystemService(PowerManager::class.java) }
     private var preview = false
+    private var previewCover by mutableStateOf(false)
     private var resetKey by mutableIntStateOf(0)
     private var receiverRegistered = false
     private var dismissing = false
@@ -89,13 +91,16 @@ class LockActivity : ComponentActivity() {
         handleIntent(intent)
 
         setContent {
-            val state by presenter.state.collectAsStateWithLifecycle()
+            val rawState by presenter.state.collectAsStateWithLifecycle()
+            val onCover = previewCover || isOnCover()
+            val state = rawState.forDisplay(onCover)
             CristalTheme(settings = state.settings) {
                 BackHandler { if (preview) finishQuietly() }
                 LockScreen(
                     state = state,
                     secure = keyguard?.isDeviceSecure == true,
                     resetKey = resetKey,
+                    coverMinimal = onCover,
                     actions = LockActions(
                         onUnlock = { requestUnlock(null) },
                         onOpenNotification = ::openNotification,
@@ -128,6 +133,7 @@ class LockActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         preview = intent?.getBooleanExtra(EXTRA_PREVIEW, false) == true
+        previewCover = preview && intent?.getBooleanExtra(EXTRA_PREVIEW_COVER, false) == true
         if (intent?.getBooleanExtra(EXTRA_AUTO_DISMISS, false) == true) {
             // Veio do modo sobreposição: o usuário já deslizou, então pede o desbloqueio direto.
             window.decorView.post { requestUnlock(null) }
@@ -226,6 +232,12 @@ class LockActivity : ComponentActivity() {
         }
     }
 
+    /** `true` quando esta activity está na tela externa de verdade (não na interna). */
+    private fun isOnCover(): Boolean {
+        val cover = displayRepository.currentCover(settingsRepository.settings.value.coverDisplayOverride) ?: return false
+        return !cover.isDefault && cover.id == currentDisplayId()
+    }
+
     private fun currentDisplayId(): Int = safely("ler tela da activity") { display?.displayId } ?: Display.DEFAULT_DISPLAY
 
     @SuppressLint("InlinedApi")
@@ -250,6 +262,7 @@ class LockActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_PREVIEW = "preview"
+        const val EXTRA_PREVIEW_COVER = "preview_cover"
         const val EXTRA_AUTO_DISMISS = "auto_dismiss"
     }
 }

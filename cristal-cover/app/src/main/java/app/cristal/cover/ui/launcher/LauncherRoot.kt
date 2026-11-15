@@ -33,7 +33,12 @@ fun LauncherRoot(viewModel: LauncherViewModel, governor: PerformanceGovernor) {
         governor.applyRefreshMode(settings.refreshMode, powerSave)
     }
 
-    CristalTheme(settings = settings, qualityOverride = quality) {
+    // A cor do vidro e do texto segue o papel de parede da tela em que o launcher está.
+    val displayId = rememberDisplayId()
+    val cover by viewModel.cover.collectAsStateWithLifecycle()
+    val themed = settings.forScreen(cover.cover?.id == displayId)
+
+    CristalTheme(settings = themed, qualityOverride = quality) {
         val light = rememberGlassLight(enabled = settings.dynamicLight && quality == GlassQuality.LIQUID)
         CompositionLocalProvider(
             LocalGlassLight provides light,

@@ -22,9 +22,13 @@ fun LockOverlayContent(presenter: LockPresenter, onUnlock: () -> Unit, onHide: (
     val secure = safely("ler segurança do aparelho") {
         context.getSystemService(KeyguardManager::class.java)?.isDeviceSecure
     } ?: true
-    CristalTheme(settings = state.settings) {
+    // O overlay normalmente está na tela externa; lá vale o Cover Clock e o papel de parede dela.
+    val onCover = safely("ler tela do overlay") { context.display.displayId != android.view.Display.DEFAULT_DISPLAY } ?: false
+    val view = state.forDisplay(onCover)
+    CristalTheme(settings = view.settings) {
         LockScreen(
-            state = state,
+            coverMinimal = onCover,
+            state = view,
             secure = secure,
             resetKey = 0,
             actions = LockActions(

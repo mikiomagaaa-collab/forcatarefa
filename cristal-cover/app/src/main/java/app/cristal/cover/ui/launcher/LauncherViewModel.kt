@@ -21,6 +21,7 @@ import app.cristal.cover.data.display.CoverState
 import app.cristal.cover.data.home.DropResult
 import app.cristal.cover.data.home.HomeItem
 import app.cristal.cover.data.home.HomeLayout
+import app.cristal.cover.data.home.HomeProfile
 import app.cristal.cover.data.home.HomeRepository
 import app.cristal.cover.data.home.WidgetKind
 import app.cristal.cover.data.launch.AppLauncher
@@ -35,6 +36,7 @@ import app.cristal.cover.data.prefs.GestureAction
 import app.cristal.cover.data.prefs.PrefKeys
 import app.cristal.cover.data.prefs.Settings
 import app.cristal.cover.data.prefs.SettingsRepository
+import app.cristal.cover.data.prefs.WallpaperImages
 import app.cristal.cover.data.shizuku.ShizukuManager
 import app.cristal.cover.data.system.PermissionCenter
 import app.cristal.cover.data.system.PermissionState
@@ -118,9 +120,17 @@ class LauncherViewModel @Inject constructor(
     /** `true` quando as preferências já vieram do disco (evita piscar o onboarding). */
     val settingsLoaded: StateFlow<Boolean> = _settingsLoaded.asStateFlow()
 
-    private val gridFlow: Flow<Pair<Int, DrawerSort>> = settings
-        .map { it.dockCount to it.drawerSort }
-        .distinctUntilChanged()
+    private val profile = MutableStateFlow(HomeProfile.INNER)
+
+    /** A tela informa em qual tela física está; cada uma tem a sua tela inicial. */
+    fun setProfile(value: HomeProfile) {
+        profile.value = value
+    }
+
+    private val gridFlow: Flow<Triple<Int, DrawerSort, HomeProfile>> = combine(
+        settings.map { it.dockCount to it.drawerSort }.distinctUntilChanged(),
+        profile,
+    ) { pair, p -> Triple(pair.first, pair.second, p) }
 
     val home: StateFlow<HomeUi> = combine(
         homeRepository.items,
@@ -129,7 +139,7 @@ class LauncherViewModel @Inject constructor(
         gridFlow,
         appRepository.loaded,
     ) { entities, apps, prefs, grid, loaded ->
-        buildHome(entities, apps, prefs, dockCount = grid.first, sort = grid.second, loaded = loaded)
+        buildHome(entities, apps, prefs, dockCount = grid.first, sort = grid.second, loaded = loaded, profile = grid.third)
     }.flowOn(default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUi())
 
     val widgetData: StateFlow<WidgetData> = combine(
@@ -158,7 +168,7 @@ class LauncherViewModel @Inject constructor(
     val quick: StateFlow<QuickState> = quickSettingsRepository.state
     val permissions: StateFlow<PermissionState> = permissionCenter.state
     val cover: StateFlow<CoverState> = coverDisplayRepository.state
-    val wallpaper: StateFlow<ImageBitmap?> = wallpaperRepository.image
+    val wallpapers: StateFlow<WallpaperImages> = wallpaperRepository.images
     val accessibilityConnected: StateFlow<Boolean> = systemBridge.accessibilityConnected
 
     private val _events = Channel<LauncherEvent>(Channel.BUFFERED)
@@ -240,20 +250,20 @@ class LauncherViewModel @Inject constructor(
 
     fun addToHome(app: AppInfo, page: Int) {
         viewModelScope.launch {
-            homeRepository.addAppToDesktop(app.key, page)
+            homeRepository.addAppToDesktop(app.key, page, profile.value)
             message("${app.label} adicionado à tela inicial.")
         }
     }
 
     fun addToDock(app: AppInfo) {
         viewModelScope.launch {
-            val ok = homeRepository.addAppToDock(app.key)
+            val ok = homeRepository.addAppToDock(app.key, profile.value)
             message(if (ok) "${app.label} adicionado ao dock." else "O dock está cheio.")
         }
     }
 
     fun addWidget(kind: WidgetKind, page: Int) {
-        viewModelScope.launch { homeRepository.addWidget(kind, page) }
+        viewModelScope.launch { homeRepository.addWidget(kind, page, profile.value) }
     }
 
     fun removeItem(id: Long) {
@@ -266,29 +276,29 @@ class LauncherViewModel @Inject constructor(
     }
 
     fun addAppWidget(appWidgetId: Int, spanX: Int, spanY: Int, page: Int) {
-        viewModelScope.launch { homeRepository.addWidget(WidgetKind.APP_WIDGET, page, appWidgetId, spanX, spanY) }
+        viewModelScope.launch { homeRepository.addWidget(WidgetKind.APP_WIDGET, page, profile.value, appWidgetId, spanX, spanY) }
     }
 
     fun moveToDesktop(id: Long, page: Int) {
-        viewModelScope.launch { homeRepository.moveToDesktop(id, page) }
+        viewModelScope.launch { homeRepository.moveToDesktop(id, page, profile.value) }
     }
 
     fun moveToDock(id: Long) {
         viewModelScope.launch {
-            val result = homeRepository.dropOnDock(id, Int.MAX_VALUE)
+            val result = homeRepository.dropOnDock(id, Int.MAX_VALUE, profile.value)
             if (result == DropResult.REJECTED) message("O dock está cheio.")
         }
     }
 
     fun dropOnCell(id: Long, page: Int, x: Int, y: Int) {
         viewModelScope.launch {
-            if (homeRepository.dropOnCell(id, page, x, y) == DropResult.REJECTED) message("Não há espaço nessa posição.")
+            if (homeRepository.dropOnCell(id, page, x, y, profile.value) == DropResult.REJECTED) message("Não há espaço nessa posição.")
         }
     }
 
     fun dropOnDock(id: Long, index: Int) {
         viewModelScope.launch {
-            if (homeRepository.dropOnDock(id, index) == DropResult.REJECTED) message("O dock está cheio.")
+            if (homeRepository.dropOnDock(id, index, profile.value) == DropResult.REJECTED) message("O dock está cheio.")
         }
     }
 
@@ -442,6 +452,7 @@ class LauncherViewModel @Inject constructor(
         dockCount: Int,
         sort: DrawerSort,
         loaded: Boolean,
+        profile: HomeProfile,
     ): HomeUi {
         val appByKey = apps.associateBy { it.key }
         val prefByKey = prefs.associateBy { it.componentKey }
@@ -467,10 +478,10 @@ class LauncherViewModel @Inject constructor(
             else -> null
         }
 
-        val desktop = entities.filter { it.container == Container.DESKTOP }.mapNotNull(::convert)
+        val desktop = entities.filter { it.container == profile.desktop }.mapNotNull(::convert)
         val pageCount = max(1, (desktop.maxOfOrNull { it.page } ?: 0) + 1)
         val pages = List(pageCount) { page -> desktop.filter { it.page == page } }
-        val dock = entities.filter { it.container == Container.DOCK }
+        val dock = entities.filter { it.container == profile.dock }
             .sortedBy { it.cellX }
             .mapNotNull(::convert)
             .take(dockCount)

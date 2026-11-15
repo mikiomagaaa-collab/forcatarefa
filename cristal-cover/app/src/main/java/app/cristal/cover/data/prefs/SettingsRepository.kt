@@ -47,6 +47,10 @@ object PrefKeys {
 
     val GRID_COLUMNS = intPreferencesKey("grid_columns")
     val GRID_ROWS = intPreferencesKey("grid_rows")
+    val INNER_GRID_COLUMNS = intPreferencesKey("inner_grid_columns")
+    val INNER_GRID_ROWS = intPreferencesKey("inner_grid_rows")
+    val HOME_SEEDED_INNER = booleanPreferencesKey("home_seeded_inner")
+    val HOME_SEEDED_COVER = booleanPreferencesKey("home_seeded_cover")
     val DOCK_ENABLED = booleanPreferencesKey("dock_enabled")
     val DOCK_COUNT = intPreferencesKey("dock_count")
     val SHOW_LABELS = booleanPreferencesKey("show_labels")
@@ -70,6 +74,11 @@ object PrefKeys {
     val LOCK_HIDE_SENSITIVE = booleanPreferencesKey("lock_hide_sensitive")
     val LOCK_SHORTCUTS = booleanPreferencesKey("lock_shortcuts")
     val LOCK_MUSIC = booleanPreferencesKey("lock_music")
+    val COVER_CLOCK_STYLE = stringPreferencesKey("cover_clock_style")
+    val COVER_CLOCK_SCALE = floatPreferencesKey("cover_clock_scale")
+    val COVER_CLOCK_POSITION = stringPreferencesKey("cover_clock_position")
+    val COVER_LOCK_MAX_NOTIFICATIONS = intPreferencesKey("cover_lock_max_notifications")
+    val FLIP_TRANSITION = booleanPreferencesKey("flip_transition")
 
     val COVER_TAKEOVER = booleanPreferencesKey("cover_takeover")
     val COVER_DISPLAY_OVERRIDE = intPreferencesKey("cover_display_override")
@@ -87,7 +96,7 @@ object PrefKeys {
     val WEATHER_CACHE = stringPreferencesKey("weather_cache")
 
     /** Chaves que não devem ser exportadas nem restauradas. */
-    val transient: Set<String> = setOf(WEATHER_CACHE.name, WALLPAPER_VERSION.name)
+    val transient: Set<String> = setOf(WEATHER_CACHE.name) + WallpaperSlot.entries.map { WallpaperKeys.of(it).version.name }
 }
 
 private inline fun <reified E : Enum<E>> Preferences.enumOr(key: Preferences.Key<String>, default: E): E {
@@ -115,6 +124,8 @@ internal fun Preferences.toSettings(): Settings {
         wallpaperVersion = this[PrefKeys.WALLPAPER_VERSION] ?: d.wallpaperVersion,
         gridColumns = (this[PrefKeys.GRID_COLUMNS] ?: d.gridColumns).coerceIn(SettingsLimits.gridColumns),
         gridRows = (this[PrefKeys.GRID_ROWS] ?: d.gridRows).coerceIn(SettingsLimits.gridRows),
+        innerGridColumns = (this[PrefKeys.INNER_GRID_COLUMNS] ?: d.innerGridColumns).coerceIn(SettingsLimits.gridColumns),
+        innerGridRows = (this[PrefKeys.INNER_GRID_ROWS] ?: d.innerGridRows).coerceIn(SettingsLimits.innerGridRows),
         dockEnabled = this[PrefKeys.DOCK_ENABLED] ?: d.dockEnabled,
         dockCount = (this[PrefKeys.DOCK_COUNT] ?: d.dockCount).coerceIn(SettingsLimits.dockCount),
         showLabels = this[PrefKeys.SHOW_LABELS] ?: d.showLabels,
@@ -136,6 +147,11 @@ internal fun Preferences.toSettings(): Settings {
         lockHideSensitive = this[PrefKeys.LOCK_HIDE_SENSITIVE] ?: d.lockHideSensitive,
         lockShortcuts = this[PrefKeys.LOCK_SHORTCUTS] ?: d.lockShortcuts,
         lockMusic = this[PrefKeys.LOCK_MUSIC] ?: d.lockMusic,
+        coverClockStyle = enumOr(PrefKeys.COVER_CLOCK_STYLE, d.coverClockStyle),
+        coverClockScale = (this[PrefKeys.COVER_CLOCK_SCALE] ?: d.coverClockScale).coerceIn(0.6f, 1.4f),
+        coverClockPosition = enumOr(PrefKeys.COVER_CLOCK_POSITION, d.coverClockPosition),
+        coverLockMaxNotifications = (this[PrefKeys.COVER_LOCK_MAX_NOTIFICATIONS] ?: d.coverLockMaxNotifications).coerceIn(0, 4),
+        flipTransition = this[PrefKeys.FLIP_TRANSITION] ?: d.flipTransition,
         coverTakeover = this[PrefKeys.COVER_TAKEOVER] ?: d.coverTakeover,
         coverDisplayOverride = this[PrefKeys.COVER_DISPLAY_OVERRIDE] ?: d.coverDisplayOverride,
         autoAllowOnCover = this[PrefKeys.AUTO_ALLOW_ON_COVER] ?: d.autoAllowOnCover,
@@ -146,7 +162,8 @@ internal fun Preferences.toSettings(): Settings {
         weatherLat = this[PrefKeys.WEATHER_LAT] ?: d.weatherLat,
         weatherLon = this[PrefKeys.WEATHER_LON] ?: d.weatherLon,
         tempUnit = enumOr(PrefKeys.TEMP_UNIT, d.tempUnit),
-    )
+        wallpapers = WallpaperKeys.readAll(this),
+    ).forSlot(WallpaperSlot.HOME_INNER)
 }
 
 @Singleton
@@ -189,6 +206,8 @@ class SettingsRepository @Inject constructor(
     }
 
     suspend fun getString(key: Preferences.Key<String>): String? = safeData.first()[key]
+
+    suspend fun <T> get(key: Preferences.Key<T>): T? = safeData.first()[key]
 
     /** Exporta tudo como pares nome → valor com marcador de tipo, para o backup. */
     suspend fun exportRaw(): Map<String, String> {

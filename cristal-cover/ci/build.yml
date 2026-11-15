@@ -77,7 +77,7 @@ jobs:
       - name: Nomear os arquivos
         id: info
         run: |
-          versao="1.1.0-${GITHUB_RUN_NUMBER}"
+          versao="1.2.0-${GITHUB_RUN_NUMBER}"
           mkdir -p saida
           cp app/build/outputs/apk/release/app-release.apk "saida/cristal-cover-${versao}.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "saida/cristal-cover-${versao}-debug.apk"

@@ -6,15 +6,17 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.ImageDecoder
 import android.net.Uri
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import app.cristal.cover.core.AppScope
 import app.cristal.cover.core.IoDispatcher
 import app.cristal.cover.core.Logx
 import app.cristal.cover.core.safely
-import app.cristal.cover.data.prefs.PrefKeys
 import app.cristal.cover.data.prefs.SettingsRepository
+import app.cristal.cover.data.prefs.WallpaperConfig
+import app.cristal.cover.data.prefs.WallpaperImages
+import app.cristal.cover.data.prefs.WallpaperKeys
 import app.cristal.cover.data.prefs.WallpaperKind
+import app.cristal.cover.data.prefs.WallpaperSlot
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
@@ -33,9 +35,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Papel de parede próprio do launcher. O vidro precisa "enxergar" a imagem para refratar, e o
- * Android não deixa apps comuns lerem o papel de parede do sistema; por isso o app guarda uma
- * cópia reduzida da imagem escolhida na pasta privada dele.
+ * Papéis de parede próprios do launcher, um por área (início e bloqueio, interna e externa).
+ *
+ * O vidro precisa "enxergar" a imagem para refratar, e o Android não deixa apps comuns lerem o
+ * papel de parede do sistema; por isso o app guarda uma cópia reduzida de cada imagem escolhida
+ * na pasta privada dele.
  */
 @Singleton
 class WallpaperRepository @Inject constructor(
@@ -44,56 +48,83 @@ class WallpaperRepository @Inject constructor(
     @AppScope scope: CoroutineScope,
     @IoDispatcher private val io: CoroutineDispatcher,
 ) {
-    private val file: File get() = File(context.filesDir, FILE_NAME)
+    private fun file(slot: WallpaperSlot): File =
+        File(context.filesDir, if (slot.key.isEmpty()) "wallpaper.jpg" else "wallpaper_${slot.key}.jpg")
 
-    private val _image = MutableStateFlow<ImageBitmap?>(null)
+    private val _images = MutableStateFlow<WallpaperImages>(emptyMap())
 
-    /** Imagem escolhida pelo usuário, ou `null` quando um preset está em uso. */
-    val image: StateFlow<ImageBitmap?> = _image.asStateFlow()
+    /** Imagens das áreas que têm imagem própria. Áreas com preset ou que acompanham outra ficam de fora. */
+    val images: StateFlow<WallpaperImages> = _images.asStateFlow()
 
     init {
         scope.launch {
             settingsRepository.settings
-                .map { it.wallpaperKind to it.wallpaperVersion }
+                .map { s -> s.wallpapers.mapValues { (_, c) -> Triple(c.kind, c.version, c.follows) } }
                 .distinctUntilChanged()
-                .collectLatest { (kind, _) ->
-                    _image.value = if (kind == WallpaperKind.IMAGE) withContext(io) { loadFromDisk() } else null
+                .collectLatest { states ->
+                    _images.value = withContext(io) {
+                        buildMap {
+                            for ((slot, state) in states) {
+                                if (state.first != WallpaperKind.IMAGE || state.third != null) continue
+                                loadFromDisk(slot)?.let { put(slot, it.asImageBitmap()) }
+                            }
+                        }
+                    }
                 }
         }
     }
 
-    private fun loadFromDisk(): ImageBitmap? = safely("carregar papel de parede") {
-        val f = file
+    private fun loadFromDisk(slot: WallpaperSlot): Bitmap? = safely("carregar papel de parede ${slot.name}") {
+        val f = file(slot)
         if (!f.exists()) return@safely null
-        BitmapFactory.decodeFile(f.absolutePath)?.asImageBitmap()
+        BitmapFactory.decodeFile(f.absolutePath)
     }
 
     /** Copia a imagem escolhida para o armazenamento do app. Devolve `false` se não for uma imagem válida. */
-    suspend fun setFromUri(uri: Uri): Boolean = withContext(io) {
+    suspend fun setFromUri(slot: WallpaperSlot, uri: Uri): Boolean = withContext(io) {
         try {
+            val maxSide = if (slot.onCover) MAX_SIDE_COVER else MAX_SIDE
             val source = ImageDecoder.createSource(context.contentResolver, uri)
             val bitmap = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
                 val longest = max(info.size.width, info.size.height)
-                if (longest > MAX_SIDE) decoder.setTargetSampleSize(ceil(longest / MAX_SIDE.toFloat()).toInt())
+                if (longest > maxSide) decoder.setTargetSampleSize(ceil(longest / maxSide.toFloat()).toInt())
                 decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
             }
-            val tmp = File(context.filesDir, "$FILE_NAME.tmp")
+            val target = file(slot)
+            val tmp = File(context.filesDir, "${target.name}.tmp")
             tmp.outputStream().use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 92, out) }
-            if (!tmp.renameTo(file)) {
-                tmp.copyTo(file, overwrite = true)
+            if (!tmp.renameTo(target)) {
+                tmp.copyTo(target, overwrite = true)
                 tmp.delete()
             }
             val dark = isDark(bitmap)
-            settingsRepository.edit {
-                it[PrefKeys.WALLPAPER_KIND] = WallpaperKind.IMAGE.name
-                it[PrefKeys.WALLPAPER_VERSION] = System.currentTimeMillis()
-                it[PrefKeys.WALLPAPER_IMAGE_DARK] = dark
+            update(slot) {
+                it.copy(
+                    kind = WallpaperKind.IMAGE,
+                    version = System.currentTimeMillis(),
+                    imageDark = dark,
+                    follows = null,
+                    zoom = 1f,
+                    offsetX = 0f,
+                    offsetY = 0f,
+                )
             }
             true
         } catch (t: Throwable) {
             Logx.w("Falha ao importar papel de parede", t)
             false
         }
+    }
+
+    suspend fun usePreset(slot: WallpaperSlot, index: Int) {
+        update(slot) { it.copy(kind = WallpaperKind.PRESET, preset = index, follows = null) }
+    }
+
+    /** Altera a configuração de uma área, partindo do que está gravado. */
+    suspend fun update(slot: WallpaperSlot, change: (WallpaperConfig) -> WallpaperConfig) {
+        val current = settingsRepository.current().wallpapers[slot] ?: WallpaperConfig()
+        val next = change(current)
+        settingsRepository.edit { WallpaperKeys.of(slot).write(it, next) }
     }
 
     /** Brilho médio da imagem, medido em uma miniatura: decide se o texto sobre o vidro fica claro. */
@@ -109,15 +140,8 @@ class WallpaperRepository @Inject constructor(
         sum / (24 * 24 * 255.0) < 0.6
     } ?: true
 
-    suspend fun usePreset(index: Int) {
-        settingsRepository.edit {
-            it[PrefKeys.WALLPAPER_KIND] = WallpaperKind.PRESET.name
-            it[PrefKeys.WALLPAPER_PRESET] = index
-        }
-    }
-
     private companion object {
-        const val FILE_NAME = "wallpaper.jpg"
         const val MAX_SIDE = 1600
+        const val MAX_SIDE_COVER = 1280
     }
 }

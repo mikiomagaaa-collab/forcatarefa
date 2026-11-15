@@ -10,14 +10,38 @@ Launcher e tela de bloqueio em **vidro líquido** para a tela externa do Motorol
 - Guia de instalação (só com o celular): [docs/GUIA.md](docs/GUIA.md)
 - Checklist de testes no aparelho: [docs/TESTES.md](docs/TESTES.md)
 
+## Roteiro "Liquid Flip"
+
+O projeto evoluiu de "launcher da tela externa" para três experiências que compartilham identidade
+(tela interna, tela externa e bloqueio). O que já existe e o que ainda não foi começado:
+
+| Parte | Estado |
+| --- | --- |
+| Vidro Liquid Glass (AGSL), tipografia, 12 papéis de parede | Feito |
+| Tela interna e externa com telas iniciais, grades e docks independentes | Feito |
+| Wallpaper Studio: 4 áreas independentes, enquadramento, filtros e "igual a outra área" | Feito |
+| Cover Clock: bloqueio minimalista da tela externa (4 estilos de relógio) | Feito |
+| Flip Transition: chegada com mola ao trocar de tela e recolhimento pela dobradiça | Primeira versão |
+| Widgets (9 embutidos + de outros apps), gaveta, painel rápido | Feito |
+| Liquid Control Center modular (módulos, páginas, editor, brilho) | Não iniciado |
+| Liquid Island (cápsula contextual) | Não iniciado |
+| Depth Effect (assunto da foto à frente do relógio) | Não iniciado |
+| Sistema de ícones por app, materiais de vidro por componente, temas salvos | Não iniciado |
+| L.I.L.Y AI (modelos locais) | Não iniciado: exige medições no aparelho real |
+
+Sobre a L.I.L.Y: nenhum motor ou modelo foi incluído. O próprio requisito pede testes no Razr 40
+Ultra antes de integrar qualquer coisa, e este projeto nunca foi executado no aparelho durante o
+desenvolvimento. Incluir um runtime pesado sem medir memória, temperatura e latência seria chute.
+
 ## Estado real do projeto
 
 O que **foi verificado** durante o desenvolvimento:
 
 - compila do zero (debug e release com R8) com as versões estáveis atuais das ferramentas;
-- 37 testes automáticos em JVM passam: lógica da grade, detecção da tela externa, regras de
-  compatibilidade, segurança dos comandos de shell, backup, **compilação real do shader AGSL** e
-  **12 telas montadas e desenhadas** no tamanho da tela externa (422×426 dp) pelo pipeline de hardware;
+- 43 testes automáticos em JVM passam: lógica da grade, detecção da tela externa, regras de
+  compatibilidade, segurança dos comandos de shell, backup, papéis de parede por área,
+  **compilação real do shader AGSL** e **14 telas montadas e desenhadas** pelo pipeline de hardware,
+  no tamanho da tela externa (422×426 dp) e da interna (411×1004 dp);
 - lint sem erros.
 
 O que **não foi verificado**: o app **nunca rodou em um Razr de verdade**. Tudo o que depende de

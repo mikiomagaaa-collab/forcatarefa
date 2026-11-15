@@ -90,10 +90,23 @@ data class Settings(
     val wallpaperImageDark: Boolean = true,
     /** Muda a cada troca de imagem para invalidar caches. */
     val wallpaperVersion: Long = 0,
+    val wallpaperZoom: Float = 1f,
+    val wallpaperOffsetX: Float = 0f,
+    val wallpaperOffsetY: Float = 0f,
+    val wallpaperSaturation: Float = 1f,
+    /** Área cuja imagem está em uso nesta "visão" das preferências (ver [forSlot]). */
+    val wallpaperSlot: WallpaperSlot = WallpaperSlot.HOME_INNER,
+    /** Configuração bruta das quatro áreas. Os campos `wallpaper*` acima são a área resolvida. */
+    val wallpapers: Map<WallpaperSlot, WallpaperConfig> = WallpaperSlot.entries.associateWith {
+        WallpaperConfig(follows = WallpaperKeys.defaultFollows(it))
+    },
 
     // Grade e ícones
     val gridColumns: Int = 4,
     val gridRows: Int = 4,
+    /** Grade da tela interna; `gridColumns`/`gridRows` são da tela externa. */
+    val innerGridColumns: Int = 4,
+    val innerGridRows: Int = 8,
     val dockEnabled: Boolean = true,
     val dockCount: Int = 4,
     val showLabels: Boolean = true,
@@ -121,6 +134,15 @@ data class Settings(
     val lockShortcuts: Boolean = true,
     val lockMusic: Boolean = true,
 
+    // Cover Clock (bloqueio da tela externa)
+    val coverClockStyle: CoverClockStyle = CoverClockStyle.LIQUID,
+    val coverClockScale: Float = 1f,
+    val coverClockPosition: CoverClockPosition = CoverClockPosition.TOP,
+    val coverLockMaxNotifications: Int = 3,
+
+    // Flip
+    val flipTransition: Boolean = true,
+
     // Tela externa
     val coverTakeover: Boolean = false,
     val coverDisplayOverride: Int = -1,
@@ -136,12 +158,52 @@ data class Settings(
     val tempUnit: TempUnit = TempUnit.CELSIUS,
 ) {
     val hasWeatherPlace: Boolean get() = !weatherLat.isNaN() && !weatherLon.isNaN()
+
+    fun columns(onCover: Boolean): Int = if (onCover) gridColumns else innerGridColumns
+    fun rows(onCover: Boolean): Int = if (onCover) gridRows else innerGridRows
+
+    /** Área que realmente fornece o papel de parede de [slot], seguindo "igual a outra área". */
+    fun resolvedSlot(slot: WallpaperSlot): WallpaperSlot {
+        var current = slot
+        repeat(WallpaperSlot.entries.size) {
+            val next = wallpapers[current]?.follows
+            if (next == null || next == current) return current
+            current = next
+        }
+        return current
+    }
+
+    /** Estas preferências "vistas" de uma área: os campos `wallpaper*` passam a ser os dela. */
+    fun forSlot(slot: WallpaperSlot): Settings {
+        val resolved = resolvedSlot(slot)
+        val c = wallpapers[resolved] ?: WallpaperConfig()
+        return copy(
+            wallpaperSlot = resolved,
+            wallpaperKind = c.kind,
+            wallpaperPreset = c.preset,
+            wallpaperDim = c.dim,
+            wallpaperBlur = c.blur,
+            wallpaperImageDark = c.imageDark,
+            wallpaperVersion = c.version,
+            wallpaperZoom = c.zoom,
+            wallpaperOffsetX = c.offsetX,
+            wallpaperOffsetY = c.offsetY,
+            wallpaperSaturation = c.saturation,
+        )
+    }
+
+    /** Preferências para a tela inicial de uma das telas: papel de parede e grade próprios. */
+    fun forScreen(onCover: Boolean): Settings {
+        val view = forSlot(WallpaperSlot.home(onCover))
+        return if (onCover) view else view.copy(gridColumns = innerGridColumns, gridRows = innerGridRows)
+    }
 }
 
 /** Limites aceitos para os valores numéricos, usados na UI e na restauração de backup. */
 object SettingsLimits {
     val gridColumns = 3..6
     val gridRows = 3..6
+    val innerGridRows = 5..9
     val dockCount = 3..6
     val drawerColumns = 3..6
     const val ICON_SCALE_MIN = 0.7f

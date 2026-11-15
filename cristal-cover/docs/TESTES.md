@@ -18,7 +18,12 @@ Para relatar um problema, anote: o item, o que você esperava, o que aconteceu e
 - [ ] "Abrir o launcher" encerra a configuração e ela não volta a aparecer.
 - [ ] Na primeira vez, a tela inicial vem com relógio, alguns apps e o dock preenchido.
 
-## 2. Tela interna (fallback)
+## 2. Tela interna
+
+- [ ] A tela interna tem a sua própria tela inicial (grade 4×8 por padrão), diferente da externa.
+- [ ] Mover, adicionar ou remover itens na tela interna não muda nada na tela externa, e vice-versa.
+- [ ] Mudar a grade de uma tela (Configurações > Tela inicial e ícones) não mexe na outra.
+- [ ] Depois de atualizar o app, a sua tela inicial antiga continua na tela interna, sem itens perdidos.
 
 - [ ] O launcher abre na tela de dentro e a grade usa a altura toda.
 - [ ] Girar o aparelho não fecha nem reinicia a tela.
@@ -100,6 +105,15 @@ Para relatar um problema, anote: o item, o que você esperava, o que aconteceu e
 - [ ] Em Configurações > Bateria, o Cristal não aparece entre os maiores consumos depois de um dia.
 
 ## 9. Tela de bloqueio
+
+- [ ] Wallpaper Studio: as 4 prévias aparecem com a proporção de cada tela.
+- [ ] Escolher uma imagem só para "Bloqueio · tela externa" não muda as outras três áreas.
+- [ ] "Igual a ..." faz uma área acompanhar outra; "Papel de parede próprio" desfaz.
+- [ ] Zoom e posição movem a foto na prévia e na tela de verdade; saturação 0% deixa em preto e branco.
+- [ ] ⚠️ Na tela externa, o bloqueio é o Cover Clock: só papel de parede, relógio e notificações.
+- [ ] Tocar em uma notificação do Cover Clock expande e mostra "Abrir"; sem notificações, sobra só o relógio.
+- [ ] Os 4 estilos, o tamanho e a posição do relógio mudam na pré-visualização do Cover Clock.
+- [ ] ⚠️ Flip Transition: ao abrir/fechar, a tela inicial chega com uma mola; ao fechar devagar, ela recolhe.
 
 - [ ] "Pré-visualizar" mostra relógio, data, bateria e atalhos; deslizar para cima fecha.
 - [ ] ⚠️ Modo Activity: fechar o aparelho, apagar e acender a tela mostra a tela do Cristal.

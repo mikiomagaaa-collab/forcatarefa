@@ -11,6 +11,7 @@ import android.provider.Settings as SystemSettings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -61,6 +62,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.cristal.cover.data.apps.AppInfo
 import app.cristal.cover.data.home.CellSlot
 import app.cristal.cover.data.home.HomeItem
+import app.cristal.cover.data.home.HomeProfile
 import app.cristal.cover.data.prefs.GestureAction
 import app.cristal.cover.data.prefs.GlassQuality
 import app.cristal.cover.data.prefs.WallpaperKind
@@ -95,14 +97,14 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
-    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val rawSettings by viewModel.settings.collectAsStateWithLifecycle()
     val home by viewModel.home.collectAsStateWithLifecycle()
     val widgetData by viewModel.widgetData.collectAsStateWithLifecycle()
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val quick by viewModel.quick.collectAsStateWithLifecycle()
     val permissions by viewModel.permissions.collectAsStateWithLifecycle()
     val cover by viewModel.cover.collectAsStateWithLifecycle()
-    val wallpaper by viewModel.wallpaper.collectAsStateWithLifecycle()
+    val wallpaperImages by viewModel.wallpapers.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -113,6 +115,23 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
     val displayIdNow = rememberDisplayId()
     val displayId by rememberUpdatedState(displayIdNow)
     val onCover by rememberUpdatedState(cover.cover?.id == displayIdNow)
+    // Cada tela tem papel de parede, grade e tela inicial próprios.
+    val settings = remember(rawSettings, onCover) { rawSettings.forScreen(onCover) }
+    val wallpaper = wallpaperImages[settings.wallpaperSlot]
+    LaunchedEffect(onCover) { viewModel.setProfile(HomeProfile.of(onCover)) }
+
+    // Flip Transition: a tela "chega" com uma mola ao trocar de tela física, e recolhe conforme a
+    // dobradiça fecha (quando o aparelho informa o ângulo).
+    val arrival = remember { Animatable(1f) }
+    LaunchedEffect(displayIdNow) {
+        if (rawSettings.flipTransition) {
+            arrival.snapTo(0f)
+            arrival.animateTo(1f, Motion.pop)
+        }
+    }
+    val hinge = cover.hingeAngle
+    val foldTarget = if (rawSettings.flipTransition && !onCover && hinge != null) ((150f - hinge) / 90f).coerceIn(0f, 1f) else 0f
+    val foldAmount by animateFloatAsState(foldTarget, Motion.gentle, label = "dobra")
     val safe = rememberSafeLayout(settings.useCutoutArea)
     val shizukuReady = permissions.shizuku == ShizukuStatus.READY
 
@@ -409,9 +428,10 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                 .graphicsLayer {
                     val amount = max(max(drawer.progress.value, panel.progress.value), max(folderAmount, dialogAmount * 0.7f))
                         .coerceIn(0f, 1f)
-                    val scale = 1f - 0.035f * amount
+                    val scale = (1f - 0.035f * amount) * (1f - 0.14f * foldAmount) * (0.9f + 0.1f * arrival.value)
                     scaleX = scale
                     scaleY = scale
+                    alpha = ((1f - 0.9f * foldAmount) * (0.2f + 0.8f * arrival.value)).coerceIn(0f, 1f)
                     renderEffect = if (quality != GlassQuality.LIGHT && amount > 0.01f) {
                         BlurEffect(blurMaxPx * amount, blurMaxPx * amount, TileMode.Clamp)
                     } else {
@@ -478,6 +498,10 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                 presetIndex = settings.wallpaperPreset,
                 dim = settings.wallpaperDim,
                 blur = settings.wallpaperBlur,
+                zoom = settings.wallpaperZoom,
+                offsetX = settings.wallpaperOffsetX,
+                offsetY = settings.wallpaperOffsetY,
+                saturation = settings.wallpaperSaturation,
                 modifier = Modifier.glassBackdropSource(sceneBackdrop),
                 parallax = {
                     if (!settingsState.value.wallpaperParallax) {

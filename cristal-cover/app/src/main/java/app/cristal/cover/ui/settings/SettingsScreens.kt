@@ -54,6 +54,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.cristal.cover.BuildConfig
 import app.cristal.cover.data.backup.BackupManager
 import app.cristal.cover.data.display.CoverState
+import app.cristal.cover.data.prefs.CoverClockPosition
+import app.cristal.cover.data.prefs.CoverClockStyle
 import app.cristal.cover.data.prefs.DrawerSort
 import app.cristal.cover.data.prefs.GestureAction
 import app.cristal.cover.data.prefs.GlassQuality
@@ -84,7 +86,7 @@ import kotlin.math.roundToInt
 enum class SettingsPage(val title: String) {
     MAIN("Configurações"),
     APPEARANCE("Aparência"),
-    WALLPAPER("Papel de parede"),
+    WALLPAPER("Wallpaper Studio"),
     HOME("Tela inicial e ícones"),
     GESTURES("Gestos"),
     LOCK("Tela de bloqueio"),
@@ -123,7 +125,7 @@ fun SettingsRoot(viewModel: SettingsViewModel, initialPage: SettingsPage, onExit
     when (page) {
         SettingsPage.MAIN -> MainPage(settings, wallpaper, permissions, back) { page = it }
         SettingsPage.APPEARANCE -> AppearancePage(viewModel, settings, wallpaper, back)
-        SettingsPage.WALLPAPER -> WallpaperPage(viewModel, settings, wallpaper, back)
+        SettingsPage.WALLPAPER -> WallpaperStudioPage(viewModel, settings, wallpaper, back)
         SettingsPage.HOME -> HomePage(viewModel, settings, wallpaper, back)
         SettingsPage.GESTURES -> GesturesPage(viewModel, settings, wallpaper, permissions, back)
         SettingsPage.LOCK -> LockPage(viewModel, settings, wallpaper, permissions, back) { page = SettingsPage.PERMISSIONS }
@@ -160,7 +162,7 @@ private fun MainPage(
         item {
             SettingsCard("Visual") {
                 NavRow(Icons.Rounded.Palette, "Aparência", "Tema, vidro, desempenho e taxa de atualização") { open(SettingsPage.APPEARANCE) }
-                NavRow(Icons.Rounded.Wallpaper, "Papel de parede", "Presets ou uma imagem sua") { open(SettingsPage.WALLPAPER) }
+                NavRow(Icons.Rounded.Wallpaper, "Wallpaper Studio", "Um papel de parede para cada tela e para cada bloqueio") { open(SettingsPage.WALLPAPER) }
                 NavRow(Icons.Rounded.GridView, "Tela inicial e ícones", "Grade, dock, forma, tamanho e pacotes de ícones") { open(SettingsPage.HOME) }
             }
         }
@@ -258,108 +260,18 @@ private fun AppearancePage(vm: SettingsViewModel, settings: Settings, wallpaper:
                         "o app usa 60 Hz e vidro leve.",
                 )
                 SwitchRow(
+                    title = "Flip Transition",
+                    subtitle = "A tela inicial chega com uma mola ao abrir ou fechar o aparelho e recolhe conforme a dobradiça fecha.",
+                    checked = settings.flipTransition,
+                    onChange = { vm.set(PrefKeys.FLIP_TRANSITION, it) },
+                )
+                SwitchRow(
                     title = "Vibração ao tocar",
                     checked = settings.haptics,
                     onChange = { vm.set(PrefKeys.HAPTICS, it) },
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun WallpaperPage(vm: SettingsViewModel, settings: Settings, wallpaper: ImageBitmap?, onBack: () -> Unit) {
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri != null) vm.setWallpaperImage(uri)
-    }
-    SettingsScaffold(SettingsPage.WALLPAPER.title, settings, wallpaper, onBack) {
-        item {
-            SettingsCard("Presets") {
-                val presets = WallpaperPresets.all
-                for (rowStart in presets.indices step 3) {
-                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        for (index in rowStart until rowStart + 3) {
-                            if (index < presets.size) {
-                                PresetTile(
-                                    index = index,
-                                    name = presets[index].name,
-                                    selected = settings.wallpaperKind == WallpaperKind.PRESET && settings.wallpaperPreset == index,
-                                    modifier = Modifier.weight(1f),
-                                ) { vm.useWallpaperPreset(index) }
-                            } else {
-                                Spacer(Modifier.weight(1f))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        item {
-            SettingsCard("Sua imagem") {
-                InfoText(
-                    "O Cristal guarda uma cópia reduzida da imagem na pasta privada do app. É ela que o vidro " +
-                        "desfoca e refrata. O papel de parede do sistema não é alterado.",
-                )
-                Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    GlassButton("Escolher imagem", Modifier.weight(1f), primary = true) {
-                        runCatching {
-                            picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                        }.onFailure { vm.message("Não foi possível abrir o seletor de fotos nesta tela.") }
-                    }
-                }
-                if (settings.wallpaperKind == WallpaperKind.IMAGE) InfoText("Em uso: imagem personalizada.")
-            }
-        }
-        item {
-            SettingsCard("Ajustes") {
-                SliderRow(
-                    "Escurecer",
-                    settings.wallpaperDim,
-                    0f..0.7f,
-                    label = { "${(it * 100).roundToInt()}%" },
-                ) { vm.set(PrefKeys.WALLPAPER_DIM, it) }
-                SliderRow(
-                    "Desfocar",
-                    settings.wallpaperBlur,
-                    0f..1f,
-                    label = { "${(it * 100).roundToInt()}%" },
-                ) { vm.set(PrefKeys.WALLPAPER_BLUR, it) }
-                InfoText("Um fundo levemente desfocado e escurecido deixa os ícones e o vidro mais nítidos.")
-                SwitchRow(
-                    title = "Parallax entre páginas",
-                    subtitle = "O fundo desliza de leve ao trocar de página.",
-                    checked = settings.wallpaperParallax,
-                    onChange = { vm.set(PrefKeys.WALLPAPER_PARALLAX, it) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PresetTile(index: Int, name: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Column(
-        modifier = modifier.clickable(
-            interactionSource = remember { MutableInteractionSource() },
-            indication = null,
-            onClick = onClick,
-        ),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(96.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .border(
-                    if (selected) 2.dp else 0.75.dp,
-                    LocalContentColor.current.copy(alpha = if (selected) 1f else 0.3f),
-                    RoundedCornerShape(16.dp),
-                ),
-        ) {
-            WallpaperLayer(image = null, presetIndex = index, dim = 0f)
-        }
-        Text(name, fontSize = 11.sp, maxLines = 1, modifier = Modifier.padding(top = 3.dp))
     }
 }
 
@@ -371,7 +283,18 @@ private fun HomePage(vm: SettingsViewModel, settings: Settings, wallpaper: Image
     LaunchedEffect(Unit) { vm.loadIconPacks() }
     SettingsScaffold(SettingsPage.HOME.title, settings, wallpaper, onBack) {
         item {
-            SettingsCard("Grade") {
+            SettingsCard("Grade da tela interna") {
+                ChoiceRow("Colunas", rangeOptions(SettingsLimits.gridColumns) { it }, settings.innerGridColumns) {
+                    vm.set(PrefKeys.INNER_GRID_COLUMNS, it)
+                }
+                ChoiceRow("Linhas", rangeOptions(SettingsLimits.innerGridRows) { it }, settings.innerGridRows) {
+                    vm.set(PrefKeys.INNER_GRID_ROWS, it)
+                }
+                InfoText("A tela interna e a externa têm telas iniciais separadas: ícones, widgets e dock de uma não mexem na outra.")
+            }
+        }
+        item {
+            SettingsCard("Grade da tela externa") {
                 ChoiceRow("Colunas", rangeOptions(SettingsLimits.gridColumns) { it }, settings.gridColumns) {
                     vm.set(PrefKeys.GRID_COLUMNS, it)
                 }
@@ -543,6 +466,45 @@ private fun LockPage(
                 )
                 SwitchRow(title = "Atalhos de lanterna e câmera", checked = settings.lockShortcuts, onChange = { vm.set(PrefKeys.LOCK_SHORTCUTS, it) })
                 SwitchRow(title = "Controle de música", checked = settings.lockMusic, onChange = { vm.set(PrefKeys.LOCK_MUSIC, it) })
+            }
+        }
+        item {
+            SettingsCard("Cover Clock (bloqueio da tela externa)") {
+                InfoText("Na tela externa o bloqueio mostra só papel de parede, relógio e notificações.")
+                ChoiceRow(
+                    "Estilo do relógio",
+                    listOf(
+                        CoverClockStyle.LIQUID to "Liquid",
+                        CoverClockStyle.MINIMAL to "Minimalista",
+                        CoverClockStyle.DIGITAL to "Digital",
+                        CoverClockStyle.CLASSIC to "Clássico",
+                    ),
+                    settings.coverClockStyle,
+                ) { vm.setEnum(PrefKeys.COVER_CLOCK_STYLE, it) }
+                SliderRow(
+                    "Tamanho",
+                    settings.coverClockScale,
+                    0.6f..1.4f,
+                    label = { "${(it * 100).roundToInt()}%" },
+                ) { vm.set(PrefKeys.COVER_CLOCK_SCALE, it) }
+                ChoiceRow(
+                    "Posição",
+                    listOf(CoverClockPosition.TOP to "Em cima", CoverClockPosition.CENTER to "No meio", CoverClockPosition.BOTTOM to "Embaixo"),
+                    settings.coverClockPosition,
+                ) { vm.setEnum(PrefKeys.COVER_CLOCK_POSITION, it) }
+                ChoiceRow(
+                    "Notificações exibidas",
+                    listOf(0 to "Nenhuma", 1 to "1", 2 to "2", 3 to "3", 4 to "4"),
+                    settings.coverLockMaxNotifications,
+                ) { vm.set(PrefKeys.COVER_LOCK_MAX_NOTIFICATIONS, it) }
+                GlassButton("Pré-visualizar o Cover Clock", Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                    context.startSafely(
+                        Intent(context, LockActivity::class.java)
+                            .putExtra(LockActivity.EXTRA_PREVIEW, true)
+                            .putExtra(LockActivity.EXTRA_PREVIEW_COVER, true),
+                    )
+                }
+                InfoText("O papel de parede dele é escolhido no Wallpaper Studio > Tela externa > Bloqueio.")
             }
         }
         item {
