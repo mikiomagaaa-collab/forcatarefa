@@ -42,7 +42,7 @@ fun LauncherRoot(viewModel: LauncherViewModel, governor: PerformanceGovernor) {
         val light = rememberGlassLight(enabled = settings.dynamicLight && quality == GlassQuality.LIQUID)
         CompositionLocalProvider(
             LocalGlassLight provides light,
-            LocalIconLook provides IconLook(settings.iconShape, settings.iconStyle),
+            LocalIconLook provides IconLook(settings.iconShape, settings.iconStyle, androidx.compose.ui.graphics.Color(settings.iconTintColor)),
             LocalWidgetHost provides viewModel.widgetHost,
         ) {
             when {

@@ -15,12 +15,14 @@ data class AppInfo(
     val label: String,
     /** Ícone quadrado, sem máscara; a forma é aplicada na hora de desenhar. */
     val icon: ImageBitmap,
-    /** Glifo monocromático (ícone temático), quando o app oferece. */
+    /** Glifo monocromático (ALPHA_8): o temático do app ou um gerado a partir do ícone. */
     val monoIcon: ImageBitmap?,
     /** `false` para ícones de pacotes de ícones, que já vêm com forma própria. */
     val maskable: Boolean,
     val isSystem: Boolean,
     val isWorkProfile: Boolean,
+    /** Cor principal do ícone (ARGB), usada no estilo escuro. */
+    val accent: Int = 0xFFD9D6E3.toInt(),
 ) {
     val packageName: String get() = component.packageName
 

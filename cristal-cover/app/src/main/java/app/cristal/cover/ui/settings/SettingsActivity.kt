@@ -49,7 +49,7 @@ class SettingsActivity : ComponentActivity() {
             // As listas de configurações têm muitos cards; o vidro "Blur" já fica ótimo e pesa menos.
             val quality = if (settings.glassQuality == GlassQuality.LIGHT) GlassQuality.LIGHT else GlassQuality.BLUR
             CristalTheme(settings = settings, qualityOverride = quality) {
-                CompositionLocalProvider(LocalIconLook provides IconLook(settings.iconShape, settings.iconStyle)) {
+                CompositionLocalProvider(LocalIconLook provides IconLook(settings.iconShape, settings.iconStyle, androidx.compose.ui.graphics.Color(settings.iconTintColor))) {
                     SettingsRoot(viewModel = viewModel, initialPage = initial, onExit = { finish() })
                 }
             }

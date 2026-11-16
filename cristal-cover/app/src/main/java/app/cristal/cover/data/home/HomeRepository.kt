@@ -133,6 +133,7 @@ class HomeRepository @Inject constructor(
         appWidgetId: Int = -1,
         spanX: Int = kind.spanX,
         spanY: Int = kind.spanY,
+        extra: String? = null,
     ): Boolean = locked {
         val c = cols(profile)
         val r = rows(profile)
@@ -150,9 +151,30 @@ class HomeRepository @Inject constructor(
                 spanY = sy,
                 widgetKind = kind.name,
                 // Para widgets de outros apps, o título guarda o id no host (evita mudar o banco).
-                title = if (appWidgetId >= 0) appWidgetId.toString() else null,
+                title = extra ?: if (appWidgetId >= 0) appWidgetId.toString() else null,
             ),
         )
+        true
+    }
+
+    /** Troca os dados próprios de um widget (como as fotos do widget de foto). */
+    suspend fun setExtra(id: Long, extra: String) = locked {
+        val item = dao.getById(id) ?: return@locked
+        if (item.type == ItemType.WIDGET) dao.update(item.copy(title = extra))
+    }
+
+    /**
+     * Novo tamanho para um widget, mantendo o canto de cima à esquerda. Recusa se sair da grade
+     * ou se encostar em outro item da página.
+     */
+    suspend fun resize(id: Long, spanX: Int, spanY: Int, profile: HomeProfile): Boolean = locked {
+        val item = dao.getById(id) ?: return@locked false
+        if (item.type != ItemType.WIDGET || item.container != profile.desktop) return@locked false
+        val c = cols(profile)
+        val r = rows(profile)
+        if (spanX < 1 || spanY < 1 || item.cellX + spanX > c || item.cellY + spanY > r) return@locked false
+        if (!GridMath.canPlace(desktop(profile), item.page, item.cellX, item.cellY, spanX, spanY, c, r, ignoreId = id)) return@locked false
+        dao.update(item.copy(spanX = spanX, spanY = spanY))
         true
     }
 

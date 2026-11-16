@@ -33,6 +33,10 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.BoxScope
+import app.cristal.cover.ui.design.LiquidSurface
+import app.cristal.cover.ui.design.LiquidMaterial
+import app.cristal.cover.data.prefs.DockStyle
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -143,9 +147,9 @@ fun HomeContent(
                     highlighted = hover is DropTarget.Dock,
                     callbacks = callbacks,
                     modifier = Modifier
-                        .padding(start = 14.dp, end = 14.dp, bottom = 8.dp)
+                        .padding(start = settings.dockMargin.dp, end = settings.dockMargin.dp, bottom = 8.dp)
                         .fillMaxWidth()
-                        .height(70.dp),
+                        .height(settings.dockHeight.dp),
                 )
             }
         }
@@ -161,7 +165,7 @@ fun HomeContent(
                     .offset(x = band.offsetX)
                     .padding(bottom = band.bottomMargin)
                     .width(band.width)
-                    .height((band.height - 12.dp).coerceAtMost(70.dp)),
+                    .height((band.height - 12.dp).coerceAtMost(settings.dockHeight.dp)),
             )
         }
     }
@@ -293,6 +297,7 @@ private fun WidgetHolder(
         // Declarado só para que soltar depois de um toque longo não conte como clique.
         onLongClick = { },
         gestureModifier = dragModifier,
+        extra = item.extra,
     )
 }
 
@@ -433,16 +438,21 @@ private fun Dock(
     modifier: Modifier = Modifier,
 ) {
     val draggingId = if (drag.moving) drag.item?.id else null
-    GlassSurface(
-        modifier = modifier.onGloballyPositioned { drag.dockBounds = it.boundsInRoot() },
-        cornerRadius = 30.dp,
-        tint = if (highlighted) Color.White.copy(alpha = 0.38f) else Color.Unspecified,
-        reactToTouch = false,
-        elevation = 14.dp,
-    ) {
+    val radius = settings.dockRadius.dp
+    val material = when (settings.dockStyle) {
+        DockStyle.GLASS -> LiquidMaterial.LIQUID
+        DockStyle.FROSTED -> LiquidMaterial.FROSTED
+        DockStyle.DARK -> LiquidMaterial.DARK
+        DockStyle.SOLID -> LiquidMaterial.SOLID
+        DockStyle.NONE -> null
+    }
+    val highlight = if (highlighted) Modifier.border(2.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(radius)) else Modifier
+    val content: @Composable BoxScope.() -> Unit = {
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val slots = items.size.coerceAtLeast(1)
-            val iconSize = (min(maxWidth / slots * 0.74f, maxHeight * 0.74f) * settings.iconScale).coerceAtMost(maxHeight * 0.84f)
+            // Com nomes, o ícone divide a altura com o texto.
+            val heightShare = if (settings.dockLabels) 0.56f else 0.70f
+            val iconSize = (maxHeight * heightShare * settings.dockIconScale).coerceAtMost(maxWidth / slots * 0.9f).coerceAtMost(maxHeight * 0.9f)
             Row(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -453,7 +463,7 @@ private fun Dock(
                         HomeIcon(
                             item = item,
                             iconSize = iconSize,
-                            showLabel = false,
+                            showLabel = settings.dockLabels,
                             inDock = true,
                             callbacks = callbacks,
                             modifier = Modifier
@@ -464,6 +474,12 @@ private fun Dock(
                 }
             }
         }
+    }
+    val bounds = modifier.onGloballyPositioned { drag.dockBounds = it.boundsInRoot() }.then(highlight)
+    if (material == null) {
+        Box(bounds, content = content)
+    } else {
+        LiquidSurface(material, bounds, cornerRadius = radius, content = content)
     }
 }
 

@@ -51,6 +51,13 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.material.icons.rounded.Photo
+import app.cristal.cover.data.home.PhotoWidgetStore
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -170,6 +177,8 @@ fun WidgetCard(
     cornerRadius: Dp = 26.dp,
     onLongClick: (() -> Unit)? = null,
     gestureModifier: Modifier = Modifier,
+    /** Dados próprios do widget (no de foto, os arquivos das fotos). */
+    extra: String? = null,
 ) {
     val onClick: () -> Unit = when (kind) {
         WidgetKind.CLOCK -> actions.onClockClick
@@ -180,7 +189,7 @@ fun WidgetCard(
         WidgetKind.ANALOG_CLOCK -> actions.onClockClick
         WidgetKind.DATE -> actions.onAgendaClick
         WidgetKind.SEARCH -> actions.onSearch
-        WidgetKind.SHORTCUTS, WidgetKind.APP_WIDGET -> ({})
+        WidgetKind.SHORTCUTS, WidgetKind.APP_WIDGET, WidgetKind.PHOTO -> ({})
     }
     GlassSurface(
         modifier = modifier,
@@ -200,7 +209,64 @@ fun WidgetCard(
             WidgetKind.DATE -> DateContent()
             WidgetKind.SHORTCUTS -> ShortcutsContent(data, actions)
             WidgetKind.SEARCH -> SearchContent()
+            WidgetKind.PHOTO -> PhotoContent(extra)
             WidgetKind.APP_WIDGET -> Unit
+        }
+    }
+}
+
+// --- Foto -----------------------------------------------------------------------------------------
+
+/**
+ * Uma ou várias fotos, ocupando o widget inteiro. Com várias, troca sozinho a cada 20 segundos
+ * (com transição suave) e um toque passa para a próxima.
+ */
+@Composable
+private fun PhotoContent(extra: String?) {
+    val context = LocalContext.current
+    val files = remember(extra) { PhotoWidgetStore.decode(extra) }
+    var index by remember(extra) { androidx.compose.runtime.mutableIntStateOf(0) }
+    LaunchedEffect(files) {
+        if (files.size > 1) {
+            while (true) {
+                kotlinx.coroutines.delay(20_000)
+                index = (index + 1) % files.size
+            }
+        }
+    }
+    val name = files.getOrNull(index)
+    val photo by androidx.compose.runtime.produceState<ImageBitmap?>(null, name) {
+        value = name?.let { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PhotoWidgetStore.load(context, it, 900) } }
+    }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .then(
+                if (files.size > 1) {
+                    Modifier.pointerInput(files) { detectTapGestures { index = (index + 1) % files.size } }
+                } else {
+                    Modifier
+                },
+            ),
+    ) {
+        androidx.compose.animation.Crossfade(photo, label = "foto") { image ->
+            if (image != null) {
+                Image(image, contentDescription = "Foto", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            } else {
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.25f)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Photo, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(36.dp))
+                }
+            }
+        }
+        if (files.size > 1) {
+            Row(
+                Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                files.indices.take(8).forEach { i ->
+                    Box(Modifier.size(if (i == index) 7.dp else 5.dp).clip(CircleShape).background(Color.White.copy(alpha = if (i == index) 0.95f else 0.5f)))
+                }
+            }
         }
     }
 }

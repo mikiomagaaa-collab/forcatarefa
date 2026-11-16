@@ -59,10 +59,17 @@ object PrefKeys {
     val HOME_SEEDED_COVER = booleanPreferencesKey("home_seeded_cover")
     val DOCK_ENABLED = booleanPreferencesKey("dock_enabled")
     val DOCK_COUNT = intPreferencesKey("dock_count")
+    val DOCK_HEIGHT = floatPreferencesKey("dock_height")
+    val DOCK_ICON_SCALE = floatPreferencesKey("dock_icon_scale")
+    val DOCK_STYLE = stringPreferencesKey("dock_style")
+    val DOCK_MARGIN = floatPreferencesKey("dock_margin")
+    val DOCK_RADIUS = floatPreferencesKey("dock_radius")
+    val DOCK_LABELS = booleanPreferencesKey("dock_labels")
     val SHOW_LABELS = booleanPreferencesKey("show_labels")
     val ICON_SCALE = floatPreferencesKey("icon_scale")
     val ICON_SHAPE = stringPreferencesKey("icon_shape")
     val ICON_STYLE = stringPreferencesKey("icon_style")
+    val ICON_TINT_COLOR = intPreferencesKey("icon_tint_color")
     val ICON_PACK = stringPreferencesKey("icon_pack")
     val USE_CUTOUT_AREA = booleanPreferencesKey("use_cutout_area")
 
@@ -170,11 +177,18 @@ internal fun Preferences.toSettings(): Settings {
         innerGridRows = (this[PrefKeys.INNER_GRID_ROWS] ?: d.innerGridRows).coerceIn(SettingsLimits.innerGridRows),
         dockEnabled = this[PrefKeys.DOCK_ENABLED] ?: d.dockEnabled,
         dockCount = (this[PrefKeys.DOCK_COUNT] ?: d.dockCount).coerceIn(SettingsLimits.dockCount),
+        dockHeight = (this[PrefKeys.DOCK_HEIGHT] ?: d.dockHeight).coerceIn(SettingsLimits.DOCK_HEIGHT_MIN, SettingsLimits.DOCK_HEIGHT_MAX),
+        dockIconScale = (this[PrefKeys.DOCK_ICON_SCALE] ?: d.dockIconScale).coerceIn(0.6f, 1.4f),
+        dockStyle = enumOr(PrefKeys.DOCK_STYLE, d.dockStyle),
+        dockMargin = (this[PrefKeys.DOCK_MARGIN] ?: d.dockMargin).coerceIn(0f, 40f),
+        dockRadius = (this[PrefKeys.DOCK_RADIUS] ?: d.dockRadius).coerceIn(0f, 66f),
+        dockLabels = this[PrefKeys.DOCK_LABELS] ?: d.dockLabels,
         showLabels = this[PrefKeys.SHOW_LABELS] ?: d.showLabels,
         iconScale = (this[PrefKeys.ICON_SCALE] ?: d.iconScale)
             .coerceIn(SettingsLimits.ICON_SCALE_MIN, SettingsLimits.ICON_SCALE_MAX),
         iconShape = enumOr(PrefKeys.ICON_SHAPE, d.iconShape),
         iconStyle = enumOr(PrefKeys.ICON_STYLE, d.iconStyle),
+        iconTintColor = this[PrefKeys.ICON_TINT_COLOR] ?: d.iconTintColor,
         iconPack = this[PrefKeys.ICON_PACK] ?: d.iconPack,
         useCutoutArea = this[PrefKeys.USE_CUTOUT_AREA] ?: d.useCutoutArea,
         drawerSort = enumOr(PrefKeys.DRAWER_SORT, d.drawerSort),

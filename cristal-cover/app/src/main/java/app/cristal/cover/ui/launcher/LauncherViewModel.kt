@@ -26,6 +26,7 @@ import app.cristal.cover.data.home.HomeItem
 import app.cristal.cover.data.home.HomeLayout
 import app.cristal.cover.data.home.HomeProfile
 import app.cristal.cover.data.home.HomeRepository
+import app.cristal.cover.data.home.PhotoWidgetStore
 import app.cristal.cover.data.home.WidgetKind
 import app.cristal.cover.data.launch.AppLauncher
 import app.cristal.cover.data.launch.CompatReport
@@ -115,6 +116,7 @@ class LauncherViewModel @Inject constructor(
     private val systemBridge: SystemBridge,
     private val permissionCenter: PermissionCenter,
     private val shizukuManager: ShizukuManager,
+    private val photoStore: PhotoWidgetStore,
     val widgetHost: WidgetHostManager,
     batteryRepository: BatteryRepository,
     coverDisplayRepository: CoverDisplayRepository,
@@ -282,12 +284,49 @@ class LauncherViewModel @Inject constructor(
         viewModelScope.launch { homeRepository.addWidget(kind, page, profile.value) }
     }
 
+    /** Copia as fotos escolhidas para o app e cria o widget de foto. */
+    fun addPhotoWidget(uris: List<android.net.Uri>, page: Int) {
+        if (uris.isEmpty()) return
+        viewModelScope.launch {
+            val files = photoStore.import(uris)
+            if (files.isEmpty()) {
+                message("Não consegui abrir essas fotos.")
+                return@launch
+            }
+            homeRepository.addWidget(WidgetKind.PHOTO, page, profile.value, extra = PhotoWidgetStore.encode(files))
+        }
+    }
+
+    /** Troca as fotos de um widget de foto (as antigas são apagadas). */
+    fun replacePhotos(widget: HomeItem.Widget, uris: List<android.net.Uri>) {
+        if (uris.isEmpty()) return
+        viewModelScope.launch {
+            val files = photoStore.import(uris)
+            if (files.isEmpty()) return@launch
+            homeRepository.setExtra(widget.id, PhotoWidgetStore.encode(files))
+            photoStore.delete(PhotoWidgetStore.decode(widget.extra))
+        }
+    }
+
+    /** Muda o tamanho de um widget (em células); recusa se encostar em outro item. */
+    fun resizeWidget(id: Long, spanX: Int, spanY: Int) {
+        viewModelScope.launch {
+            val ok = homeRepository.resize(id, spanX, spanY, profile.value)
+            if (!ok) message("Não cabe nesse tamanho: há outros itens no caminho.")
+        }
+    }
+
     fun removeItem(id: Long) {
         // Widgets de outros apps também precisam ser liberados no host.
         home.value.layout.pages.asSequence().flatten()
             .filterIsInstance<HomeItem.Widget>()
             .firstOrNull { it.id == id && it.appWidgetId >= 0 }
             ?.let { widgetHost.delete(it.appWidgetId) }
+        // Widgets de foto levam as cópias das fotos junto.
+        home.value.layout.pages.asSequence().flatten()
+            .filterIsInstance<HomeItem.Widget>()
+            .firstOrNull { it.id == id && it.kind == WidgetKind.PHOTO }
+            ?.let { photoStore.delete(PhotoWidgetStore.decode(it.extra)) }
         viewModelScope.launch { homeRepository.remove(id) }
     }
 
@@ -609,7 +648,7 @@ class LauncherViewModel @Inject constructor(
             }
 
             ItemType.WIDGET -> WidgetKind.fromName(e.widgetKind)?.let {
-                HomeItem.Widget(e.id, e.page, e.cellX, e.cellY, e.spanX, e.spanY, it, e.title?.toIntOrNull() ?: -1)
+                HomeItem.Widget(e.id, e.page, e.cellX, e.cellY, e.spanX, e.spanY, it, e.title?.toIntOrNull() ?: -1, extra = e.title)
             }
 
             else -> null

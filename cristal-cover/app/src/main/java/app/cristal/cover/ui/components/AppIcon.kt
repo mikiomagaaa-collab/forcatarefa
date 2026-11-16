@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
@@ -75,6 +76,8 @@ fun IconShape.toShape(): Shape = when (this) {
 data class IconLook(
     val shape: IconShape = IconShape.SQUIRCLE,
     val style: IconStyle = IconStyle.ORIGINAL,
+    /** Cor do estilo colorido ([IconStyle.TINTED]). */
+    val tint: Color = Color(0xFFB9A2FF),
 )
 
 val LocalIconLook = staticCompositionLocalOf { IconLook() }
@@ -93,24 +96,38 @@ fun AppIconImage(
 ) {
     val shape = look.shape.toShape()
     val mono = app.monoIcon
-    if (look.style == IconStyle.MONO_GLASS && mono != null) {
+    if (look.style != IconStyle.ORIGINAL && mono != null) {
+        // Estilos monocromáticos: placa + glifo (o temático do app ou um gerado a partir do ícone).
+        val (plate, glyph, rim) = when (look.style) {
+            IconStyle.TINTED -> Triple(
+                Brush.linearGradient(listOf(lerp(Color(0xFF17151E), look.tint, 0.30f), lerp(Color(0xFF0E0D13), look.tint, 0.12f))),
+                look.tint,
+                look.tint.copy(alpha = 0.38f),
+            )
+            IconStyle.DARK -> Triple(
+                Brush.verticalGradient(listOf(Color(0xFF2C2A33), Color(0xFF141318))),
+                Color(app.accent),
+                Color.White.copy(alpha = 0.10f),
+            )
+            else -> Triple(
+                Brush.linearGradient(listOf(Color.White.copy(alpha = 0.34f), Color.White.copy(alpha = 0.12f))),
+                Color.White,
+                Color.White.copy(alpha = 0.4f),
+            )
+        }
         Box(
             modifier = modifier
                 .size(size)
                 .clip(shape)
-                .background(
-                    Brush.linearGradient(
-                        listOf(Color.White.copy(alpha = 0.34f), Color.White.copy(alpha = 0.12f)),
-                    ),
-                )
-                .border(0.75.dp, Color.White.copy(alpha = 0.4f), shape),
+                .background(plate)
+                .border(0.75.dp, rim, shape),
             contentAlignment = Alignment.Center,
         ) {
             Image(
                 bitmap = mono,
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
-                colorFilter = ColorFilter.tint(Color.White),
+                colorFilter = ColorFilter.tint(glyph),
                 filterQuality = FilterQuality.Medium,
                 modifier = Modifier.fillMaxSize(),
             )

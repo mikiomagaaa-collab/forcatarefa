@@ -33,8 +33,26 @@ enum class IconStyle {
     /** Ícone original (ou do pacote de ícones). */
     ORIGINAL,
 
-    /** Glifo monocromático sobre uma placa de vidro, quando o app oferece ícone temático. */
+    /**
+     * Glifo monocromático sobre uma placa de vidro. Apps sem ícone temático (TikTok e muitos outros)
+     * ganham um glifo gerado a partir do ícone deles.
+     */
     MONO_GLASS,
+
+    /** Glifo na cor escolhida pela pessoa, sobre uma placa escura tingida (como o "tingido" do iOS). */
+    TINTED,
+
+    /** Placa escura com o glifo na cor do próprio app (como o modo escuro dos ícones do iOS). */
+    DARK,
+}
+
+/** Fundo do dock. */
+enum class DockStyle(val label: String) {
+    GLASS("Vidro líquido"),
+    FROSTED("Fosco"),
+    DARK("Vidro escuro"),
+    SOLID("Sólido"),
+    NONE("Sem fundo"),
 }
 
 enum class GestureAction {
@@ -132,10 +150,20 @@ data class Settings(
     val innerGridRows: Int = 8,
     val dockEnabled: Boolean = true,
     val dockCount: Int = 4,
+    /** Altura do dock em dp e tamanho dos ícones dele (relativo à altura). */
+    val dockHeight: Float = 84f,
+    val dockIconScale: Float = 1f,
+    val dockStyle: DockStyle = DockStyle.GLASS,
+    /** Margem nas laterais e raio dos cantos, em dp. */
+    val dockMargin: Float = 12f,
+    val dockRadius: Float = 34f,
+    val dockLabels: Boolean = false,
     val showLabels: Boolean = true,
     val iconScale: Float = 1f,
     val iconShape: IconShape = IconShape.SQUIRCLE,
     val iconStyle: IconStyle = IconStyle.ORIGINAL,
+    /** Cor dos ícones no estilo [IconStyle.TINTED], em ARGB. */
+    val iconTintColor: Int = 0xFFB9A2FF.toInt(),
     val iconPack: String = "",
     val useCutoutArea: Boolean = true,
 
@@ -271,7 +299,9 @@ object SettingsLimits {
     val gridColumns = 3..6
     val gridRows = 3..6
     val innerGridRows = 5..9
-    val dockCount = 3..6
+    val dockCount = 3..7
+    const val DOCK_HEIGHT_MIN = 56f
+    const val DOCK_HEIGHT_MAX = 132f
     val drawerColumns = 3..6
     const val ICON_SCALE_MIN = 0.7f
     const val ICON_SCALE_MAX = 1.3f

@@ -52,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -68,6 +69,7 @@ import app.cristal.cover.data.prefs.GlassQuality
 import app.cristal.cover.data.prefs.IconShape
 import app.cristal.cover.data.prefs.IconStyle
 import app.cristal.cover.data.prefs.LockMode
+import app.cristal.cover.data.prefs.DockStyle
 import app.cristal.cover.data.prefs.PrefKeys
 import app.cristal.cover.data.prefs.RefreshMode
 import app.cristal.cover.data.prefs.Settings
@@ -336,6 +338,23 @@ private fun HomePage(vm: SettingsViewModel, settings: Settings, wallpaper: Image
                 ChoiceRow("Itens no dock", rangeOptions(SettingsLimits.dockCount) { it }, settings.dockCount) {
                     vm.set(PrefKeys.DOCK_COUNT, it)
                 }
+                SliderRow(
+                    "Altura",
+                    settings.dockHeight,
+                    SettingsLimits.DOCK_HEIGHT_MIN..SettingsLimits.DOCK_HEIGHT_MAX,
+                    label = { "${it.roundToInt()} dp" },
+                ) { vm.set(PrefKeys.DOCK_HEIGHT, it) }
+                SliderRow("Tamanho dos ícones", settings.dockIconScale, 0.6f..1.4f, label = { "${(it * 100).roundToInt()}%" }) {
+                    vm.set(PrefKeys.DOCK_ICON_SCALE, it)
+                }
+                ChoiceRow("Fundo", DockStyle.entries.map { it to it.label }, settings.dockStyle) { vm.setEnum(PrefKeys.DOCK_STYLE, it) }
+                SliderRow("Margem nas laterais", settings.dockMargin, 0f..40f, label = { "${it.roundToInt()} dp" }) {
+                    vm.set(PrefKeys.DOCK_MARGIN, it)
+                }
+                SliderRow("Cantos", settings.dockRadius, 0f..66f, label = { "${it.roundToInt()} dp" }) {
+                    vm.set(PrefKeys.DOCK_RADIUS, it)
+                }
+                SwitchRow(title = "Nomes no dock", checked = settings.dockLabels, onChange = { vm.set(PrefKeys.DOCK_LABELS, it) })
                 SwitchRow(
                     title = "Aproveitar a área ao lado das câmeras",
                     subtitle = "Na tela externa, coloca o dock na faixa livre ao lado das lentes, se ela existir.",
@@ -366,10 +385,26 @@ private fun HomePage(vm: SettingsViewModel, settings: Settings, wallpaper: Image
                 ) { vm.setEnum(PrefKeys.ICON_SHAPE, it) }
                 ChoiceRow(
                     "Estilo",
-                    listOf(IconStyle.ORIGINAL to "Original", IconStyle.MONO_GLASS to "Vidro monocromático"),
+                    listOf(
+                        IconStyle.ORIGINAL to "Original",
+                        IconStyle.MONO_GLASS to "Vidro monocromático",
+                        IconStyle.TINTED to "Colorido",
+                        IconStyle.DARK to "Escuro",
+                    ),
                     settings.iconStyle,
                 ) { vm.setEnum(PrefKeys.ICON_STYLE, it) }
-                InfoText("O estilo monocromático vale para apps que oferecem ícone temático; os demais ficam como estão.")
+                if (settings.iconStyle == IconStyle.TINTED) {
+                    RowTitle("Cor dos ícones")
+                    app.cristal.cover.ui.design.LiquidColorPicker(
+                        initial = androidx.compose.ui.graphics.Color(settings.iconTintColor),
+                        onColorChange = { vm.set(PrefKeys.ICON_TINT_COLOR, it.toArgbInt()) },
+                        modifier = Modifier.padding(top = 8.dp, bottom = 6.dp),
+                    )
+                }
+                InfoText(
+                    "Os estilos monocromático, colorido e escuro valem para todos os apps: quem não oferece ícone temático " +
+                        "(como o TikTok) ganha um glifo gerado a partir do próprio ícone.",
+                )
                 ChoiceRow(
                     "Pacote de ícones",
                     listOf("" to "Nenhum") + packs.map { it.packageName to it.label },
@@ -1223,3 +1258,6 @@ private fun android.content.Context.openNotificationChannel(pkg: String?, channe
         if (runCatching { startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
     }
 }
+
+/** Cor em ARGB para gravar nas configurações. */
+private fun androidx.compose.ui.graphics.Color.toArgbInt(): Int = toArgb()

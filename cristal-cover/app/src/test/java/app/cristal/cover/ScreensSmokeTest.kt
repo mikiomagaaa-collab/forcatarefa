@@ -113,6 +113,7 @@ import app.cristal.cover.ui.theme.CristalTheme
 import app.cristal.cover.ui.widgets.WidgetActions
 import app.cristal.cover.ui.widgets.WidgetData
 import java.io.File
+import androidx.test.core.app.ApplicationProvider
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -280,7 +281,7 @@ class ScreensSmokeTest {
         overlay: @Composable () -> Unit = {},
     ) {
         CristalTheme(settings = settings) {
-            CompositionLocalProvider(LocalIconLook provides IconLook(settings.iconShape, settings.iconStyle)) {
+            CompositionLocalProvider(LocalIconLook provides IconLook(settings.iconShape, settings.iconStyle, Color(settings.iconTintColor))) {
                 val sceneBackdrop = rememberGlassBackdrop()
                 val overlayBackdrop = rememberGlassBackdrop()
                 val drag = remember { DragController() }
@@ -355,6 +356,77 @@ class ScreensSmokeTest {
             )
         }
         shot("05-inicial-leve-claro")
+    }
+
+    /** Troca os apps de um layout pelos mesmos apps com glifo gerado e cor principal. */
+    private fun forcedGlyphLayout(source: HomeLayout): HomeLayout {
+        val byKey = apps.associate { a ->
+            val bmp = a.icon.asAndroidBitmap()
+            val glyph = app.cristal.cover.data.apps.MonoGlyph.forced(
+                android.graphics.drawable.BitmapDrawable(ApplicationProvider.getApplicationContext<android.content.Context>().resources, bmp),
+                bmp.width,
+                bmp,
+            )
+            a.key to a.copy(monoIcon = glyph?.asImageBitmap(), accent = app.cristal.cover.data.apps.MonoGlyph.dominantColor(bmp))
+        }
+        fun swap(item: HomeItem): HomeItem = when (item) {
+            is HomeItem.App -> item.copy(app = byKey[item.app.key] ?: item.app)
+            is HomeItem.Folder -> item.copy(children = item.children.map { c -> c.copy(app = byKey[c.app.key] ?: c.app) })
+            is HomeItem.Widget -> item
+        }
+        return source.copy(pages = source.pages.map { page -> page.map(::swap) }, dock = source.dock.map(::swap))
+    }
+
+    @Test
+    @Config(sdk = [36], qualifiers = "w411dp-h1004dp-420dpi")
+    fun `dock grande e icones coloridos em qualquer app`() {
+        val settings = Settings().copy(
+            dockHeight = 108f,
+            dockIconScale = 1.15f,
+            dockStyle = app.cristal.cover.data.prefs.DockStyle.FROSTED,
+            dockLabels = true,
+            iconStyle = IconStyle.TINTED,
+            iconTintColor = 0xFFFFB27A.toInt(),
+        )
+        val tinted = forcedGlyphLayout(layout)
+        rule.setContent { Scene(settings, sceneLayout = tinted) }
+        shot("47-dock-grande-icones-coloridos")
+        rule.onNodeWithText("WhatsApp").assertExists()
+    }
+
+    @Test
+    @Config(sdk = [36], qualifiers = "w411dp-h1004dp-420dpi")
+    fun `icones escuros e widget de foto`() {
+        val settings = Settings().copy(iconStyle = IconStyle.DARK, dockStyle = app.cristal.cover.data.prefs.DockStyle.NONE)
+        val base = forcedGlyphLayout(layout)
+        val withPhoto = base.copy(
+            pages = listOf(base.pages[0].filterNot { it is HomeItem.Widget } + HomeItem.Widget(90, 0, 0, 0, 4, 2, WidgetKind.PHOTO)),
+        )
+        rule.setContent { Scene(settings, sceneLayout = withPhoto) }
+        shot("48-icones-escuros-widget-foto")
+    }
+
+    @Test
+    fun `redimensionar widget`() {
+        val widget = HomeItem.Widget(1, 0, 0, 0, 2, 2, WidgetKind.WEATHER)
+        var applied: Pair<Int, Int>? = null
+        rule.setContent {
+            CristalTheme(settings = Settings()) {
+                app.cristal.cover.ui.launcher.WidgetResizeDialog(
+                    widget = widget,
+                    pageItems = listOf(widget, appItem(2, 0, 3, 3)),
+                    cols = 4,
+                    rows = 4,
+                    onApply = { x, y -> applied = x to y },
+                    onDismiss = {},
+                )
+            }
+        }
+        rule.onNodeWithContentDescription("Aumentar largura").performClick()
+        rule.onNodeWithContentDescription("Aumentar altura").performClick()
+        shot("49-redimensionar-widget")
+        rule.onNodeWithText("Aplicar").performClick()
+        org.junit.Assert.assertEquals(3 to 3, applied)
     }
 
     @Test

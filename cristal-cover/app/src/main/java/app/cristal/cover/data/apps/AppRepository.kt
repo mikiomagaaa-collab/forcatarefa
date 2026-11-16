@@ -158,6 +158,7 @@ class AppRepository @Inject constructor(
             maskable = rendered?.maskable ?: true,
             isSystem = (info.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
             isWorkProfile = isWork,
+            accent = rendered?.accent ?: 0xFFD9D6E3.toInt(),
         )
     }
 

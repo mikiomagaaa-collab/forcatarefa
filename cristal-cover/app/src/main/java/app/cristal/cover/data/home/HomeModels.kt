@@ -30,6 +30,9 @@ enum class WidgetKind(val spanX: Int, val spanY: Int) {
     SHORTCUTS(4, 1),
     SEARCH(4, 1),
 
+    /** Fotos escolhidas pela pessoa (uma ou várias, em sequência). */
+    PHOTO(2, 2),
+
     /** Widget de outro app; o id no host fica guardado no item. */
     APP_WIDGET(4, 2);
 
@@ -88,6 +91,8 @@ sealed interface HomeItem {
         val kind: WidgetKind,
         /** Id no AppWidgetHost; só vale para [WidgetKind.APP_WIDGET]. */
         val appWidgetId: Int = -1,
+        /** Dados próprios do widget (no de foto, os arquivos das fotos). */
+        val extra: String? = null,
     ) : HomeItem
 }
 

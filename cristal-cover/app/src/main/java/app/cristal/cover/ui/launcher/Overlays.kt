@@ -30,6 +30,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Event
+import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Widgets
@@ -421,6 +422,7 @@ private fun widgetInfo(kind: WidgetKind): Triple<ImageVector, String, String> = 
     WidgetKind.DATE -> Triple(Icons.Rounded.CalendarToday, "Data", "Dia do mês em destaque")
     WidgetKind.SHORTCUTS -> Triple(Icons.Rounded.TouchApp, "Atalhos", "Lanterna, câmera, busca e ajustes")
     WidgetKind.SEARCH -> Triple(Icons.Rounded.Search, "Busca", "Abre a gaveta de apps")
+    WidgetKind.PHOTO -> Triple(Icons.Rounded.Photo, "Foto", "Uma ou várias fotos suas, em sequência")
     WidgetKind.APP_WIDGET -> Triple(Icons.Rounded.Widgets, "Widget de app", "De outro aplicativo")
 }
 

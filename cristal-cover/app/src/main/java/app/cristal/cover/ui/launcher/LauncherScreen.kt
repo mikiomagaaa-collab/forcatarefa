@@ -11,6 +11,12 @@ import android.provider.MediaStore
 import android.provider.Settings as SystemSettings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.runtime.mutableIntStateOf
+import app.cristal.cover.data.home.PhotoWidgetStore
+import app.cristal.cover.data.home.WidgetKind
+import androidx.compose.material.icons.rounded.Photo
+import androidx.compose.material.icons.rounded.AspectRatio
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
@@ -154,6 +160,20 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
     var menu by remember { mutableStateOf<MenuState?>(null) }
     var homeMenu by remember { mutableStateOf(false) }
     var widgetPicker by remember { mutableStateOf(false) }
+    var resizing by remember { mutableStateOf<HomeItem.Widget?>(null) }
+    var photoTarget by remember { mutableStateOf<HomeItem.Widget?>(null) }
+    var photoPage by remember { mutableIntStateOf(0) }
+    // Seletor de fotos do Android: não precisa de permissão de acesso à galeria.
+    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(PhotoWidgetStore.MAX)) { uris ->
+        val target = photoTarget
+        photoTarget = null
+        if (target != null) viewModel.replacePhotos(target, uris) else viewModel.addPhotoWidget(uris, photoPage)
+    }
+    fun pickPhotos(target: HomeItem.Widget?, page: Int) {
+        photoTarget = target
+        photoPage = page
+        photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    }
     var compat by remember { mutableStateOf<LauncherEvent.ConfirmCompat?>(null) }
     var appOptions by remember { mutableStateOf<AppInfo?>(null) }
     var blockedHelp by remember { mutableStateOf<AppInfo?>(null) }
@@ -641,8 +661,24 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                     currentPage = (pagerState.currentPage - 1).coerceAtLeast(0),
                     onOpenFolder = { openFolderId = it },
                     onAppOptions = { appOptions = it },
+                    onResizeWidget = { resizing = it },
+                    onReplacePhotos = { pickPhotos(it, it.page) },
                 )
                 ContextMenu(state = state, title = title, actions = actions, onDismiss = { menu = null })
+            }
+
+            resizing?.let { widget ->
+                WidgetResizeDialog(
+                    widget = widget,
+                    pageItems = layout.pages.getOrNull(widget.page).orEmpty(),
+                    cols = settings.columns(onCover),
+                    rows = settings.rows(onCover),
+                    onApply = { sx, sy ->
+                        resizing = null
+                        viewModel.resizeWidget(widget.id, sx, sy)
+                    },
+                    onDismiss = { resizing = null },
+                )
             }
 
             if (homeMenu) {
@@ -684,7 +720,8 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                 WidgetPicker(
                     onPick = { kind ->
                         widgetPicker = false
-                        viewModel.addWidget(kind, (pagerState.currentPage - 1).coerceAtLeast(0))
+                        val page = (pagerState.currentPage - 1).coerceAtLeast(0)
+                        if (kind == WidgetKind.PHOTO) pickPhotos(null, page) else viewModel.addWidget(kind, page)
                     },
                     onDismiss = { widgetPicker = false },
                     providers = providers,
@@ -767,6 +804,8 @@ private fun menuFor(
     currentPage: Int,
     onOpenFolder: (Long) -> Unit,
     onAppOptions: (AppInfo) -> Unit,
+    onResizeWidget: (HomeItem.Widget) -> Unit = {},
+    onReplacePhotos: (HomeItem.Widget) -> Unit = {},
 ): Pair<String, List<MenuAction>> {
     fun action(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, destructive: Boolean = false, run: () -> Unit) =
         MenuAction(icon, label, destructive) {
@@ -803,9 +842,11 @@ private fun menuFor(
                 add(action(Icons.Rounded.Delete, "Remover pasta e atalhos", destructive = true) { viewModel.removeItem(item.id) })
             }
 
-            is HomeItem.Widget -> "Widget" to listOf(
-                action(Icons.Rounded.RemoveCircleOutline, "Remover widget", destructive = true) { viewModel.removeItem(item.id) },
-            )
+            is HomeItem.Widget -> (if (item.kind == WidgetKind.PHOTO) "Foto" else "Widget") to buildList {
+                add(action(Icons.Rounded.AspectRatio, "Redimensionar") { onResizeWidget(item) })
+                if (item.kind == WidgetKind.PHOTO) add(action(Icons.Rounded.Photo, "Trocar fotos") { onReplacePhotos(item) })
+                add(action(Icons.Rounded.RemoveCircleOutline, "Remover widget", destructive = true) { viewModel.removeItem(item.id) })
+            }
         }
 
         is MenuTarget.FolderChild -> target.item.label to buildList {
