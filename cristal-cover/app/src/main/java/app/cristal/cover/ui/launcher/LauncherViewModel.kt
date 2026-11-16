@@ -270,6 +270,25 @@ class LauncherViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Abre a L.I.L.Y (conversa, voz ou pergunta) nesta tela. Na tela externa ela é liberada antes,
+     * como os apps em [launchApp], e o launcher confere depois se ela apareceu de fato (a Motorola
+     * fecha na hora o que não está liberado).
+     */
+    fun openLily(onCover: Boolean, open: () -> Boolean, failure: String) {
+        viewModelScope.launch {
+            if (onCover) appLauncher.allowOnCover(app.cristal.cover.data.lily.LilyLink.PACKAGE)
+            if (!open()) {
+                _events.trySend(LauncherEvent.Message(failure))
+                return@launch
+            }
+            if (onCover) {
+                home.value.apps.firstOrNull { it.packageName == app.cristal.cover.data.lily.LilyLink.PACKAGE }
+                    ?.let { _events.trySend(LauncherEvent.CheckLaunched(it)) }
+            }
+        }
+    }
+
     /** O usuário confirmou abrir um app com aviso de compatibilidade. */
     fun confirmLaunch(app: AppInfo, displayId: Int, dontAskAgain: Boolean) {
         viewModelScope.launch {

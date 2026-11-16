@@ -398,9 +398,14 @@ quando ele está instalado e escolhido como app de mídia na nuvem (no seletor: 
 **App de mídia na nuvem** > Google Fotos). As fotos escolhidas são copiadas para Pictures/Importadas.
 Para mandar fotos ao backup do Google Fotos, selecione-as e toque no ícone de nuvem.
 
-## 9.3 L.I.L.Y no Cristal (Cristal 1.7.0 e L.I.L.Y AI 1.1.0)
+## 9.3 L.I.L.Y no Cristal (Cristal 1.7.1 e L.I.L.Y AI 1.1.1)
 
 Instale os dois APKs da mesma rodada (a ponte entre eles só funciona com a mesma assinatura).
+
+**Na tela externa**, a Motorola só deixa abrir apps liberados, e fecha os outros logo que abrem. Com o
+Shizuku ativo e **Liberar apps automaticamente** ligado, o Cristal libera a L.I.L.Y sozinho antes de abri-la (widget, busca e
+Central). Sem o Shizuku, adicione a **L.I.L.Y AI** no painel **Apps** da tela externa (parte 4, caminho 3).
+Se mesmo assim ela não aparecer, o Cristal avisa "L.I.L.Y AI não abriu nesta tela" com o botão **Por quê?**.
 
 - **Pela ilha:** com a cápsula à mostra (Configurações > Liquid Island > **Mostrar sempre**), **segure a ilha**
   e fale. A L.I.L.Y responde numa lente logo abaixo dela, por cima de qualquer app. Para desligar:
@@ -420,6 +425,13 @@ O microfone só liga quando você chama a L.I.L.Y (segurar a ilha, tocar no micr
 para sozinho no fim da fala.
 
 ## 10. Problemas comuns
+
+**A L.I.L.Y AI abre e fecha.** Na tela externa, é a Motorola bloqueando um app não liberado: veja o começo
+da parte 9.3. Se for um erro do próprio app (desde a 1.1.1), aparece a tela **A L.I.L.Y AI fechou por um
+erro**: toque em **Copiar relatório** e mande o texto. O relatório fica só no aparelho e também vai junto no
+**Teste do aparelho** (Configurações da L.I.L.Y). Na 1.1.0, o texto das fotos (OCR), os rótulos, a
+detecção de idioma, a tradução (também a do teclado) e o recorte não funcionavam no APK final; a 1.1.1
+corrige isso.
 
 **"App não instalado" ao atualizar.** O APK novo foi assinado com outra chave. Desinstale o antigo e
 instale de novo (parte 8).

@@ -430,10 +430,10 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
         onSearch = { scope.launch { drawer.open() } },
         onSettings = { openCristalSettings() },
         onLilyAsk = {
-            if (!app.cristal.cover.data.lily.LilyLink.openChat(context, displayId)) showMessage("Instale a L.I.L.Y AI para conversar com ela.")
+            viewModel.openLily(onCover, { app.cristal.cover.data.lily.LilyLink.openChat(context, displayId) }, "Instale a L.I.L.Y AI para conversar com ela.")
         },
         onLilyVoice = {
-            if (!app.cristal.cover.data.lily.LilyLink.voice(context, displayId)) showMessage("Instale a L.I.L.Y AI para falar com ela.")
+            viewModel.openLily(onCover, { app.cristal.cover.data.lily.LilyLink.voice(context, displayId) }, "Instale a L.I.L.Y AI para falar com ela.")
         },
     )
 
@@ -624,7 +624,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                 onAskLily = if (lilyReady) {
                     { q ->
                         scope.launch { drawer.close() }
-                        app.cristal.cover.data.lily.LilyLink.ask(context, q, displayId)
+                        viewModel.openLily(onCover, { app.cristal.cover.data.lily.LilyLink.ask(context, q, displayId) }, "Não foi possível abrir a L.I.L.Y.")
                     }
                 } else {
                     null
@@ -662,7 +662,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                             ControlKind.MEDIA -> viewModel.mediaOpen(displayId)
                             ControlKind.LILY -> {
                                 scope.launch { panel.close() }
-                                if (!app.cristal.cover.data.lily.LilyLink.voice(context, displayId)) showMessage("Instale a L.I.L.Y AI para falar com ela.")
+                                viewModel.openLily(onCover, { app.cristal.cover.data.lily.LilyLink.voice(context, displayId) }, "Instale a L.I.L.Y AI para falar com ela.")
                             }
                             else -> viewModel.runControl(kind)
                         }

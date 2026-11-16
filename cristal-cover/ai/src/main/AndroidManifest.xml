@@ -128,6 +128,16 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- Relatório de erro: processo próprio e só as views do Android (ver CrashReport). -->
+        <activity
+            android:name=".diagnostics.CrashActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:process=":relatorio"
+            android:taskAffinity="app.lily.ai.relatorio"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
+
         <service
             android:name=".models.DownloadService"
             android:exported="false"

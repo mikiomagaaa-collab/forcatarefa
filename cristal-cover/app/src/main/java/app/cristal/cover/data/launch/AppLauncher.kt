@@ -151,19 +151,35 @@ class AppLauncher @Inject constructor(
     }
 
     /** Ajustes que só fazem sentido na tela externa e dependem do Shizuku. */
-    private suspend fun prepareCover(app: AppInfo, pref: AppPrefEntity?, displayId: Int) {
-        if (!shizuku.isReady) return
-        val settings = settingsRepository.settings.value
-        val pkg = app.packageName
-        if (!isSafePackage(pkg)) return
+    /**
+     * Libera um pacote na tela externa antes de abrir uma tela dele por lá sem passar por [launch]
+     * (a L.I.L.Y pelo widget, pela busca ou pela Central): sem a liberação, a Motorola fecha o app
+     * logo que ele abre. Só faz algo com o Shizuku ativo e "Liberar apps automaticamente" ligado.
+     */
+    suspend fun allowOnCover(packageName: String) {
+        if (!shizuku.isReady || !isSafePackage(packageName)) return
+        val commands = allowCommands(packageName)
+        if (commands.isNotEmpty()) shizuku.execAll(commands)
+    }
+
+    /** Os comandos do climanager que ainda faltam para liberar [pkg] na tela externa. */
+    private fun allowCommands(pkg: String): MutableList<String> {
         val commands = ArrayList<String>()
-        if (settings.autoAllowOnCover) {
+        if (settingsRepository.settings.value.autoAllowOnCover) {
             if (!allowAllApplied) {
                 allowAllApplied = true
                 commands += "cmd climanager set-allow-all-oncli true"
             }
             if (allowedOnCover.add(pkg)) commands += "cmd climanager set-pkg-allowed-oncli $pkg true"
         }
+        return commands
+    }
+
+    private suspend fun prepareCover(app: AppInfo, pref: AppPrefEntity?, displayId: Int) {
+        if (!shizuku.isReady) return
+        val pkg = app.packageName
+        if (!isSafePackage(pkg)) return
+        val commands = allowCommands(pkg)
         if (pref?.forceResizable == true && compatApplied.add(pkg)) {
             commands += "am compat enable FORCE_RESIZE_APP $pkg"
         }

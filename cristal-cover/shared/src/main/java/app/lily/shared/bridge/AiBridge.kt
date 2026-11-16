@@ -112,14 +112,28 @@ class AiClient(private val context: Context) {
         if (data.getLong(AiBridge.KEY_ID) != currentId) return@Handler true
         when (msg.what) {
             AiBridge.MSG_CHUNK -> listener?.onChunk(data.getString(AiBridge.KEY_TEXT).orEmpty(), data.getString(AiBridge.KEY_MODEL))
-            AiBridge.MSG_DONE -> listener?.onDone(data.getString(AiBridge.KEY_TEXT).orEmpty(), data.getString(AiBridge.KEY_MODEL), data.getLong(AiBridge.KEY_MILLIS))
-            AiBridge.MSG_ERROR -> listener?.onError(data.getString(AiBridge.KEY_MESSAGE).orEmpty(), data.getString(AiBridge.KEY_CODE) ?: AiBridge.CODE_FAILED)
+            AiBridge.MSG_DONE -> {
+                // Pedido encerrado: se a IA for fechada depois, o resultado já mostrado não vira erro.
+                currentId = 0L
+                listener?.onDone(data.getString(AiBridge.KEY_TEXT).orEmpty(), data.getString(AiBridge.KEY_MODEL), data.getLong(AiBridge.KEY_MILLIS))
+            }
+            AiBridge.MSG_ERROR -> {
+                currentId = 0L
+                listener?.onError(data.getString(AiBridge.KEY_MESSAGE).orEmpty(), data.getString(AiBridge.KEY_CODE) ?: AiBridge.CODE_FAILED)
+            }
         }
         true
     })
 
+    /** A IA não subiu a tempo (o processo dela caiu ao abrir, por exemplo): avisa e solta a ligação. */
+    private val connectTimeout = Runnable {
+        if (service == null && pending != null) fail("A L.I.L.Y AI não respondeu. Abra o app uma vez e tente de novo.")
+    }
+
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            main.removeCallbacks(connectTimeout)
+            if (binder == null) return fail(REFUSED)
             service = Messenger(binder)
             pending?.let { (id, request) -> send(id, request) }
             pending = null
@@ -127,8 +141,29 @@ class AiClient(private val context: Context) {
 
         override fun onServiceDisconnected(name: ComponentName?) {
             service = null
-            if (currentId != 0L) listener?.onError("A L.I.L.Y AI foi fechada pelo sistema. Tente de novo.", AiBridge.CODE_FAILED)
+            report("A L.I.L.Y AI foi fechada pelo sistema. Tente de novo.")
         }
+
+        // O processo da IA morreu de vez (ou nem chegou a ligar): solta para ligar de novo no próximo pedido.
+        override fun onBindingDied(name: ComponentName?) = fail("A L.I.L.Y AI foi fechada pelo sistema. Tente de novo.")
+
+        override fun onNullBinding(name: ComponentName?) = fail(REFUSED)
+    }
+
+    /** Avisa o erro do pedido atual uma vez só (depois disso ele está encerrado). */
+    private fun report(message: String) {
+        if (currentId == 0L) return
+        currentId = 0L
+        listener?.onError(message, AiBridge.CODE_FAILED)
+    }
+
+    private fun fail(message: String) {
+        main.removeCallbacks(connectTimeout)
+        pending = null
+        if (bound) runCatching { context.unbindService(connection) }
+        bound = false
+        service = null
+        report(message)
     }
 
     /** Manda um pedido. Devolve false se a IA não está instalada ou a ponte não está liberada. */
@@ -151,6 +186,8 @@ class AiClient(private val context: Context) {
                 return false
             }
         }
+        main.removeCallbacks(connectTimeout)
+        main.postDelayed(connectTimeout, CONNECT_TIMEOUT_MS)
         return true
     }
 
@@ -158,6 +195,7 @@ class AiClient(private val context: Context) {
         val id = currentId
         currentId = 0L
         listener = null
+        pending = null
         val s = service ?: return
         runCatching { s.send(Message.obtain(null, AiBridge.MSG_CANCEL).apply { data = Bundle().apply { putLong(AiBridge.KEY_ID, id) } }) }
     }
@@ -165,6 +203,7 @@ class AiClient(private val context: Context) {
     /** Solta a ligação (o serviço da IA pode descarregar o modelo). */
     fun release() {
         cancel()
+        main.removeCallbacks(connectTimeout)
         if (bound) runCatching { context.unbindService(connection) }
         bound = false
         service = null
@@ -188,7 +227,13 @@ class AiClient(private val context: Context) {
             service?.send(msg)
         } catch (e: RemoteException) {
             Log.w("LilyAiClient", "A ponte caiu", e)
-            main.post { listener?.onError("Não foi possível falar com a L.I.L.Y AI.", AiBridge.CODE_FAILED) }
+            main.post { report("Não foi possível falar com a L.I.L.Y AI.") }
         }
+    }
+
+    private companion object {
+        /** Tempo para o processo da IA subir e aceitar a ligação (normalmente leva menos de 2 s). */
+        const val CONNECT_TIMEOUT_MS = 10_000L
+        const val REFUSED = "A L.I.L.Y AI recusou a ligação. Abra o app uma vez e tente de novo."
     }
 }

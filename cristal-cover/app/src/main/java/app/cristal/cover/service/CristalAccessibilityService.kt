@@ -118,7 +118,7 @@ class CristalAccessibilityService : AccessibilityService() {
         controlCenter?.hide()
         val control = ControlCenterOverlay(
             this, newScope, settingsRepository, quickSettingsRepository, controlCenterRepository,
-            notificationRepository, mediaRepository, batteryRepository, bridge, displayRepository,
+            notificationRepository, mediaRepository, batteryRepository, bridge, displayRepository, appLauncher,
         ).also { controlCenter = it }
         newScope.launch {
             combine(

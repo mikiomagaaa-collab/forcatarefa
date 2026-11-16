@@ -100,6 +100,7 @@ internal class ControlCenterOverlay(
     private val batteryRepository: BatteryRepository,
     private val systemBridge: SystemBridge,
     private val displayRepository: CoverDisplayRepository,
+    private val appLauncher: app.cristal.cover.data.launch.AppLauncher,
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val handles = HashMap<Int, Pair<WindowManager, View>>()
@@ -476,8 +477,14 @@ internal class ControlCenterOverlay(
                                     }
                                     ControlKind.LILY -> {
                                         close()
-                                        if (!app.cristal.cover.data.lily.LilyLink.voice(service, p.displayId)) {
-                                            Toast.makeText(service, "Instale a L.I.L.Y AI para falar com ela.", Toast.LENGTH_LONG).show()
+                                        scope.launch {
+                                            // Na tela externa, a L.I.L.Y é liberada antes (senão a Motorola a fecha ao abrir).
+                                            if (displayRepository.state.value.coverId == p.displayId) {
+                                                appLauncher.allowOnCover(app.cristal.cover.data.lily.LilyLink.PACKAGE)
+                                            }
+                                            if (!app.cristal.cover.data.lily.LilyLink.voice(service, p.displayId)) {
+                                                Toast.makeText(service, "Instale a L.I.L.Y AI para falar com ela.", Toast.LENGTH_LONG).show()
+                                            }
                                         }
                                     }
                                     else -> controller.runControl(kind)

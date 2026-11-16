@@ -67,7 +67,7 @@ data class LlmRun(
 data class Check(val name: String, val ok: Boolean?, val detail: String, val millis: Long? = null)
 
 @Immutable
-data class Report(val header: List<String>, val runs: List<LlmRun>, val checks: List<Check>, val millis: Long) {
+data class Report(val header: List<String>, val runs: List<LlmRun>, val checks: List<Check>, val millis: Long, val lastCrash: String? = null) {
     fun text(): String = buildString {
         header.forEach { appendLine(it) }
         appendLine("Duração do teste: ${secs(millis)}")
@@ -100,6 +100,12 @@ data class Report(val header: List<String>, val runs: List<LlmRun>, val checks: 
             append("• ").append(c.name).append(": ").append(mark)
             c.millis?.let { append(" em ${secs(it)}") }
             appendLine(" · ${c.detail}")
+        }
+        // O último erro que fechou o app (se houver), para ir junto no relatório copiado.
+        lastCrash?.let {
+            appendLine()
+            appendLine("Último erro que fechou o app:")
+            appendLine(it.trim())
         }
     }.trimEnd()
 
@@ -182,7 +188,7 @@ class Diagnostics(private val graph: AiGraph, private val context: Context) {
             String.format(Locale.forLanguageTag("pt-BR"), "RAM: %.1f GB · GPU (OpenCL): %s · núcleos: %d", device.totalRamGb, if (device.gpuCompute) "sim" else "não", device.cpuCores),
             "Bateria ${battery(device.batteryPercent)} → ${battery(after.batteryPercent)} · temperatura ${Report.thermal(device.thermalStatus)} → ${Report.thermal(after.thermalStatus)}",
         )
-        val report = Report(header, runs, checks, SystemClock.elapsedRealtime() - started)
+        val report = Report(header, runs, checks, SystemClock.elapsedRealtime() - started, CrashReport.last(context))
         _state.value = DiagState.Done(report)
         return report
     }

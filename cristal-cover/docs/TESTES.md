@@ -284,7 +284,7 @@ estão implementados com as APIs oficiais e precisam ser confirmados no Razr.
 - [ ] Campo de senha e campo de código: o painel diz que nada vai para a IA
 - [ ] Sem a L.I.L.Y AI instalada, o painel explica e não mostra ações
 
-## 20. L.I.L.Y no Cristal (Cristal 1.7.0 e L.I.L.Y AI 1.1.0)
+## 20. L.I.L.Y no Cristal (Cristal 1.7.1 e L.I.L.Y AI 1.1.1)
 
 - [ ] Com "Mostrar sempre" ligado, segurar a ilha parada abre a lente da L.I.L.Y logo abaixo dela, já ouvindo
 - [ ] Segurar a ilha com música ou uma atividade continua expandindo (não chama a L.I.L.Y)
@@ -297,3 +297,14 @@ estão implementados com as APIs oficiais e precisam ser confirmados no Razr.
 - [ ] Sem a L.I.L.Y AI instalada: o widget diz "Instale a L.I.L.Y AI" e nada abre
 - [ ] ⚠️ Escolher a L.I.L.Y AI como assistente digital do Android e chamá-la pelo gesto do aparelho
 
+## 21. Correções da L.I.L.Y AI 1.1.1, do Cristal 1.7.1 e do teclado 1.3.1
+
+- [ ] A L.I.L.Y AI abre pelo ícone na tela interna e continua aberta
+- [ ] ⚠️ Na tela externa, com o Shizuku ativo: widget, busca e Central abrem a L.I.L.Y e ela fica na tela
+- [ ] ⚠️ Na tela externa, sem o Shizuku e sem a L.I.L.Y AI no painel Apps da Motorola: o Cristal mostra "L.I.L.Y AI não abriu nesta tela" com "Por quê?"
+- [ ] No teclado, "Traduzir": baixa o modelo de tradução (com Wi-Fi) e traduz
+- [ ] Ferramentas de imagem: "Ler texto" e "O que tem na foto" funcionam no APK final
+- [ ] Se a L.I.L.Y fechar por um erro, aparece "A L.I.L.Y AI fechou por um erro" e "Copiar relatório" copia o texto
+- [ ] O relatório do Teste do aparelho traz o último erro no fim (quando houver)
+- [ ] No teclado (1.3.1), se a L.I.L.Y AI não subir, o painel avisa "A L.I.L.Y AI não respondeu" em até 10 s, em vez de ficar carregando
+- [ ] Depois de uma resposta do teclado, fechar a L.I.L.Y AI (ou o Android encerrá-la) não troca o resultado por um erro

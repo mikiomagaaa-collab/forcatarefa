@@ -47,6 +47,7 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 | L.I.L.Y AI: app próprio com conversa, roteador de modelos, Model Hub, ferramentas de texto, imagem e áudio, geração de imagem experimental, memória e versão de voz para a tela externa | Feito (1.0.0); a inferência ainda precisa ser medida no Razr |
 | L.I.L.Y Gallery: biblioteca do aparelho, álbuns, visualizador, editor, lixeira oficial, importação pelo seletor do Android (inclui o Google Fotos) e ações da L.I.L.Y | Feito (1.0.0) |
 | L.I.L.Y no Cristal: segurar a Liquid Island chama a L.I.L.Y por voz (uma lente logo abaixo da ilha); respostas, downloads de modelos e geração de imagem aparecem na ilha como Live Updates com o orbe; widget L.I.L.Y; "Perguntar à L.I.L.Y" na busca da gaveta; módulo L.I.L.Y na Central de Controle | Feito (Cristal 1.7.0 e L.I.L.Y AI 1.1.0) |
+| Correções: ML Kit de volta no APK final da IA, relatório de erro no aparelho, L.I.L.Y liberada na tela externa antes de abrir, ponte do teclado com prazo (nunca fica esperando para sempre) | Feito (L.I.L.Y AI 1.1.1, Cristal 1.7.1, teclado 1.3.1) |
 | Biblioteca de apps, páginas próprias da tela externa | Planejado |
 
 ## Estado real do projeto
@@ -54,7 +55,7 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 O que **foi verificado** durante o desenvolvimento:
 
 - compila do zero (debug e release com R8) com as versões estáveis atuais das ferramentas;
-- 232 testes automáticos em JVM passam (100 no Cristal, 41 no teclado, 16 no módulo compartilhado, 67 na
+- 247 testes automáticos em JVM passam (100 no Cristal, 45 no teclado, 16 no módulo compartilhado, 78 na
   L.I.L.Y AI e 8 na Gallery). No launcher: lógica da grade, detecção da tela externa,
   regras de compatibilidade, segurança dos comandos de shell, backup, papéis de parede por área,
   encaixe e edição da Central de Controle, **compilação real do shader AGSL** e **16 telas montadas e
@@ -81,6 +82,12 @@ O que **foi verificado** durante o desenvolvimento:
   SHA-256 do catálogo) e os formatos do Real-ESRGAN foram lidos do próprio arquivo (entrada
   [1,128,128,3] e saída [1,3,512,512], FLOAT32), os mesmos que o app usa. No teclado, o painel da L.I.L.Y e as regras de campos protegidos. Na Gallery, o editor
   (corte, giro e cores de verdade) e 7 telas;
+- o APK de release da L.I.L.Y AI foi conferido por dentro. Na 1.1.0, o R8 (no modo estrito do AGP 9)
+  apagava o construtor dos nove "registrars" do ML Kit, e o texto das fotos, os rótulos, o idioma, a
+  tradução e o recorte não funcionavam no APK final. Na 1.1.1 os construtores estão lá (conferido no dex), e
+  o código encolhido do release, refeito com o mesmo R8 e as mesmas regras, abre no Robolectric: tela
+  inicial, tela externa, painel de voz, ponte do teclado e o ML Kit iniciando com os componentes. As
+  atividades também passaram a ser abertas de verdade nos testes (antes só as telas eram montadas);
 - lint sem erros.
 
 O que **não foi verificado**: os apps **nunca rodaram em um Razr de verdade**. Na L.I.L.Y AI, os
@@ -133,6 +140,7 @@ você pede. Não há nenhum provedor remoto; o indicador de cada conversa diz "N
 | Integrações | Teclado (ponte de assinatura), Cristal (voz pela ilha, widget, busca da gaveta e Central de Controle; lembretes pela confirmação do Info Brief, nada é criado sem o toque), Gallery (fotos chegam com permissão só delas), Liquid Island (Live Updates oficiais da voz, dos downloads e da geração, com o orbe da L.I.L.Y) |
 | Tela externa | Versão de voz: tocar no orbe, falar e ouvir; ao abrir o aparelho, a mesma conversa continua na tela interna, até com a resposta em andamento |
 | Aparência | Orbe em AGSL, fundo aurora, vidro, temas Liquid Glass, AMOLED, Claro, Roxo e Personalizado |
+| Relatório de erro | Se a L.I.L.Y fechar por um erro, abre a tela **A L.I.L.Y AI fechou por um erro** (num processo separado, sem depender do resto do app) com a pilha completa e **Copiar relatório**. Fica só no aparelho e também vai no fim do Teste do aparelho |
 | Teste do aparelho | Configurações > **Testar este aparelho**: roda cada modelo de conversa instalado na GPU e na CPU, o OCR, a ampliação e a voz, e mede carregamento, velocidade, memória e temperatura. Gera um relatório para copiar e enviar; o que falha aparece como falha |
 
 Limitações reais da L.I.L.Y AI:

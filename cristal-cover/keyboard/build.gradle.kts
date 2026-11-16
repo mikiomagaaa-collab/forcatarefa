@@ -18,8 +18,8 @@ android {
         applicationId = "app.lily.keyboard"
         minSdk = 33
         targetSdk = 36
-        versionCode = 130 + ciRunNumber
-        versionName = "1.3.0"
+        versionCode = 131 + ciRunNumber
+        versionName = "1.3.1"
         vectorDrawables { useSupportLibrary = true }
     }
 
