@@ -4,6 +4,17 @@ import androidx.compose.runtime.Immutable
 
 enum class ThemeMode { AUTO, LIGHT, DARK }
 
+/** Temas completos do Design System Liquid Flip (as telas passam a usá-los fase a fase). */
+enum class LiquidThemeId(val label: String) {
+    LIQUID_DARK("Liquid Dark"),
+    LIQUID_LIGHT("Liquid Light"),
+    AMOLED("AMOLED"),
+    LAVENDER("Lavender"),
+    CLASSIC_IOS("Classic iOS"),
+    ONE_UI("One UI"),
+    CUSTOM("Personalizado"),
+}
+
 /** Nível de qualidade do vidro. Quanto maior, mais custo de GPU. */
 enum class GlassQuality {
     /** Sem blur nem shader: só película translúcida e borda. */
@@ -75,6 +86,15 @@ data class Settings(
     val glassQuality: GlassQuality = GlassQuality.LIQUID,
     /** 0 = mais transparente, 0,5 = padrão, 1 = mais fosco. */
     val glassIntensity: Float = 0.45f,
+    /** Tema do Design System. */
+    val liquidTheme: LiquidThemeId = LiquidThemeId.LIQUID_DARK,
+    /** No tema Personalizado: o tema de partida e a cor de destaque em ARGB (0 = a do tema de partida). */
+    val liquidCustomBase: LiquidThemeId = LiquidThemeId.LIQUID_DARK,
+    val liquidCustomAccent: Int = 0,
+    /** Ajuste de cada material, de 0 a 1 (o vidro líquido usa [glassIntensity]). */
+    val materialFrosted: Float = 0.5f,
+    val materialDark: Float = 0.55f,
+    val materialColored: Float = 0.35f,
     val dynamicLight: Boolean = true,
     val adaptivePerformance: Boolean = true,
     val refreshMode: RefreshMode = RefreshMode.AUTO,

@@ -19,6 +19,9 @@ import app.cristal.cover.data.prefs.Settings
 import app.cristal.cover.data.prefs.ThemeMode
 import app.cristal.cover.data.prefs.WallpaperKind
 import app.cristal.cover.ui.components.WallpaperPresets
+import app.cristal.cover.ui.design.LocalLiquidTheme
+import app.cristal.cover.ui.design.liquidThemeState
+import androidx.compose.runtime.remember
 import app.cristal.cover.ui.glass.GlassSpec
 import app.cristal.cover.ui.glass.LocalGlassSpec
 
@@ -117,9 +120,14 @@ fun CristalTheme(
         intensity = settings.glassIntensity,
         dark = dark,
     )
+    val liquid = remember(
+        settings.liquidTheme, settings.liquidCustomBase, settings.liquidCustomAccent,
+        settings.glassIntensity, settings.materialFrosted, settings.materialDark, settings.materialColored,
+    ) { settings.liquidThemeState() }
     MaterialTheme(colorScheme = scheme, typography = CristalTypography) {
         CompositionLocalProvider(
             LocalIsDark provides dark,
+            LocalLiquidTheme provides liquid,
             LocalGlassSpec provides spec,
             LocalHapticsEnabled provides settings.haptics,
             content = content,

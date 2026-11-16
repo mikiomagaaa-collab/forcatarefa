@@ -91,6 +91,7 @@ import kotlin.math.roundToInt
 enum class SettingsPage(val title: String) {
     MAIN("Configurações"),
     APPEARANCE("Aparência"),
+    DESIGN("Design System"),
     WALLPAPER("Wallpaper Studio"),
     HOME("Tela inicial e ícones"),
     GESTURES("Gestos"),
@@ -125,12 +126,19 @@ fun SettingsRoot(viewModel: SettingsViewModel, initialPage: SettingsPage, onExit
     var page by rememberSaveable { mutableStateOf(initialPage) }
 
     // Quem abriu direto em uma subpágina (ex.: "Papel de parede" pelo menu) sai ao voltar.
-    val back: () -> Unit = { if (page == SettingsPage.MAIN || page == initialPage) onExit() else page = SettingsPage.MAIN }
+    val back: () -> Unit = {
+        when {
+            page == SettingsPage.MAIN || page == initialPage -> onExit()
+            page == SettingsPage.DESIGN -> page = SettingsPage.APPEARANCE
+            else -> page = SettingsPage.MAIN
+        }
+    }
     androidx.activity.compose.BackHandler(onBack = back)
 
     when (page) {
         SettingsPage.MAIN -> MainPage(settings, wallpaper, permissions, back) { page = it }
-        SettingsPage.APPEARANCE -> AppearancePage(viewModel, settings, wallpaper, back)
+        SettingsPage.APPEARANCE -> AppearancePage(viewModel, settings, wallpaper, back) { page = SettingsPage.DESIGN }
+        SettingsPage.DESIGN -> DesignSystemPage(viewModel, settings, wallpaper, back)
         SettingsPage.WALLPAPER -> WallpaperStudioPage(viewModel, settings, wallpaper, back)
         SettingsPage.HOME -> HomePage(viewModel, settings, wallpaper, back)
         SettingsPage.GESTURES -> GesturesPage(viewModel, settings, wallpaper, permissions, back)
@@ -194,8 +202,13 @@ private fun MainPage(
 }
 
 @Composable
-private fun AppearancePage(vm: SettingsViewModel, settings: Settings, wallpaper: ImageBitmap?, onBack: () -> Unit) {
+private fun AppearancePage(vm: SettingsViewModel, settings: Settings, wallpaper: ImageBitmap?, onBack: () -> Unit, openDesign: () -> Unit) {
     SettingsScaffold(SettingsPage.APPEARANCE.title, settings, wallpaper, onBack) {
+        item {
+            SettingsCard("Design System Liquid Flip") {
+                NavRow(Icons.Rounded.Palette, "Temas e materiais", "${settings.liquidTheme.label} · prévia dos componentes") { openDesign() }
+            }
+        }
         item {
             SettingsCard("Cor do vidro e do texto") {
                 ChoiceRow(

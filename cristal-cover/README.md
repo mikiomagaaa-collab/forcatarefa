@@ -25,7 +25,7 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 | Relógio: 12 fontes (10 embutidas, licença OFL) e formato adaptativo (cresce, estica, empilha; com profundidade passa por trás do objeto) | Feito (1.3.0) |
 | Flip Transition: chegada com mola ao trocar de tela e recolhimento pela dobradiça | Primeira versão |
 | Widgets (9 embutidos + de outros apps), gaveta | Feito |
-| Liquid Control Center: 31 tipos de módulo, 6 tamanhos, páginas, editor, predefinições Liquid Flip/iOS/One UI, centrais separadas por tela | Feito (1.3.0) |
+| Liquid Control Center: 29 tipos de módulo, 6 tamanhos, páginas, editor, predefinições Liquid Flip/iOS/One UI, centrais separadas por tela | Feito (1.3.0) |
 | Controles reais: brilho, rotação, Não perturbe, avião, localização, NFC, modo escuro, economia de bateria | Feito (API do Android, Shizuku ou ajuste do sistema) |
 | Depth Effect: objeto da foto recortado no aparelho (ML Kit) na frente do relógio, no bloqueio interno e no Cover Clock | Feito (1.3.0) |
 | Papel de parede espacial (move com a inclinação; presets com camadas de profundidade) | Feito (1.3.0) |
@@ -33,7 +33,9 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 | Liquid Island: ilha dinâmica em volta da câmera, por cima de qualquer app (música, chamadas, timers, carregando, silencioso, notificações, música expandida) | Feito (1.4.0) |
 | Bloqueio no estilo iOS 26: relógio de vidro esticado, data com clima, widgets redondos, notificações embaixo | Feito (1.4.0) |
 | Central de Controle no estilo iOS 26 (botões ativos brancos, status, desligar) e fonte Inter | Feito (1.4.0) |
-| Sistema de ícones por app, materiais de vidro por componente, temas salvos | Não iniciado |
+| Design System Liquid Flip: tokens (cores, tipografia Inter, espaço de 4 dp, cantos concêntricos, molas), 6 materiais configuráveis, 7 temas e componentes base, com página de prévia | Fase A feita (1.5.0); as telas adotam o sistema fase a fase |
+| Ícones nos modos escuro e tingido, biblioteca de apps, páginas próprias da tela externa | Planejado (fase B) |
+| Liquid Island Live (espaço inteligente, integração com apps pelos Live Updates do Android 16), Info Brief no teclado e Now Brief | Protótipo aguardando aprovação; não implementado |
 | L.I.L.Y AI (modelos locais) e as ferramentas de escrita com IA do teclado | Adiado a pedido; exige medições no aparelho real |
 
 Sobre a L.I.L.Y AI: nenhum motor ou modelo foi incluído (o teclado funciona sem ela). O próprio requisito pede testes no Razr 40
@@ -45,13 +47,15 @@ desenvolvimento. Incluir um runtime pesado sem medir memória, temperatura e lat
 O que **foi verificado** durante o desenvolvimento:
 
 - compila do zero (debug e release com R8) com as versões estáveis atuais das ferramentas;
-- 78 testes automáticos em JVM passam. No launcher: lógica da grade, detecção da tela externa,
+- 99 testes automáticos em JVM passam (89 até a 1.4.0, mais 10 do Design System). No launcher: lógica da grade, detecção da tela externa,
   regras de compatibilidade, segurança dos comandos de shell, backup, papéis de parede por área,
   encaixe e edição da Central de Controle, **compilação real do shader AGSL** e **16 telas montadas e
   desenhadas** pelo pipeline de hardware (incluindo a central e o efeito de profundidade), no tamanho
   da tela externa (422×426 dp) e da interna (411×1004 dp). No teclado: o corretor com o dicionário
   real, a digitação por deslize com traços simulados, o controlador de texto num campo de mentira
-  (correção, desfazer, maiúsculas, pontuação, senha) e 6 telas desenhadas;
+  (correção, desfazer, maiúsculas, pontuação, senha) e 6 telas desenhadas. No Design System: escala
+  tipográfica, molas, cantos, contraste dos 7 temas, materiais, leitura das preferências e a página de
+  prévia desenhada em três temas;
 - lint sem erros.
 
 O que **não foi verificado**: o app **nunca rodou em um Razr de verdade**. Tudo o que depende de
@@ -91,6 +95,19 @@ MVVM em camadas, um módulo (`app`), injeção com Hilt.
 - **Persistência**: DataStore (preferências) e Room (tela inicial e ajustes por app).
 - **Erros**: toda chamada a serviço do sistema passa por `safely { }` ou `try/catch` e vira um estado
   ("sem permissão", "indisponível") em vez de crash.
+
+### Design System
+
+- `ui/design/LiquidTokens.kt`: paleta, espaço (grade de 4 dp), cantos concêntricos, escala tipográfica
+  com a Inter (espaçamento entre letras pela fórmula de métricas dinâmicas da própria Inter) e as
+  quatro molas do sistema (rápida, suave, elástica, calma), descritas por amortecimento e resposta.
+- `ui/design/LiquidThemes.kt`: Liquid Dark (padrão), Liquid Light, AMOLED, Lavender, Classic iOS,
+  One UI e Personalizado (parte de um tema e troca o destaque). Um teste garante contraste mínimo
+  de texto em todos.
+- `ui/design/LiquidMaterials.kt`: Liquid, Clear, Frosted, Dark, Colored e Sólido. Só o Liquid e o
+  Clear usam a refração do shader; os painéis usam desfoque simples, que custa menos.
+- `ui/design/LiquidComponents.kt`: interruptor, controle deslizante, seletor segmentado, listas,
+  botões e chips. A página Configurações > Aparência > Temas e materiais mostra tudo.
 
 ### Liquid Glass
 

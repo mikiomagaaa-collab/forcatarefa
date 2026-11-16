@@ -32,6 +32,12 @@ object PrefKeys {
     val THEME_MODE = stringPreferencesKey("theme_mode")
     val GLASS_QUALITY = stringPreferencesKey("glass_quality")
     val GLASS_INTENSITY = floatPreferencesKey("glass_intensity")
+    val LIQUID_THEME = stringPreferencesKey("liquid_theme")
+    val LIQUID_CUSTOM_BASE = stringPreferencesKey("liquid_custom_base")
+    val LIQUID_CUSTOM_ACCENT = intPreferencesKey("liquid_custom_accent")
+    val MATERIAL_FROSTED = floatPreferencesKey("material_frosted")
+    val MATERIAL_DARK = floatPreferencesKey("material_dark")
+    val MATERIAL_COLORED = floatPreferencesKey("material_colored")
     val DYNAMIC_LIGHT = booleanPreferencesKey("dynamic_light")
     val ADAPTIVE_PERFORMANCE = booleanPreferencesKey("adaptive_performance")
     val REFRESH_MODE = stringPreferencesKey("refresh_mode")
@@ -133,6 +139,12 @@ internal fun Preferences.toSettings(): Settings {
         themeMode = enumOr(PrefKeys.THEME_MODE, d.themeMode),
         glassQuality = enumOr(PrefKeys.GLASS_QUALITY, d.glassQuality),
         glassIntensity = (this[PrefKeys.GLASS_INTENSITY] ?: d.glassIntensity).coerceIn(0f, 1f),
+        liquidTheme = enumOr(PrefKeys.LIQUID_THEME, d.liquidTheme),
+        liquidCustomBase = enumOr(PrefKeys.LIQUID_CUSTOM_BASE, d.liquidCustomBase),
+        liquidCustomAccent = this[PrefKeys.LIQUID_CUSTOM_ACCENT] ?: d.liquidCustomAccent,
+        materialFrosted = (this[PrefKeys.MATERIAL_FROSTED] ?: d.materialFrosted).coerceIn(0f, 1f),
+        materialDark = (this[PrefKeys.MATERIAL_DARK] ?: d.materialDark).coerceIn(0f, 1f),
+        materialColored = (this[PrefKeys.MATERIAL_COLORED] ?: d.materialColored).coerceIn(0f, 1f),
         dynamicLight = this[PrefKeys.DYNAMIC_LIGHT] ?: d.dynamicLight,
         adaptivePerformance = this[PrefKeys.ADAPTIVE_PERFORMANCE] ?: d.adaptivePerformance,
         refreshMode = enumOr(PrefKeys.REFRESH_MODE, d.refreshMode),
