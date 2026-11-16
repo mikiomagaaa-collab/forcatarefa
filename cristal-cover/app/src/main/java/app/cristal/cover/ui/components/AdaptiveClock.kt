@@ -55,7 +55,7 @@ data class ClockFit(val stacked: Boolean, val scale: Float, val stretch: Float)
  * algarismos, com uma película branca de [opacity] e uma borda brilhante.
  */
 @Immutable
-data class ClockGlass(val backdrop: GlassBackdrop, val opacity: Float = 0.32f, val blurDp: Float = 16f)
+data class ClockGlass(val backdrop: GlassBackdrop, val opacity: Float = 0.32f, val blurDp: Float = 16f, val tint: Color = Color.White)
 
 object ClockFitting {
     /** Fonte de referência usada para medir (em sp). */
@@ -199,12 +199,12 @@ fun AdaptiveClock(
                             drawText(
                                 layoutResult,
                                 brush = Brush.verticalGradient(
-                                    listOf(Color.White.copy(alpha = glass.opacity + 0.12f), Color.White.copy(alpha = glass.opacity * 0.55f)),
+                                    listOf(glass.tint.copy(alpha = glass.opacity + 0.12f), glass.tint.copy(alpha = glass.opacity * 0.55f)),
                                 ),
                             )
                             drawText(
                                 layoutResult,
-                                brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.95f), Color.White.copy(alpha = 0.30f))),
+                                brush = Brush.verticalGradient(listOf(glass.tint.copy(alpha = 0.95f), glass.tint.copy(alpha = 0.30f))),
                                 drawStyle = Stroke(width = 1.3.dp.toPx()),
                             )
                         }

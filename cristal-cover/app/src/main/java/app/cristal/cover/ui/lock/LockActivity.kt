@@ -121,6 +121,7 @@ class LockActivity : ComponentActivity() {
                         onMediaPlayPause = presenter::mediaPlayPause,
                         onMediaNext = presenter::mediaNext,
                         onMediaPrevious = presenter::mediaPrevious,
+                        onCustomize = { customize(onCover) },
                     ),
                 )
             }
@@ -166,6 +167,20 @@ class LockActivity : ComponentActivity() {
         if (interactive && keyguard?.isKeyguardLocked != true) finishQuietly()
     }
 
+    /**
+     * Segurou o bloqueio: pede a autenticação ao sistema (PIN, digital ou rosto) e, liberado, abre
+     * o editor na mesma tela. Na pré-visualização o aparelho já está desbloqueado.
+     */
+    private fun customize(onCover: Boolean) {
+        val displayId = currentDisplayId()
+        if (preview) {
+            LockEditorActivity.open(this, onCover, displayId)
+            finishQuietly()
+            return
+        }
+        requestUnlock { LockEditorActivity.open(this, onCover, displayId) }
+    }
+
     private fun requestUnlock(afterUnlock: (() -> Unit)?) {
         if (preview) {
             finishQuietly()
@@ -173,8 +188,7 @@ class LockActivity : ComponentActivity() {
         }
         val km = keyguard
         if (km == null || !km.isKeyguardLocked) {
-            afterUnlock?.invoke()
-            onUnlocked()
+            finishAfterUnlock(afterUnlock)
             return
         }
         dismissing = true
@@ -184,8 +198,7 @@ class LockActivity : ComponentActivity() {
                 object : KeyguardManager.KeyguardDismissCallback() {
                     override fun onDismissSucceeded() {
                         dismissing = false
-                        afterUnlock?.invoke()
-                        onUnlocked()
+                        finishAfterUnlock(afterUnlock)
                     }
 
                     override fun onDismissCancelled() {
@@ -203,6 +216,19 @@ class LockActivity : ComponentActivity() {
             Logx.w("Falha ao pedir o desbloqueio ao sistema", t)
             dismissing = false
             resetKey++
+        }
+    }
+
+    /**
+     * Depois de destravar: com uma ação pendente (abrir notificação, câmera, editor), executa e sai;
+     * sem ação, segue o fluxo normal (que pode abrir o launcher na tela externa).
+     */
+    private fun finishAfterUnlock(afterUnlock: (() -> Unit)?) {
+        if (afterUnlock != null) {
+            afterUnlock()
+            finishQuietly()
+        } else {
+            onUnlocked()
         }
     }
 

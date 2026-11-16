@@ -1,6 +1,7 @@
 package app.cristal.cover.service
 
 import android.app.Notification
+import android.os.Build
 import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.pm.PackageManager
@@ -130,8 +131,10 @@ class CristalNotificationListener : NotificationListenerService() {
         }
 
         var lockVisibility = n.visibility
+        var importance = NotificationManager.IMPORTANCE_DEFAULT
         if (rankingMap != null && rankingMap.getRanking(sbn.key, ranking)) {
             if (ranking.importance < NotificationManager.IMPORTANCE_LOW) return null
+            importance = ranking.importance
             if (ranking.isSuspended) return null
             val override = ranking.lockscreenVisibilityOverride
             if (override != Ranking.VISIBILITY_NO_OVERRIDE) lockVisibility = override
@@ -162,6 +165,47 @@ class CristalNotificationListener : NotificationListenerService() {
             ongoing = n.flags and Notification.FLAG_ONGOING_EVENT != 0,
             chronometerBase = if (extras?.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER) == true && n.`when` > 0) n.`when` else null,
             countDown = extras?.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN) == true,
+            channelId = n.channelId,
+            importance = importance,
+        ).withProgress(n)
+    }
+
+    /**
+     * Lê a barra de progresso que o app publicou. No Android 16, quando o app usa o formato oficial
+     * de Live Update (ProgressStyle), lê também as etapas, o texto curto e o pedido de destaque.
+     */
+    private fun NotificationItem.withProgress(n: Notification): NotificationItem {
+        val extras = n.extras ?: return this
+        var max = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0)
+        var value = if (max > 0) extras.getInt(Notification.EXTRA_PROGRESS, -1) else -1
+        var indeterminate = extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE)
+        var points = emptyList<Int>()
+        var shortText: String? = null
+        var promoted = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+            shortText = safely("texto curto do Live Update") { n.shortCriticalText }?.takeIf { it.isNotBlank() }
+            promoted = n.flags and Notification.FLAG_PROMOTED_ONGOING != 0 || safely("pedido de destaque") { n.isRequestPromotedOngoing } == true
+            val style = safely("estilo de progresso") {
+                if (extras.getString(Notification.EXTRA_TEMPLATE)?.endsWith("ProgressStyle") == true) {
+                    Notification.Builder.recoverBuilder(this@CristalNotificationListener, n).style as? Notification.ProgressStyle
+                } else {
+                    null
+                }
+            }
+            if (style != null) {
+                max = style.progressMax
+                value = style.progress
+                indeterminate = style.isProgressIndeterminate
+                points = style.progressPoints.map { it.position }.sorted()
+            }
+        }
+        return copy(
+            progress = value,
+            progressMax = max,
+            progressIndeterminate = indeterminate,
+            progressPoints = points,
+            shortCriticalText = shortText,
+            promoted = promoted,
         )
     }
 

@@ -29,6 +29,7 @@ import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Security
@@ -93,6 +94,7 @@ enum class SettingsPage(val title: String) {
     APPEARANCE("Aparência"),
     DESIGN("Design System"),
     WALLPAPER("Wallpaper Studio"),
+    COLLECTIONS("Coleções"),
     HOME("Tela inicial e ícones"),
     GESTURES("Gestos"),
     LOCK("Tela de bloqueio"),
@@ -130,6 +132,7 @@ fun SettingsRoot(viewModel: SettingsViewModel, initialPage: SettingsPage, onExit
         when {
             page == SettingsPage.MAIN || page == initialPage -> onExit()
             page == SettingsPage.DESIGN -> page = SettingsPage.APPEARANCE
+            page == SettingsPage.COLLECTIONS -> page = SettingsPage.WALLPAPER
             else -> page = SettingsPage.MAIN
         }
     }
@@ -139,7 +142,8 @@ fun SettingsRoot(viewModel: SettingsViewModel, initialPage: SettingsPage, onExit
         SettingsPage.MAIN -> MainPage(settings, wallpaper, permissions, back) { page = it }
         SettingsPage.APPEARANCE -> AppearancePage(viewModel, settings, wallpaper, back) { page = SettingsPage.DESIGN }
         SettingsPage.DESIGN -> DesignSystemPage(viewModel, settings, wallpaper, back)
-        SettingsPage.WALLPAPER -> WallpaperStudioPage(viewModel, settings, wallpaper, back)
+        SettingsPage.WALLPAPER -> WallpaperStudioPage(viewModel, settings, wallpaper, back) { page = SettingsPage.COLLECTIONS }
+        SettingsPage.COLLECTIONS -> CollectionsPage(viewModel, back)
         SettingsPage.HOME -> HomePage(viewModel, settings, wallpaper, back)
         SettingsPage.GESTURES -> GesturesPage(viewModel, settings, wallpaper, permissions, back)
         SettingsPage.LOCK -> LockPage(viewModel, settings, wallpaper, permissions, back) { page = SettingsPage.PERMISSIONS }
@@ -1134,6 +1138,7 @@ private fun IslandPage(
                 GlassButton("Ver demonstração", Modifier.fillMaxWidth().padding(top = 6.dp)) { vm.islandDemo() }
             }
         }
+        item { DuplicateAlertsCard(vm, permissions) }
         item {
             SettingsCard("O que aparece") {
                 SwitchRow(title = "Música", checked = settings.islandMedia, onChange = { vm.set(PrefKeys.ISLAND_MEDIA, it) })
@@ -1150,5 +1155,71 @@ private fun IslandPage(
                 InfoText("Use para centralizar a câmera dentro da cápsula, se precisar.")
             }
         }
+    }
+}
+
+/**
+ * Notificação aparecendo duas vezes (pop-up do Android e ilha): explica e resolve. Com o Shizuku,
+ * desliga os pop-ups do sistema em um toque; sem ele, abre o ajuste exato de cada app que avisou.
+ */
+@Composable
+private fun DuplicateAlertsCard(vm: SettingsViewModel, permissions: PermissionState) {
+    val context = LocalContext.current
+    val popups by vm.systemPopups.collectAsStateWithLifecycle()
+    val apps by vm.popupApps.collectAsStateWithLifecycle()
+    LaunchedEffect(permissions.shizuku) { if (permissions.shizuku == ShizukuStatus.READY) vm.refreshSystemPopups() }
+    SettingsCard("Notificação aparecendo duas vezes?") {
+        InfoText(
+            "Quando chega um aviso importante, o Android mostra o pop-up dele no alto da tela e a ilha mostra o mesmo " +
+                "aviso. Deixe só um dos dois.",
+        )
+        when (permissions.shizuku) {
+            ShizukuStatus.READY -> SwitchRow(
+                title = "Pop-ups do sistema",
+                checked = popups ?: true,
+                onChange = { vm.setSystemPopups(it) },
+                subtitle = "Desligado, só a ilha avisa. As notificações continuam na barra, na central e no bloqueio. " +
+                    "Vale para todos os apps e dá para religar aqui.",
+            )
+            ShizukuStatus.NO_PERMISSION -> {
+                InfoText("Com o Shizuku, dá para desligar os pop-ups de todos os apps em um toque.")
+                GlassButton("Permitir o Shizuku", Modifier.fillMaxWidth().padding(top = 4.dp)) { vm.requestShizukuPermission() }
+            }
+            else -> InfoText(
+                "Sem o Shizuku, desligue por app: Configurações do Android > Notificações > Notificações de apps > " +
+                    "escolha o app > toque no tipo de aviso > desligue a opção de pop-up (aparecer na tela).",
+            )
+        }
+        if (apps.isNotEmpty()) {
+            RowTitle("Avisando com pop-up agora")
+            apps.forEach { item ->
+                NavRow(Icons.Rounded.NotificationsActive, item.appLabel, "Abrir a opção de pop-up deste aviso") {
+                    context.openNotificationChannel(item.packageName, item.channelId)
+                }
+            }
+        } else {
+            GlassButton("Abrir as notificações dos apps", Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                context.openNotificationChannel(null, null)
+            }
+        }
+        InfoText("Prefere o pop-up do sistema? Desligue \"Notificações que chegam\" logo abaixo.")
+    }
+}
+
+/** Abre o ajuste de um canal de notificação; sem canal, o do app; sem app, a lista de todos. */
+private fun android.content.Context.openNotificationChannel(pkg: String?, channel: String?) {
+    val candidates = buildList {
+        if (pkg != null && channel != null) {
+            add(
+                Intent(android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                    .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, pkg)
+                    .putExtra(android.provider.Settings.EXTRA_CHANNEL_ID, channel),
+            )
+        }
+        if (pkg != null) add(Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, pkg))
+        add(Intent(android.provider.Settings.ACTION_ALL_APPS_NOTIFICATION_SETTINGS))
+    }
+    for (intent in candidates) {
+        if (runCatching { startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
     }
 }

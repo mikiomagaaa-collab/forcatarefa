@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.rounded.Collections
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,7 +60,7 @@ private fun WallpaperSlot.aspect(): Float = if (onCover) 0.99f else 0.41f
  * Cada uma pode ter imagem, enquadramento e ajustes próprios, ou acompanhar outra área.
  */
 @Composable
-fun WallpaperStudioPage(vm: SettingsViewModel, settings: Settings, wallpaper: ImageBitmap?, onBack: () -> Unit) {
+fun WallpaperStudioPage(vm: SettingsViewModel, settings: Settings, wallpaper: ImageBitmap?, onBack: () -> Unit, openCollections: () -> Unit = {}) {
     val images by vm.wallpapers.collectAsStateWithLifecycle()
     var editingName by rememberSaveable { mutableStateOf<String?>(null) }
     val editing = WallpaperSlot.fromName(editingName)
@@ -70,6 +71,15 @@ fun WallpaperStudioPage(vm: SettingsViewModel, settings: Settings, wallpaper: Im
         return
     }
     SettingsScaffold("Wallpaper Studio", settings, wallpaper, onBack) {
+        item {
+            SettingsCard {
+                NavRow(
+                    androidx.compose.material.icons.Icons.Rounded.Collections,
+                    "Coleções",
+                    "Guarde a aparência inteira com um nome e troque quando quiser",
+                ) { openCollections() }
+            }
+        }
         item {
             SettingsCard("Tela interna") {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {

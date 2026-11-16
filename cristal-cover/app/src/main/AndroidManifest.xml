@@ -107,6 +107,15 @@
 
         <!-- Exportada para o atalho "Configurações" da tela de acessibilidade e de detalhes do app. -->
         <activity
+            android:name=".ui.lock.LockEditorActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|density|uiMode|fontScale|colorMode"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:label="Personalizar o bloqueio"
+            android:resizeableActivity="true"
+            android:theme="@style/Theme.Cristal.Lock" />
+
+        <activity
             android:name=".ui.settings.SettingsActivity"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|density|uiMode|fontScale|colorMode"
             android:exported="true"

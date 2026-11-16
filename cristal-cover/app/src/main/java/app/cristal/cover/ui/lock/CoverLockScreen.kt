@@ -36,6 +36,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -98,6 +101,7 @@ fun CoverLockScreen(
     resetKey: Int,
     actions: LockActions,
     onClockScale: ((Float) -> Unit)? = null,
+    editing: LockEditing? = null,
 ) {
     val settings = state.settings
     val backdrop = rememberGlassBackdrop()
@@ -107,6 +111,7 @@ fun CoverLockScreen(
     val locale = currentLocale()
     val slide = remember { Animatable(0f) }
     val unlock by rememberUpdatedState(actions.onUnlock)
+    val customize by rememberUpdatedState(actions.onCustomize)
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     val ink = if (LocalGlassSpec.current.dark) Color.White else Color(0xFF14161A)
 
@@ -140,9 +145,13 @@ fun CoverLockScreen(
                         scope.launch { slide.snapTo((slide.value + amount / height).coerceIn(-1f, 0.06f)) }
                     },
                 )
-            },
+            }
+            .pointerInput(Unit) { detectTapGestures(onLongPress = { customize() }) },
     ) {
         val tilt = rememberDeviceTilt(settings.wallpaperSpatial)
+        val placement = ClockPlacement(settings.coverClockX, settings.coverClockY, settings.coverClockZ)
+        val widthPx = constraints.maxWidth.toFloat()
+        val heightPx = constraints.maxHeight.toFloat()
         WallpaperLayer(
             image = if (settings.wallpaperKind == WallpaperKind.IMAGE) state.wallpaper else null,
             presetIndex = settings.wallpaperPreset,
@@ -203,7 +212,13 @@ fun CoverLockScreen(
                 showRest = showRest,
                 clockHeight = clockHeight,
                 fixedScale = liveScale,
-                clockGlass = if (settings.coverClockGlass) ClockGlass(backdrop, settings.lockClockGlassOpacity) else null,
+                clockGlass = if (settings.coverClockGlass) {
+                    ClockGlass(backdrop, settings.lockClockGlassOpacity, tint = if (settings.coverClockColor == 0) Color.White else Color(settings.coverClockColor))
+                } else {
+                    null
+                },
+                depthModifier = Modifier.clockDepth(placement, { tilt.value }, settings.wallpaperSpatial, widthPx, heightPx),
+                onClockBounds = editing?.onClockBounds,
                 resize = if (onClockScale != null && showRest) {
                     ResizeControl(
                         baseHeight = baseClockHeight ?: 120.dp,
@@ -219,7 +234,20 @@ fun CoverLockScreen(
             )
         }
         val subject = state.subject
-        if (subject != null) {
+        if (subject != null && placement.inFront) {
+            // Relógio na frente do objeto: objeto, depois relógio e notificações.
+            WallpaperSubjectLayer(
+                subject = subject,
+                dim = settings.wallpaperDim,
+                zoom = settings.wallpaperZoom,
+                offsetX = settings.wallpaperOffsetX,
+                offsetY = settings.wallpaperOffsetY,
+                saturation = settings.wallpaperSaturation,
+                tilt = { tilt.value },
+                spatial = settings.wallpaperSpatial,
+            )
+            CompositionLocalProvider(LocalGlassBackdrop provides backdrop) { column(true, true) }
+        } else if (subject != null) {
             // Efeito de profundidade: relógio, depois o objeto da foto, depois as notificações.
             column(true, false)
             WallpaperSubjectLayer(
@@ -258,8 +286,11 @@ private fun CoverClockColumn(
     expandedKey: String?,
     onToggle: (String) -> Unit,
     onOpen: (NotificationItem) -> Unit,
+    depthModifier: Modifier = Modifier,
+    onClockBounds: ((androidx.compose.ui.geometry.Rect) -> Unit)? = null,
 ) {
     val settings = state.settings
+    val clockColor = settings.coverClockColor
     val clockAlpha = if (showClock) Modifier else Modifier.alpha(0f)
     val restAlpha = if (showRest) Modifier else Modifier.alpha(0f)
     Column(
@@ -277,9 +308,10 @@ private fun CoverClockColumn(
         if (position != CoverClockPosition.TOP) Spacer(Modifier.weight(1f))
 
         val time = formatTime(now, is24h)
-        val glassInk = Brush.verticalGradient(listOf(ink, ink.copy(alpha = 0.62f)))
+        val glassInk = if (clockColor != 0) clockBrush(clockColor) else Brush.verticalGradient(listOf(ink, ink.copy(alpha = 0.62f)))
+        val bounds = if (onClockBounds != null) Modifier.onGloballyPositioned { onClockBounds(it.boundsInRoot()) } else Modifier
         if (clockHeight != null) {
-            Box(Modifier.fillMaxWidth().height(clockHeight)) {
+            Box(Modifier.fillMaxWidth().height(clockHeight).then(depthModifier).then(bounds)) {
                 AdaptiveClock(
                     time = time,
                     font = settings.coverClockFont,
@@ -292,7 +324,7 @@ private fun CoverClockColumn(
                 )
                 if (resize != null) ClockResizeHandle(resize.baseHeight, resize.onDrag, resize.onEnd)
             }
-            LockDateLine(now, locale, state, Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp).then(clockAlpha), color = ink)
+            LockDateLine(now, locale, state, Modifier.align(Alignment.CenterHorizontally).then(depthModifier).padding(top = 4.dp).then(clockAlpha), color = ink)
         } else {
             Text(
                 time,
@@ -300,7 +332,7 @@ private fun CoverClockColumn(
                 fontSize = (104f * fixedScale.coerceIn(0.6f, 1.8f)).sp,
                 maxLines = 1,
                 softWrap = false,
-                modifier = clockAlpha,
+                modifier = depthModifier.then(bounds).then(clockAlpha),
             )
             Text(
                 formatDate(now).replaceFirstChar { it.titlecase(locale) },
@@ -308,7 +340,7 @@ private fun CoverClockColumn(
                 style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Medium, shadow = WallpaperTextShadow),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 4.dp).then(clockAlpha),
+                modifier = depthModifier.padding(start = 4.dp).then(clockAlpha),
             )
         }
 

@@ -49,6 +49,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlin.math.roundToInt
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -109,7 +116,27 @@ class LockActions(
     val onMediaPlayPause: () -> Unit,
     val onMediaNext: () -> Unit,
     val onMediaPrevious: () -> Unit,
+    /** Segurou o fundo do bloqueio: autentica e abre a personalização. */
+    val onCustomize: () -> Unit = {},
 )
+
+/**
+ * Ganchos do editor do bloqueio: a prévia avisa onde o relógio foi desenhado (em pixels da própria
+ * prévia), para o editor pôr a moldura de arrasto em volta dele.
+ */
+class LockEditing(val onClockBounds: (Rect) -> Unit)
+
+/** Deslocamento do relógio (X/Y em fração da tela) e camada (Z), já limitados. */
+internal data class ClockPlacement(val x: Float, val y: Float, val z: Float) {
+    /** O relógio fica na frente do objeto recortado da foto. */
+    val inFront: Boolean get() = z >= 0.5f
+}
+
+/** Pincel do relógio: o degradê branco de sempre ou a cor escolhida. */
+internal fun clockBrush(argb: Int): Brush {
+    val base = if (argb == 0) Color.White else Color(argb)
+    return Brush.verticalGradient(listOf(base, base.copy(alpha = if (argb == 0) 0.78f else 0.84f)))
+}
 
 /**
  * Tela de bloqueio do Cristal, no estilo do iOS 26: data e clima no alto, relógio de vidro alto
@@ -128,10 +155,12 @@ fun LockScreen(
     coverMinimal: Boolean = false,
     /** Só na pré-visualização: permite esticar o relógio arrastando o canto. */
     onClockScale: ((Float) -> Unit)? = null,
+    /** Só no editor do bloqueio. */
+    editing: LockEditing? = null,
 ) {
     if (coverMinimal) {
         // Na tela externa o bloqueio é o Cover Clock: só papel de parede, relógio e notificações.
-        CoverLockScreen(state, secure, resetKey, actions, onClockScale)
+        CoverLockScreen(state, secure, resetKey, actions, onClockScale, editing)
         return
     }
     val settings = state.settings
@@ -141,6 +170,7 @@ fun LockScreen(
     val is24h = DateFormat.is24HourFormat(LocalContext.current)
     val slide = remember { Animatable(0f) }
     val unlock by rememberUpdatedState(actions.onUnlock)
+    val customize by rememberUpdatedState(actions.onCustomize)
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     val locale = currentLocale()
     val density = LocalDensity.current
@@ -175,7 +205,9 @@ fun LockScreen(
                         scope.launch { slide.snapTo((slide.value + amount / height).coerceIn(-1f, 0.06f)) }
                     },
                 )
-            },
+            }
+            // Segurar o fundo abre a personalização (depois de autenticar), como no iPhone.
+            .pointerInput(Unit) { detectTapGestures(onLongPress = { customize() }) },
     ) {
         val compact = maxHeight < 380.dp
         val tilt = rememberDeviceTilt(settings.wallpaperSpatial)
@@ -226,21 +258,42 @@ fun LockScreen(
         }
         val clockHeight = (baseClockHeight * liveScale).coerceIn(72.dp, maxHeight * 0.64f)
         val bigClock = !settings.lockClockCard || subject != null
-        val clockGlass = if (settings.lockClockGlass) ClockGlass(backdrop, settings.lockClockGlassOpacity) else null
+        val clockColor = if (settings.lockClockColor == 0) Color.White else Color(settings.lockClockColor)
+        val clockGlass = if (settings.lockClockGlass) ClockGlass(backdrop, settings.lockClockGlassOpacity, tint = clockColor) else null
         val slideModifier = Modifier.graphicsLayer {
             val p = slide.value
             translationY = p * size.height * 0.5f
             alpha = (1f + p * 1.6f).coerceIn(0f, 1f)
         }
+        val placement = ClockPlacement(settings.lockClockX, settings.lockClockY, settings.lockClockZ)
+        val widthPx = constraints.maxWidth.toFloat()
+        val heightPx = constraints.maxHeight.toFloat()
 
         if (bigClock) {
-            // Data e relógio ficam numa camada própria, por baixo do objeto recortado da foto.
+            val subjectLayer: @Composable () -> Unit = {
+                if (subject != null) {
+                    WallpaperSubjectLayer(
+                        subject = subject,
+                        dim = dim,
+                        zoom = settings.wallpaperZoom,
+                        offsetX = settings.wallpaperOffsetX,
+                        offsetY = settings.wallpaperOffsetY,
+                        saturation = settings.wallpaperSaturation,
+                        tilt = { tilt.value },
+                        spatial = settings.wallpaperSpatial,
+                    )
+                }
+            }
+            // Z: o relógio fica atrás do objeto recortado da foto (profundidade) ou na frente dele.
+            if (placement.inFront) subjectLayer()
+            // Data e relógio ficam numa camada própria; X e Y deslocam os dois juntos.
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(insets)
                     .then(slideModifier)
-                    .padding(top = topGap + widgetsAbove),
+                    .padding(top = topGap + widgetsAbove)
+                    .clockDepth(placement, { tilt.value }, settings.wallpaperSpatial, widthPx, heightPx),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 LockDateLine(now, locale, state, Modifier.height(dateLine))
@@ -250,23 +303,16 @@ fun LockScreen(
                     layout = settings.lockClockLayout,
                     adaptive = settings.lockClockAdaptive,
                     glass = clockGlass,
-                    brush = Brush.verticalGradient(listOf(Color.White, Color.White.copy(alpha = 0.78f))),
+                    brush = clockBrush(settings.lockClockColor),
                     fixedSize = (if (compact) 96f else 128f).times(liveScale).sp,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp).height(clockHeight),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp)
+                        .height(clockHeight)
+                        .then(if (editing != null) Modifier.onGloballyPositioned { editing.onClockBounds(it.boundsInRoot()) } else Modifier),
                 )
             }
-            if (subject != null) {
-                WallpaperSubjectLayer(
-                    subject = subject,
-                    dim = dim,
-                    zoom = settings.wallpaperZoom,
-                    offsetX = settings.wallpaperOffsetX,
-                    offsetY = settings.wallpaperOffsetY,
-                    saturation = settings.wallpaperSaturation,
-                    tilt = { tilt.value },
-                    spatial = settings.wallpaperSpatial,
-                )
-            }
+            if (!placement.inFront) subjectLayer()
         }
 
         CompositionLocalProvider(LocalGlassBackdrop provides backdrop) {
@@ -299,7 +345,12 @@ fun LockScreen(
                 }
                 if (bigClock) {
                     // O relógio já foi desenhado (atrás do objeto, se houver); aqui só reserva o espaço.
-                    Box(Modifier.fillMaxWidth().height(dateLine + clockHeight)) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(dateLine + clockHeight)
+                            .offset { IntOffset((placement.x * widthPx).roundToInt(), (placement.y * heightPx).roundToInt()) },
+                    ) {
                         if (onClockScale != null) {
                             ClockResizeHandle(
                                 baseHeight = baseClockHeight,
@@ -447,3 +498,26 @@ private fun LockBottomBar(state: LockUiState, actions: LockActions) {
         }
     }
 }
+
+/**
+ * Posição livre e profundidade do relógio: X e Y deslocam (em fração da tela). Com o papel de
+ * parede espacial, a camada se move com a inclinação proporcionalmente à profundidade: na frente
+ * se move mais, atrás quase nada. Atrás do objeto o relógio também perde um pouco de brilho.
+ */
+internal fun Modifier.clockDepth(
+    placement: ClockPlacement,
+    tilt: () -> androidx.compose.ui.geometry.Offset,
+    spatial: Boolean,
+    widthPx: Float,
+    heightPx: Float,
+): Modifier = this
+    .offset { IntOffset((placement.x * widthPx).roundToInt(), (placement.y * heightPx).roundToInt()) }
+    .graphicsLayer {
+        if (spatial) {
+            val t = tilt()
+            val amount = (placement.z - 0.5f) * 14.dp.toPx()
+            translationX = t.x * amount
+            translationY = t.y * amount
+        }
+        alpha = 0.86f + 0.14f * placement.z.coerceIn(0f, 1f)
+    }

@@ -15,10 +15,14 @@ import app.cristal.cover.data.apps.IconPackInfo
 import app.cristal.cover.data.apps.IconPackManager
 import app.cristal.cover.data.backup.BackupManager
 import app.cristal.cover.data.backup.BackupResult
+import app.cristal.cover.data.collections.CollectionRepository
+import app.cristal.cover.data.collections.CollectionPreview
+import app.cristal.cover.data.collections.WallpaperCollection
 import app.cristal.cover.data.db.AppPrefDao
 import app.cristal.cover.data.display.CoverDisplayRepository
 import app.cristal.cover.data.display.CoverState
 import app.cristal.cover.data.launch.AppLauncher
+import app.cristal.cover.data.notifications.NotificationRepository
 import app.cristal.cover.data.prefs.PrefKeys
 import app.cristal.cover.data.prefs.Settings
 import app.cristal.cover.data.prefs.SettingsRepository
@@ -63,12 +67,111 @@ class SettingsViewModel @Inject constructor(
     private val appPrefDao: AppPrefDao,
     private val appLauncher: AppLauncher,
     private val islandRepository: IslandRepository,
+    notificationRepository: NotificationRepository,
+    private val collectionRepository: CollectionRepository,
     appRepository: AppRepository,
     coverDisplayRepository: CoverDisplayRepository,
     @DefaultDispatcher private val default: CoroutineDispatcher,
 ) : ViewModel() {
 
     val settings: StateFlow<Settings> = settingsRepository.settings
+
+    /**
+     * Apps cujas notificações viram pop-up do sistema (importância alta) e também aparecem na ilha.
+     * Cada um abre direto no ajuste do canal, onde fica a opção de pop-up.
+     */
+    val popupApps: StateFlow<List<NotificationItem>> = notificationRepository.items
+        .map { items ->
+            items.filter { !it.ongoing && it.importance >= android.app.NotificationManager.IMPORTANCE_HIGH }
+                .distinctBy { it.packageName to it.channelId }
+                .take(8)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    // --- Wallpaper Library ---------------------------------------------------------------------
+
+    val collections: StateFlow<List<WallpaperCollection>> = collectionRepository.collections
+    val activeCollection: StateFlow<String?> = collectionRepository.active
+
+    private val _collectionPreviews = MutableStateFlow<Map<String, CollectionPreview>>(emptyMap())
+
+    /** Prévia de cada coleção (configurações e imagens reduzidas), por id. */
+    val collectionPreviews: StateFlow<Map<String, CollectionPreview>> = _collectionPreviews.asStateFlow()
+    private val previewStamps = HashMap<String, Long>()
+
+    fun loadCollections() {
+        viewModelScope.launch {
+            collectionRepository.refresh()
+            refreshPreviews()
+        }
+    }
+
+    private suspend fun refreshPreviews() {
+        val list = collectionRepository.collections.value
+        val next = HashMap(_collectionPreviews.value)
+        next.keys.retainAll(list.map { it.id }.toSet())
+        for (c in list) {
+            if (previewStamps[c.id] == c.updated && next.containsKey(c.id)) continue
+            next[c.id] = collectionRepository.preview(c)
+            previewStamps[c.id] = c.updated
+        }
+        _collectionPreviews.value = next
+    }
+
+    private fun collectionJob(done: String? = null, block: suspend () -> Unit) {
+        viewModelScope.launch {
+            block()
+            refreshPreviews()
+            if (done != null) message(done)
+        }
+    }
+
+    fun newCollection(name: String) = collectionJob("Coleção \"$name\" guardada.") { collectionRepository.saveCurrent(name) }
+
+    fun renameCollection(id: String, name: String) = collectionJob { collectionRepository.rename(id, name) }
+
+    fun duplicateCollection(id: String) = collectionJob("Coleção duplicada.") { collectionRepository.duplicate(id) }
+
+    fun overwriteCollection(id: String) = collectionJob("Coleção atualizada com a aparência atual.") { collectionRepository.overwrite(id) }
+
+    fun deleteCollection(id: String) = collectionJob("Coleção excluída.") { collectionRepository.delete(id) }
+
+    /** Aplica uma coleção; [then] roda depois (por exemplo, abrir o editor do bloqueio). */
+    fun applyCollection(id: String, then: (() -> Unit)?) {
+        viewModelScope.launch {
+            val ok = if (collectionRepository.active.value == id) true else collectionRepository.apply(id)
+            if (!ok) {
+                message("Não consegui aplicar esta coleção.")
+                return@launch
+            }
+            if (then != null) then() else message("Coleção aplicada.")
+        }
+    }
+
+    private val _systemPopups = MutableStateFlow<Boolean?>(null)
+
+    /** Pop-ups do sistema (heads-up): ligados, desligados ou `null` quando não dá para saber sem o Shizuku. */
+    val systemPopups: StateFlow<Boolean?> = _systemPopups.asStateFlow()
+
+    fun refreshSystemPopups() {
+        viewModelScope.launch {
+            val result = shizukuManager.exec("settings get global $HEADS_UP_KEY")
+            _systemPopups.value = if (result.ok) result.output.trim() != "0" else null
+        }
+    }
+
+    /** Liga ou desliga os pop-ups do sistema para todos os apps (reversível). Só com o Shizuku. */
+    fun setSystemPopups(enabled: Boolean) {
+        viewModelScope.launch {
+            val result = shizukuManager.exec("settings put global $HEADS_UP_KEY ${if (enabled) 1 else 0}")
+            if (result.ok) {
+                _systemPopups.value = enabled
+                message(if (enabled) "Pop-ups do sistema ligados." else "Pop-ups do sistema desligados: agora só a ilha avisa.")
+            } else {
+                message("O Shizuku não respondeu. Use o caminho manual mostrado abaixo.")
+            }
+        }
+    }
 
     /** Mostra a Liquid Island funcionando: carregando, depois uma notificação de exemplo. */
     fun islandDemo() {
@@ -290,3 +393,6 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.set(PrefKeys.ONBOARDING_DONE, false) }
     }
 }
+
+/** Chave global do Android que liga e desliga os pop-ups (heads-up) de notificação. */
+private const val HEADS_UP_KEY = "heads_up_notifications_enabled"

@@ -92,6 +92,10 @@ object PrefKeys {
     val LOCK_CLOCK_GLASS_OPACITY = floatPreferencesKey("lock_clock_glass_opacity")
     val COVER_CLOCK_GLASS = booleanPreferencesKey("cover_clock_glass")
     val LOCK_CLOCK_SCALE = floatPreferencesKey("lock_clock_scale")
+    val LOCK_CLOCK_X = floatPreferencesKey("lock_clock_x")
+    val LOCK_CLOCK_Y = floatPreferencesKey("lock_clock_y")
+    val LOCK_CLOCK_Z = floatPreferencesKey("lock_clock_z")
+    val LOCK_CLOCK_COLOR = intPreferencesKey("lock_clock_color")
     val LOCK_MEDIA_POSITION = stringPreferencesKey("lock_media_position")
     val LOCK_WIDGETS = stringPreferencesKey("lock_widgets")
     val LOCK_WIDGETS_POSITION = stringPreferencesKey("lock_widgets_position")
@@ -104,6 +108,10 @@ object PrefKeys {
     val ISLAND_RINGER = booleanPreferencesKey("island_ringer")
     val ISLAND_OFFSET_Y = floatPreferencesKey("island_offset_y")
     val COVER_CLOCK_SCALE = floatPreferencesKey("cover_clock_scale")
+    val COVER_CLOCK_X = floatPreferencesKey("cover_clock_x")
+    val COVER_CLOCK_Y = floatPreferencesKey("cover_clock_y")
+    val COVER_CLOCK_Z = floatPreferencesKey("cover_clock_z")
+    val COVER_CLOCK_COLOR = intPreferencesKey("cover_clock_color")
     val COVER_CLOCK_POSITION = stringPreferencesKey("cover_clock_position")
     val COVER_LOCK_MAX_NOTIFICATIONS = intPreferencesKey("cover_lock_max_notifications")
     val FLIP_TRANSITION = booleanPreferencesKey("flip_transition")
@@ -193,6 +201,10 @@ internal fun Preferences.toSettings(): Settings {
         lockClockGlassOpacity = (this[PrefKeys.LOCK_CLOCK_GLASS_OPACITY] ?: d.lockClockGlassOpacity).coerceIn(0f, 1f),
         coverClockGlass = this[PrefKeys.COVER_CLOCK_GLASS] ?: d.coverClockGlass,
         lockClockScale = (this[PrefKeys.LOCK_CLOCK_SCALE] ?: d.lockClockScale).coerceIn(0.6f, 1.8f),
+        lockClockX = (this[PrefKeys.LOCK_CLOCK_X] ?: d.lockClockX).coerceIn(-ClockBounds.X, ClockBounds.X),
+        lockClockY = (this[PrefKeys.LOCK_CLOCK_Y] ?: d.lockClockY).coerceIn(ClockBounds.Y_MIN, ClockBounds.Y_MAX),
+        lockClockZ = (this[PrefKeys.LOCK_CLOCK_Z] ?: d.lockClockZ).coerceIn(0f, 1f),
+        lockClockColor = this[PrefKeys.LOCK_CLOCK_COLOR] ?: d.lockClockColor,
         lockMediaPosition = enumOr(PrefKeys.LOCK_MEDIA_POSITION, d.lockMediaPosition),
         lockWidgets = this[PrefKeys.LOCK_WIDGETS]?.split(',')?.mapNotNull { n -> LockWidget.entries.firstOrNull { it.name == n } }?.distinct()
             ?: d.lockWidgets,
@@ -206,6 +218,10 @@ internal fun Preferences.toSettings(): Settings {
         islandRinger = this[PrefKeys.ISLAND_RINGER] ?: d.islandRinger,
         islandOffsetY = (this[PrefKeys.ISLAND_OFFSET_Y] ?: d.islandOffsetY).coerceIn(-16f, 24f),
         coverClockScale = (this[PrefKeys.COVER_CLOCK_SCALE] ?: d.coverClockScale).coerceIn(0.6f, 1.8f),
+        coverClockX = (this[PrefKeys.COVER_CLOCK_X] ?: d.coverClockX).coerceIn(-ClockBounds.X, ClockBounds.X),
+        coverClockY = (this[PrefKeys.COVER_CLOCK_Y] ?: d.coverClockY).coerceIn(ClockBounds.Y_MIN, ClockBounds.Y_MAX),
+        coverClockZ = (this[PrefKeys.COVER_CLOCK_Z] ?: d.coverClockZ).coerceIn(0f, 1f),
+        coverClockColor = this[PrefKeys.COVER_CLOCK_COLOR] ?: d.coverClockColor,
         coverClockPosition = enumOr(PrefKeys.COVER_CLOCK_POSITION, d.coverClockPosition),
         coverLockMaxNotifications = (this[PrefKeys.COVER_LOCK_MAX_NOTIFICATIONS] ?: d.coverLockMaxNotifications).coerceIn(0, 4),
         flipTransition = this[PrefKeys.FLIP_TRANSITION] ?: d.flipTransition,
@@ -317,4 +333,11 @@ class SettingsRepository @Inject constructor(
             }
         }
     }
+}
+
+/** Limites da posição livre do relógio (em fração da tela), para ele nunca sumir de vez. */
+object ClockBounds {
+    const val X = 0.45f
+    const val Y_MIN = -0.25f
+    const val Y_MAX = 0.75f
 }

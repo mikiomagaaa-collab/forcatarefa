@@ -42,7 +42,24 @@ data class NotificationItem(
     /** Início (ou fim, se [countDown]) do cronômetro mostrado pela notificação, em ms de relógio. */
     val chronometerBase: Long? = null,
     val countDown: Boolean = false,
+    /** Canal da notificação: abre o ajuste certo (como o pop-up) para este tipo de aviso. */
+    val channelId: String? = null,
+    /** Importância efetiva do canal (constantes de NotificationManager). Alta = pop-up do sistema. */
+    val importance: Int = android.app.NotificationManager.IMPORTANCE_DEFAULT,
+    /** Progresso publicado pelo app (-1 quando não há barra). */
+    val progress: Int = -1,
+    val progressMax: Int = 0,
+    val progressIndeterminate: Boolean = false,
+    /** Etapas do Live Update do Android 16 (posição de cada ponto, na escala de [progressMax]). */
+    val progressPoints: List<Int> = emptyList(),
+    /** Texto curto do Live Update (o que o Android mostra no chip da barra de status). */
+    val shortCriticalText: String? = null,
+    /** O app pediu destaque como Live Update, ou o sistema já promoveu a notificação. */
+    val promoted: Boolean = false,
 ) {
+    /** Tem barra de progresso publicada pelo app. */
+    val hasProgress: Boolean get() = progressIndeterminate || (progressMax > 0 && progress >= 0)
+
     val isCall: Boolean get() = category == Notification.CATEGORY_CALL && ongoing
     val isSecret: Boolean get() = lockVisibility == Notification.VISIBILITY_SECRET
     val isPublic: Boolean get() = lockVisibility == Notification.VISIBILITY_PUBLIC

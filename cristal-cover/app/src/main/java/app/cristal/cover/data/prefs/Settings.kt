@@ -175,6 +175,13 @@ data class Settings(
     val lockClockCard: Boolean = false,
     /** Tamanho do relógio do bloqueio interno (também ajustável arrastando na pré-visualização). */
     val lockClockScale: Float = 1f,
+    /** Posição livre do relógio do bloqueio interno, em fração da largura (X) e da altura (Y) da tela. */
+    val lockClockX: Float = 0f,
+    val lockClockY: Float = 0f,
+    /** Profundidade (Z): abaixo de 0,5 o relógio fica atrás do objeto da foto; acima, na frente. */
+    val lockClockZ: Float = 0.25f,
+    /** Cor do relógio em ARGB (0 = branco com degradê, o padrão). */
+    val lockClockColor: Int = 0,
     val lockMediaPosition: LockPlacement = LockPlacement.BELOW_CLOCK,
     val lockWidgets: List<LockWidget> = emptyList(),
     val lockWidgetsPosition: LockPlacement = LockPlacement.BOTTOM,
@@ -191,6 +198,10 @@ data class Settings(
     /** Ajuste fino da altura, em dp, para alinhar com a câmera. */
     val islandOffsetY: Float = 0f,
     val coverClockScale: Float = 1f,
+    val coverClockX: Float = 0f,
+    val coverClockY: Float = 0f,
+    val coverClockZ: Float = 0.25f,
+    val coverClockColor: Int = 0,
     val coverClockPosition: CoverClockPosition = CoverClockPosition.TOP,
     val coverLockMaxNotifications: Int = 3,
 
