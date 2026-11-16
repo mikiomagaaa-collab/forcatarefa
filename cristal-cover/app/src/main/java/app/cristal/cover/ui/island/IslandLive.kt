@@ -46,6 +46,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import app.cristal.cover.data.island.BriefSuggestion
+import app.cristal.cover.data.brief.BriefLabels
+import androidx.compose.material.icons.rounded.Check
 import app.cristal.cover.data.island.LiveActivityData
 import app.cristal.cover.data.island.LiveCategory
 import java.text.SimpleDateFormat
@@ -278,13 +280,13 @@ internal fun BriefExpanded(
     Column(Modifier.fillMaxSize()) {
         LensHeader(
             leading = {
-                Box(Modifier.size(18.dp).clip(CircleShape).background(BriefBlue), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.Event, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                Box(Modifier.size(18.dp).clip(CircleShape).background(if (suggestion.created) Color(0xFF30D158) else BriefBlue), contentAlignment = Alignment.Center) {
+                    Icon(if (suggestion.created) Icons.Rounded.Check else Icons.Rounded.Event, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
                 }
             },
-            label = if (suggestion.kind == "task") "Tarefa identificada" else "Compromisso identificado",
+            label = if (suggestion.created) "Lembrete criado" else BriefLabels.found(suggestion.kind),
             chip = null,
-            labelColor = Color(0xFF9DCBFF),
+            labelColor = if (suggestion.created) Color(0xFF8BE7A5) else Color(0xFF9DCBFF),
         )
         Column(
             Modifier
@@ -300,9 +302,19 @@ internal fun BriefExpanded(
                 }
                 briefTime(suggestion)?.let { Text(it, style = islandText(28.sp, FontWeight.SemiBold), color = Color.White) }
             }
-            Row(Modifier.padding(horizontal = LensLayout.LAST_ROW), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                BriefButton(if (suggestion.kind == "task") "Adicionar tarefa" else "Criar lembrete", BriefBlue, Icons.Rounded.NotificationAdd, Modifier.weight(1.3f), onAccept)
-                BriefButton("Agora não", Color.White.copy(alpha = 0.14f), null, Modifier.weight(1f), onLater)
+            if (suggestion.created) {
+                Text(
+                    "Avisa na hora, aqui na ilha. Está também no Now Brief.",
+                    style = islandText(12.5.sp, FontWeight.Normal),
+                    color = Color.White.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(horizontal = LensLayout.LAST_ROW),
+                    maxLines = 2,
+                )
+            } else {
+                Row(Modifier.padding(horizontal = LensLayout.LAST_ROW), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    BriefButton(BriefLabels.action(suggestion.kind), BriefBlue, Icons.Rounded.NotificationAdd, Modifier.weight(1.3f), onAccept)
+                    BriefButton("Agora não", Color.White.copy(alpha = 0.14f), null, Modifier.weight(1f), onLater)
+                }
             }
         }
     }

@@ -117,6 +117,8 @@ class LauncherViewModel @Inject constructor(
     private val permissionCenter: PermissionCenter,
     private val shizukuManager: ShizukuManager,
     private val photoStore: PhotoWidgetStore,
+    private val briefRepository: app.cristal.cover.data.brief.BriefRepository,
+    private val reminderRepository: app.cristal.cover.data.brief.ReminderRepository,
     val widgetHost: WidgetHostManager,
     batteryRepository: BatteryRepository,
     coverDisplayRepository: CoverDisplayRepository,
@@ -175,6 +177,30 @@ class LauncherViewModel @Inject constructor(
             torchOn = extra.third,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WidgetData())
+
+    /** Now Brief: lembretes, sugestões do Info Brief e atividades em andamento de outros apps. */
+    val nowBrief: StateFlow<NowBriefData> = combine(
+        reminderRepository.reminders,
+        briefRepository.pending,
+        notificationRepository.items,
+    ) { reminders, pending, items ->
+        val lives = items.mapNotNull(app.cristal.cover.data.island.LiveIntegration::toLive)
+        val liveKeys = lives.map { it.item.key }.toSet()
+        NowBriefData(
+            reminders = reminders.filter { !it.done },
+            suggestions = pending.take(4),
+            lives = lives.sortedBy(app.cristal.cover.data.island.LiveIntegration::rank).take(3),
+            timers = items.filter { !it.isCall && it.ongoing && it.chronometerBase != null && it.key !in liveKeys }.take(2),
+        )
+    }.flowOn(default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NowBriefData())
+
+    fun completeReminder(id: Long) {
+        viewModelScope.launch { reminderRepository.complete(id) }
+    }
+
+    fun acceptSuggestion(s: app.cristal.cover.data.island.BriefSuggestion, displayId: Int) = briefRepository.accept(s, displayId)
+
+    fun dismissSuggestion(s: app.cristal.cover.data.island.BriefSuggestion) = briefRepository.later(s)
 
     val notifications: StateFlow<List<NotificationItem>> = notificationRepository.items
     val quick: StateFlow<QuickState> = quickSettingsRepository.state

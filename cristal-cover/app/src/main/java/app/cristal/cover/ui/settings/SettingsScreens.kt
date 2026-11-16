@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Info
@@ -102,6 +103,7 @@ enum class SettingsPage(val title: String) {
     GESTURES("Gestos"),
     LOCK("Tela de bloqueio"),
     ISLAND("Liquid Island"),
+    BRIEF("Info Brief"),
     COVER("Tela externa"),
     WEATHER("Clima"),
     PERMISSIONS("Permissões"),
@@ -152,6 +154,7 @@ fun SettingsRoot(viewModel: SettingsViewModel, initialPage: SettingsPage, onExit
         SettingsPage.LOCK -> LockPage(viewModel, settings, wallpaper, permissions, back) { page = SettingsPage.PERMISSIONS }
         SettingsPage.COVER -> CoverPage(viewModel, settings, wallpaper, permissions, cover, back)
         SettingsPage.ISLAND -> IslandPage(viewModel, settings, wallpaper, permissions, back) { page = SettingsPage.PERMISSIONS }
+        SettingsPage.BRIEF -> BriefPage(viewModel, settings, wallpaper, back)
         SettingsPage.WEATHER -> WeatherPage(viewModel, settings, wallpaper, permissions, back)
         SettingsPage.PERMISSIONS -> PermissionsPage(viewModel, settings, wallpaper, permissions, back, onExit)
         SettingsPage.BACKUP -> BackupPage(viewModel, settings, wallpaper, back)
@@ -193,6 +196,7 @@ private fun MainPage(
                 NavRow(Icons.Rounded.TouchApp, "Gestos", "O que cada gesto faz") { open(SettingsPage.GESTURES) }
                 NavRow(Icons.Rounded.Lock, "Tela de bloqueio", "Relógio, notificações e atalhos sobre o bloqueio do sistema") { open(SettingsPage.LOCK) }
                 NavRow(Icons.Rounded.Lens, "Liquid Island", "Ilha dinâmica em volta da câmera: música, chamadas e avisos") { open(SettingsPage.ISLAND) }
+                NavRow(Icons.Rounded.Event, "Info Brief", "Lembretes do teclado na ilha e no Now Brief") { open(SettingsPage.BRIEF) }
                 NavRow(Icons.Rounded.Smartphone, "Tela externa", "Assumir a tela externa, liberar apps e compatibilidade") { open(SettingsPage.COVER) }
                 NavRow(Icons.Rounded.WbSunny, "Clima", "Cidade e unidade de temperatura") { open(SettingsPage.WEATHER) }
             }
@@ -1178,8 +1182,9 @@ private fun IslandPage(
             SettingsCard("Aparência") {
                 ChoiceRow("Estilo", IslandStyle.entries.map { it to it.label }, settings.islandStyle) { vm.setEnum(PrefKeys.ISLAND_STYLE, it) }
                 InfoText(
-                    "Ao expandir, a ilha vira uma gota com uma faixa de luz colorida. Antes de crescer, ela mede o espaço entre " +
-                        "os ícones da barra de status: se não couber, fica só com o ícone ou com um anel em volta da câmera.",
+                    "A cápsula mede o espaço entre os ícones da barra de status: se não couber, fica só com o ícone ou com um " +
+                        "anel em volta da câmera. Ao expandir, uma gota se solta da cápsula e vira uma lente logo abaixo da " +
+                        "barra de status, com uma faixa de luz colorida: nunca cobre os ícones do sistema.",
                 )
             }
         }

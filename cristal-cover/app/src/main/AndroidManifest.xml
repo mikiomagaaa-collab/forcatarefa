@@ -19,6 +19,19 @@
     <!-- Reconectar os serviços depois de ligar o aparelho. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Info Brief: avisar na hora do lembrete (pedida no primeiro lembrete) e no horário exato. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <!--
+        Ponte com o L.I.L.Y Keyboard: só apps assinados com a mesma chave do Cristal podem mandar
+        sugestões do Info Brief. O teclado declara a mesma permissão (vale a ordem de instalação).
+    -->
+    <permission
+        android:name="app.cristal.cover.permission.INFO_BRIEF"
+        android:description="@string/brief_permission_description"
+        android:label="@string/brief_permission_label"
+        android:protectionLevel="signature" />
     <!-- Central de Controle: brilho e rotação (o usuário libera em "Alterar configurações do sistema"). -->
     <uses-permission
         android:name="android.permission.WRITE_SETTINGS"
@@ -184,8 +197,37 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
+
+        <!-- Info Brief: sugestões do teclado (só com a permissão de assinatura). -->
+        <receiver
+            android:name=".service.BriefReceiver"
+            android:exported="true"
+            android:permission="app.cristal.cover.permission.INFO_BRIEF">
+            <intent-filter>
+                <action android:name="app.cristal.cover.action.BRIEF_SUGGEST" />
+                <action android:name="app.cristal.cover.action.BRIEF_ACCEPT" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".service.ReminderReceiver"
+            android:exported="false" />
+
+        <!-- Confirmação do Info Brief: data, hora e ação antes de agendar. -->
+        <activity
+            android:name=".ui.brief.BriefConfirmActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|density|uiMode|fontScale|colorMode"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:label="Info Brief"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true"
+            android:taskAffinity="app.cristal.cover.brief"
+            android:theme="@style/Theme.Cristal.Sheet"
+            android:windowSoftInputMode="adjustResize" />
 
         <!-- Ponte com o Shizuku (opcional em tempo de execução). -->
         <provider

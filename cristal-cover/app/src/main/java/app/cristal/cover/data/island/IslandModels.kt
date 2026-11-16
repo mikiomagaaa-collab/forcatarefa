@@ -54,9 +54,22 @@ data class BriefSuggestion(
     /** Momento sugerido (ms do relógio); a data pode precisar de confirmação. */
     val whenMillis: Long?,
     val dateConfirmed: Boolean,
+    /** event, task, place, recurring ou trip. */
     val kind: String,
+    /** Só a expressão reconhecida ("às 7 horas da noite"), nunca a conversa. */
     val sourceText: String,
-)
+    /** O horário foi dito com clareza (sem ele, a confirmação pergunta). */
+    val timeConfirmed: Boolean = whenMillis != null,
+    /** Repete toda semana ("toda segunda"). */
+    val weekly: Boolean = false,
+    /** Lugar citado ("shopping"), para abrir no mapa. */
+    val place: String? = null,
+    /** O lembrete já foi criado: a ilha mostra a confirmação. */
+    val created: Boolean = false,
+) {
+    /** Dá para criar direto da ilha, sem perguntar nada. */
+    val ready: Boolean get() = whenMillis != null && dateConfirmed && timeConfirmed
+}
 
 /**
  * Estado da ilha: a atividade principal (no centro) e, se houver outra contínua ao mesmo tempo,

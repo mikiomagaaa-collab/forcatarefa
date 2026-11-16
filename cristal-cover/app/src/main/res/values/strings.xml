@@ -9,4 +9,6 @@
     <string name="precision_label">Cristal · precisão da ilha</string>
     <string name="precision_summary">Opcional: a Liquid Island mede a barra de status para nunca cobrir os ícones</string>
     <string name="precision_description">Modo de precisão da Liquid Island (opcional).\n\nLê só a barra de status do sistema (onde ficam o relógio e os ícones), para a ilha saber exatamente quanto espaço tem ao redor da câmera. Não lê o conteúdo dos apps, não guarda nada e nenhuma informação sai do aparelho.\n\nSem este modo, a ilha estima o espaço pelas notificações ativas.</string>
+    <string name="brief_permission_label">Info Brief do L.I.L.Y</string>
+    <string name="brief_permission_description">Permite que o L.I.L.Y Keyboard mande ao Cristal os compromissos reconhecidos (título e horário), para a Liquid Island oferecer um lembrete.</string>
 </resources>

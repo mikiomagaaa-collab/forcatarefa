@@ -37,6 +37,11 @@ import app.cristal.cover.ui.island.IslandGeometry
 import app.cristal.cover.ui.island.IslandSizing
 import app.cristal.cover.ui.island.IslandTarget
 import app.cristal.cover.ui.island.LiquidIsland
+import app.cristal.cover.ui.island.BriefFlightLayer
+import app.cristal.cover.data.brief.BriefFlight
+import app.cristal.cover.data.brief.BriefRepository
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -51,6 +56,7 @@ internal class IslandOverlay(
     private val settingsRepository: SettingsRepository,
     private val mediaRepository: MediaRepository,
     private val notificationRepository: NotificationRepository,
+    private val briefRepository: BriefRepository,
 ) {
     private var view: ComposeView? = null
     private var owner: OverlayOwner? = null
@@ -62,6 +68,9 @@ internal class IslandOverlay(
     private var cameraCenterX = 0
     private var screenWidth = 0
     private var statusBarPx = 0
+    private var windowContext: android.content.Context? = null
+    private var geometry: IslandGeometry? = null
+    private val flights = ArrayList<ComposeView>()
 
     /** O app em primeiro plano escondeu a barra de status (vídeo, jogo) ou a tela está deitada. */
     private val fullscreen = mutableStateOf(false)
@@ -123,6 +132,11 @@ internal class IslandOverlay(
             owner = newOwner
             windowManager = wm
             params = p
+            windowContext = context
+            geometry = baseGeometry
+            briefRepository.islandReady.value = true
+            // Info Brief: a esfera que vem do teclado voa numa janela própria até a ilha.
+            newOwner.lifecycleScope.launch { briefRepository.flights.collect { fly(it) } }
             true
         } catch (t: Throwable) {
             Logx.w("Não foi possível mostrar a Liquid Island", t)
@@ -136,6 +150,8 @@ internal class IslandOverlay(
     fun hide() {
         val v = view ?: return
         view = null
+        briefRepository.islandReady.value = false
+        flights.toList().forEach(::removeFlight)
         pendingShrink?.let(handler::removeCallbacks)
         pendingShrink = null
         safely("remover a Liquid Island") { windowManager?.removeViewImmediate(v) }
@@ -144,6 +160,82 @@ internal class IslandOverlay(
         owner = null
         windowManager = null
         params = null
+        windowContext = null
+    }
+
+    /**
+     * Voo da esfera do Info Brief: de onde ela saiu do teclado até a câmera. Uma janela de tela
+     * inteira que não recebe toques e some ao chegar; a ilha abre a sugestão no pouso.
+     */
+    private fun fly(flight: BriefFlight) {
+        val context = windowContext
+        val wm = windowManager
+        val g = geometry
+        if (context == null || wm == null || g == null) {
+            briefRepository.show(flight.suggestion)
+            return
+        }
+        val target = androidx.compose.ui.geometry.Offset(
+            cameraCenterX.toFloat(),
+            (g.topPadding.value + g.pillHeight.value / 2f) * density,
+        )
+        val flightOwner = OverlayOwner().also { it.start() }
+        var flightView: ComposeView? = null
+        val composeView = ComposeView(context).apply {
+            setViewTreeLifecycleOwner(flightOwner)
+            setViewTreeViewModelStoreOwner(flightOwner)
+            setViewTreeSavedStateRegistryOwner(flightOwner)
+            setContent {
+                BriefFlightLayer(
+                    origin = androidx.compose.ui.geometry.Offset(flight.originX, flight.originY),
+                    target = target,
+                    onArrive = { briefRepository.show(flight.suggestion) },
+                    onDone = {
+                        flightView?.let(::removeFlight)
+                        flightOwner.stop()
+                    },
+                )
+            }
+        }
+        flightView = composeView
+        val p = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            title = "InfoBriefFlight"
+            layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+        }
+        val added = safely("mostrar o voo do Info Brief") {
+            wm.addView(composeView, p)
+            true
+        } ?: false
+        if (!added) {
+            flightOwner.stop()
+            briefRepository.show(flight.suggestion)
+            return
+        }
+        flights += composeView
+        // Garantia: mesmo se a animação não terminar, a janela some.
+        handler.postDelayed({
+            if (composeView in flights) {
+                removeFlight(composeView)
+                flightOwner.stop()
+            }
+        }, 3_000L)
+    }
+
+    private fun removeFlight(v: ComposeView) {
+        if (!flights.remove(v)) return
+        safely("remover o voo do Info Brief") { windowManager?.removeViewImmediate(v) }
+        safely("descartar o voo do Info Brief") { v.disposeComposition() }
     }
 
     /** Medidas em dp a partir do furo da câmera (em px). */
@@ -199,6 +291,8 @@ internal class IslandOverlay(
                     expanded = false
                     repository.dismissTransient()
                 },
+                onBriefAccept = briefRepository::accept,
+                onBriefLater = briefRepository::later,
             ),
         )
     }

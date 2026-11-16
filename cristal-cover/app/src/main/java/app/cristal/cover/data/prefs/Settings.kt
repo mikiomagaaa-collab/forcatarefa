@@ -229,6 +229,10 @@ data class Settings(
     val islandLive: Boolean = true,
     /** Aparência da ilha: preta (nativa) ou de vidro. */
     val islandStyle: IslandStyle = IslandStyle.NATIVE,
+    /** Info Brief: receber as sugestões do L.I.L.Y Keyboard (compromissos, tarefas, lugares). */
+    val briefEnabled: Boolean = true,
+    /** Lembretes criados pelo Info Brief tocam como alarme (som contínuo até tocar). */
+    val briefAlarm: Boolean = false,
     /** Mostra a cápsula preta mesmo sem nada acontecendo (como no iPhone). */
     val islandAlwaysVisible: Boolean = false,
     val islandMedia: Boolean = true,

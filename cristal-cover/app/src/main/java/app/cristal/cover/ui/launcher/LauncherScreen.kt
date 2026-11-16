@@ -108,6 +108,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
     val rawSettings by viewModel.settings.collectAsStateWithLifecycle()
     val home by viewModel.home.collectAsStateWithLifecycle()
     val widgetData by viewModel.widgetData.collectAsStateWithLifecycle()
+    val nowBrief by viewModel.nowBrief.collectAsStateWithLifecycle()
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val quick by viewModel.quick.collectAsStateWithLifecycle()
     val controlLayout by viewModel.controlLayout.collectAsStateWithLifecycle()
@@ -556,7 +557,20 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                     widgetData = widgetData,
                     widgetActions = widgetActions,
                     callbacks = callbacks,
-                    todayPanel = { TodayPanel(widgetData, widgetActions) },
+                    todayPanel = {
+                        NowBriefPanel(
+                            widgetData,
+                            widgetActions,
+                            nowBrief,
+                            NowBriefActions(
+                                onCompleteReminder = { viewModel.completeReminder(it.id) },
+                                onAcceptSuggestion = { viewModel.acceptSuggestion(it, displayId) },
+                                onDismissSuggestion = viewModel::dismissSuggestion,
+                                onOpenNotification = { viewModel.openNotification(it, displayId) },
+                                onOpenSettings = { openCristalSettings("BRIEF") },
+                            ),
+                        )
+                    },
                 )
               }
             }

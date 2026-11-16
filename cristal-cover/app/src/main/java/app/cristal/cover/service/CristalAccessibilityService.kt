@@ -56,6 +56,7 @@ class CristalAccessibilityService : AccessibilityService() {
     @Inject lateinit var islandRepository: IslandRepository
     @Inject lateinit var mediaRepository: MediaRepository
     @Inject lateinit var notificationRepository: NotificationRepository
+    @Inject lateinit var briefRepository: app.cristal.cover.data.brief.BriefRepository
 
     private var island: IslandOverlay? = null
 
@@ -96,7 +97,7 @@ class CristalAccessibilityService : AccessibilityService() {
             }
         }
         // Liquid Island: liga e desliga conforme a configuração.
-        val overlay = island ?: IslandOverlay(this, islandRepository, settingsRepository, mediaRepository, notificationRepository)
+        val overlay = island ?: IslandOverlay(this, islandRepository, settingsRepository, mediaRepository, notificationRepository, briefRepository)
             .also { island = it }
         newScope.launch {
             settingsRepository.settings.map { it.islandEnabled }.distinctUntilChanged().collect { enabled ->

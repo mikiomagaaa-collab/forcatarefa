@@ -104,7 +104,9 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import app.cristal.cover.ui.launcher.SafeLayout
-import app.cristal.cover.ui.launcher.TodayPanel
+import app.cristal.cover.ui.launcher.NowBriefActions
+import app.cristal.cover.ui.launcher.NowBriefData
+import app.cristal.cover.ui.launcher.NowBriefPanel
 import app.cristal.cover.ui.launcher.WidgetPicker
 import app.cristal.cover.ui.lock.LockActions
 import app.cristal.cover.ui.lock.LockScreen
@@ -305,7 +307,7 @@ class ScreensSmokeTest {
                                 widgetData = widgetData,
                                 widgetActions = widgetActions,
                                 callbacks = callbacks,
-                                todayPanel = { TodayPanel(widgetData, widgetActions) },
+                                todayPanel = { NowBriefPanel(widgetData, widgetActions, NowBriefData(), NowBriefActions()) },
                             )
                         }
                     }

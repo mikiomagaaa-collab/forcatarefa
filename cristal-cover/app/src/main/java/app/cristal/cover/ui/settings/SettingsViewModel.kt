@@ -69,6 +69,8 @@ class SettingsViewModel @Inject constructor(
     private val islandRepository: IslandRepository,
     notificationRepository: NotificationRepository,
     private val collectionRepository: CollectionRepository,
+    private val briefRepository: app.cristal.cover.data.brief.BriefRepository,
+    private val reminderRepository: app.cristal.cover.data.brief.ReminderRepository,
     appRepository: AppRepository,
     coverDisplayRepository: CoverDisplayRepository,
     @DefaultDispatcher private val default: CoroutineDispatcher,
@@ -174,6 +176,31 @@ class SettingsViewModel @Inject constructor(
     }
 
     /** Mostra a Liquid Island funcionando: carregando, depois uma notificação de exemplo. */
+    /** Info Brief: histórico das sugestões e os lembretes criados. */
+    val briefHistory: StateFlow<List<app.cristal.cover.data.brief.BriefRecord>> = briefRepository.history
+    val reminders: StateFlow<List<app.cristal.cover.data.brief.Reminder>> = reminderRepository.reminders
+
+    fun deleteReminder(id: Long) {
+        viewModelScope.launch { reminderRepository.delete(id) }
+    }
+
+    fun clearBriefHistory() = briefRepository.clearHistory()
+
+    /** Mostra na ilha uma sugestão de exemplo (nada é guardado se você tocar em "Agora não"). */
+    fun briefDemo() {
+        val at = java.time.LocalDate.now().plusDays(1).atTime(19, 0).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        briefRepository.show(
+            app.cristal.cover.data.island.BriefSuggestion(
+                id = System.currentTimeMillis(),
+                title = "Show",
+                whenMillis = at,
+                dateConfirmed = true,
+                kind = "event",
+                sourceText = "amanhã às 7 horas da noite",
+            ),
+        )
+    }
+
     fun islandDemo() {
         viewModelScope.launch {
             islandRepository.flash(IslandActivity.Charging(76), 2_600)

@@ -15,4 +15,12 @@
     <style name="Theme.Cristal.Lock" parent="Theme.Cristal">
         <item name="android:windowAnimationStyle">@null</item>
     </style>
+
+    <!-- Folha sobre o app atual (confirmação do Info Brief): fundo transparente, sem animação de janela. -->
+    <style name="Theme.Cristal.Sheet" parent="Theme.Cristal">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
 </resources>
