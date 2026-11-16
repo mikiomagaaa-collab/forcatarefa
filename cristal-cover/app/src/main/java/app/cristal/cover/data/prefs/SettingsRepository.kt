@@ -107,6 +107,8 @@ object PrefKeys {
     val LOCK_WIDGETS = stringPreferencesKey("lock_widgets")
     val LOCK_WIDGETS_POSITION = stringPreferencesKey("lock_widgets_position")
     val ISLAND_ENABLED = booleanPreferencesKey("island_enabled")
+    val ISLAND_LIVE = booleanPreferencesKey("island_live")
+    val ISLAND_STYLE = stringPreferencesKey("island_style")
     val ISLAND_ALWAYS = booleanPreferencesKey("island_always")
     val ISLAND_MEDIA = booleanPreferencesKey("island_media")
     val ISLAND_ALERTS = booleanPreferencesKey("island_alerts")
@@ -224,6 +226,8 @@ internal fun Preferences.toSettings(): Settings {
             ?: d.lockWidgets,
         lockWidgetsPosition = enumOr(PrefKeys.LOCK_WIDGETS_POSITION, d.lockWidgetsPosition),
         islandEnabled = this[PrefKeys.ISLAND_ENABLED] ?: d.islandEnabled,
+        islandLive = this[PrefKeys.ISLAND_LIVE] ?: d.islandLive,
+        islandStyle = enumOr(PrefKeys.ISLAND_STYLE, d.islandStyle),
         islandAlwaysVisible = this[PrefKeys.ISLAND_ALWAYS] ?: d.islandAlwaysVisible,
         islandMedia = this[PrefKeys.ISLAND_MEDIA] ?: d.islandMedia,
         islandAlerts = this[PrefKeys.ISLAND_ALERTS] ?: d.islandAlerts,

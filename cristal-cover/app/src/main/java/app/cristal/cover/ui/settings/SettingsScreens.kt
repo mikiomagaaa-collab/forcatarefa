@@ -70,6 +70,7 @@ import app.cristal.cover.data.prefs.IconShape
 import app.cristal.cover.data.prefs.IconStyle
 import app.cristal.cover.data.prefs.LockMode
 import app.cristal.cover.data.prefs.DockStyle
+import app.cristal.cover.data.prefs.IslandStyle
 import app.cristal.cover.data.prefs.PrefKeys
 import app.cristal.cover.data.prefs.RefreshMode
 import app.cristal.cover.data.prefs.Settings
@@ -1173,6 +1174,16 @@ private fun IslandPage(
                 GlassButton("Ver demonstração", Modifier.fillMaxWidth().padding(top = 6.dp)) { vm.islandDemo() }
             }
         }
+        item {
+            SettingsCard("Aparência") {
+                ChoiceRow("Estilo", IslandStyle.entries.map { it to it.label }, settings.islandStyle) { vm.setEnum(PrefKeys.ISLAND_STYLE, it) }
+                InfoText(
+                    "Ao expandir, a ilha vira uma gota com uma faixa de luz colorida. Antes de crescer, ela mede o espaço entre " +
+                        "os ícones da barra de status: se não couber, fica só com o ícone ou com um anel em volta da câmera.",
+                )
+            }
+        }
+        item { PrecisionCard() }
         item { DuplicateAlertsCard(vm, permissions) }
         item {
             SettingsCard("O que aparece") {
@@ -1181,6 +1192,12 @@ private fun IslandPage(
                 SwitchRow(title = "Chamadas e timers", checked = settings.islandCalls, onChange = { vm.set(PrefKeys.ISLAND_CALLS, it) })
                 SwitchRow(title = "Carregando", checked = settings.islandCharging, onChange = { vm.set(PrefKeys.ISLAND_CHARGING, it) })
                 SwitchRow(title = "Som e silencioso", checked = settings.islandRinger, onChange = { vm.set(PrefKeys.ISLAND_RINGER, it) })
+                SwitchRow(
+                    title = "Atividades de outros apps",
+                    subtitle = "Entregas, corridas, navegação e qualquer coisa com barra de progresso, com os dados que o próprio app publica.",
+                    checked = settings.islandLive,
+                    onChange = { vm.set(PrefKeys.ISLAND_LIVE, it) },
+                )
                 InfoText("Música e notificações precisam do acesso às notificações. Com o aparelho bloqueado, as notificações mostram só o nome do app.")
             }
         }
@@ -1261,3 +1278,28 @@ private fun android.content.Context.openNotificationChannel(pkg: String?, channe
 
 /** Cor em ARGB para gravar nas configurações. */
 private fun androidx.compose.ui.graphics.Color.toArgbInt(): Int = toArgb()
+
+/**
+ * Modo de precisão da ilha: um serviço de acessibilidade à parte, desligado por padrão, que lê só a
+ * barra de status. Sem ele, a ilha estima o espaço pelas notificações ativas.
+ */
+@Composable
+private fun PrecisionCard() {
+    val context = LocalContext.current
+    val metrics by app.cristal.cover.data.island.StatusBarMetricsStore.state.collectAsStateWithLifecycle()
+    SettingsCard("Modo de precisão (opcional)") {
+        InfoText(
+            if (metrics != null) {
+                "Ligado: a ilha mede o relógio e os ícones da barra de status e nunca os cobre."
+            } else {
+                "Desligado (padrão): a ilha estima o espaço pelas notificações ativas, com folga. Ligue para a medida exata: " +
+                    "o serviço \"Cristal · precisão da ilha\" lê só a barra de status do sistema, nada dos apps."
+            },
+        )
+        GlassButton(if (metrics != null) "Abrir acessibilidade" else "Ligar nas configurações de acessibilidade", Modifier.fillMaxWidth().padding(top = 6.dp)) {
+            runCatching {
+                context.startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        }
+    }
+}

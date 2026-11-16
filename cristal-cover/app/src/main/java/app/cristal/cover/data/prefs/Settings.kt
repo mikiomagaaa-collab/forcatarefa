@@ -46,6 +46,15 @@ enum class IconStyle {
     DARK,
 }
 
+/** Aparência da Liquid Island. */
+enum class IslandStyle(val label: String) {
+    /** Preta, some junto com a câmera. */
+    NATIVE("Nativa"),
+
+    /** Vidro escuro com borda de luz iridescente. */
+    GLASS("Liquid Glass"),
+}
+
 /** Fundo do dock. */
 enum class DockStyle(val label: String) {
     GLASS("Vidro líquido"),
@@ -216,6 +225,10 @@ data class Settings(
 
     // Liquid Island (ilha dinâmica em volta da câmera da tela interna)
     val islandEnabled: Boolean = false,
+    /** Atividades de outros apps (entregas, corridas, navegação, progresso). */
+    val islandLive: Boolean = true,
+    /** Aparência da ilha: preta (nativa) ou de vidro. */
+    val islandStyle: IslandStyle = IslandStyle.NATIVE,
     /** Mostra a cápsula preta mesmo sem nada acontecendo (como no iPhone). */
     val islandAlwaysVisible: Boolean = false,
     val islandMedia: Boolean = true,

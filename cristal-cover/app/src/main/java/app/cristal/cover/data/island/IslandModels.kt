@@ -34,7 +34,29 @@ sealed interface IslandActivity {
     data class Alert(val item: NotificationItem) : IslandActivity {
         override val id: String get() = "alert:${item.key}:${item.postTime}"
     }
+
+    /** Atividade de outro app: entrega, corrida, navegação ou algo com progresso. */
+    data class Live(val live: LiveActivityData) : IslandActivity {
+        override val id: String get() = "live:${live.item.key}"
+    }
+
+    /** Sugestão do Info Brief (compromisso reconhecido no teclado), à espera de confirmação. */
+    data class Brief(val suggestion: BriefSuggestion) : IslandActivity {
+        override val id: String get() = "brief:${suggestion.id}"
+    }
 }
+
+/** Compromisso reconhecido pelo Info Brief, para a ilha oferecer o lembrete. */
+@Immutable
+data class BriefSuggestion(
+    val id: Long,
+    val title: String,
+    /** Momento sugerido (ms do relógio); a data pode precisar de confirmação. */
+    val whenMillis: Long?,
+    val dateConfirmed: Boolean,
+    val kind: String,
+    val sourceText: String,
+)
 
 /**
  * Estado da ilha: a atividade principal (no centro) e, se houver outra contínua ao mesmo tempo,
@@ -56,12 +78,22 @@ object IslandLogic {
         media: MediaState?,
         transient: IslandActivity?,
     ): IslandState {
-        val ongoing = ArrayList<IslandActivity>(3)
+        val ongoing = ArrayList<IslandActivity>(4)
+        val lives = if (settings.islandLive) {
+            notifications.mapNotNull(LiveIntegration::toLive).sortedBy(LiveIntegration::rank)
+        } else {
+            emptyList()
+        }
+        val liveKeys = lives.map { it.item.key }.toSet()
+        if (settings.islandCalls) notifications.firstOrNull { it.isCall }?.let { ongoing += IslandActivity.Call(it) }
+        // Navegação e entregas/corridas chegando vêm antes do timer e da música.
+        lives.filter { LiveIntegration.rank(it) <= 1 }.forEach { ongoing += IslandActivity.Live(it) }
         if (settings.islandCalls) {
-            notifications.firstOrNull { it.isCall }?.let { ongoing += IslandActivity.Call(it) }
-            notifications.firstOrNull { !it.isCall && it.ongoing && it.chronometerBase != null }?.let { ongoing += IslandActivity.Timer(it) }
+            notifications.firstOrNull { !it.isCall && it.ongoing && it.chronometerBase != null && it.key !in liveKeys }
+                ?.let { ongoing += IslandActivity.Timer(it) }
         }
         if (settings.islandMedia && media != null && media.isPlaying) ongoing += IslandActivity.Media(media)
+        lives.filter { LiveIntegration.rank(it) > 1 }.forEach { ongoing += IslandActivity.Live(it) }
         val allowedTransient = when (transient) {
             is IslandActivity.Alert -> transient.takeIf { settings.islandAlerts }
             is IslandActivity.Charging -> transient.takeIf { settings.islandCharging }

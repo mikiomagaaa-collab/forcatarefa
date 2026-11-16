@@ -29,6 +29,10 @@ import app.cristal.cover.data.media.MediaRepository
 import app.cristal.cover.data.notifications.NotificationRepository
 import app.cristal.cover.data.prefs.SettingsRepository
 import app.cristal.cover.ui.island.IslandActions
+import app.cristal.cover.ui.island.IslandSpace
+import app.cristal.cover.data.notifications.NotificationItem
+import app.cristal.cover.data.island.StatusBarMetricsStore
+import app.cristal.cover.data.island.StatusBarMetrics
 import app.cristal.cover.ui.island.IslandGeometry
 import app.cristal.cover.ui.island.IslandSizing
 import app.cristal.cover.ui.island.IslandTarget
@@ -57,6 +61,10 @@ internal class IslandOverlay(
     private var density = 1f
     private var cameraCenterX = 0
     private var screenWidth = 0
+    private var statusBarPx = 0
+
+    /** O app em primeiro plano escondeu a barra de status (vídeo, jogo) ou a tela está deitada. */
+    private val fullscreen = mutableStateOf(false)
 
     val isShowing: Boolean get() = view != null
 
@@ -74,6 +82,9 @@ internal class IslandOverlay(
             cameraCenterX = cutout?.centerX() ?: (screenWidth / 2)
             val cutoutHeight = cutout?.height() ?: (22 * density).roundToInt()
             val cutoutTop = cutout?.top ?: (8 * density).roundToInt()
+            statusBarPx = safely("altura da barra de status") {
+                metrics.windowInsets.getInsets(android.view.WindowInsets.Type.statusBars()).top
+            } ?: (32 * density).roundToInt()
             val baseGeometry = geometryFor(cutoutTop, cutoutHeight)
 
             val newOwner = OverlayOwner().also { it.start() }
@@ -82,6 +93,12 @@ internal class IslandOverlay(
                 setViewTreeViewModelStoreOwner(newOwner)
                 setViewTreeSavedStateRegistryOwner(newOwner)
                 setContent { Host(baseGeometry) }
+                // Barra de status escondida pelo app da frente = tela cheia: a ilha se recolhe.
+                setOnApplyWindowInsetsListener { v, insets ->
+                    val landscape = v.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                    fullscreen.value = landscape || !insets.isVisible(android.view.WindowInsets.Type.statusBars())
+                    insets
+                }
             }
             val p = WindowManager.LayoutParams(
                 1,
@@ -149,7 +166,11 @@ internal class IslandOverlay(
         val settings by settingsRepository.settings.collectAsState()
         var expanded by remember { mutableStateOf(false) }
         val geometry = base.copy(topPadding = (base.topPadding + settings.islandOffsetY.dp).coerceAtLeast(0.dp))
-        val target = IslandSizing.target(state, geometry, expanded, settings.islandAlwaysVisible)
+        val notifications by notificationRepository.items.collectAsState()
+        val measured by StatusBarMetricsStore.state.collectAsState()
+        val isFullscreen by fullscreen
+        val space = remember(notifications, measured, isFullscreen) { spaceFor(notifications, measured, isFullscreen) }
+        val target = IslandSizing.target(state, geometry, expanded, settings.islandAlwaysVisible, space)
         LaunchedEffect(target, geometry) { resizeFor(target, geometry) }
         val keyguard = remember { service.getSystemService(KeyguardManager::class.java) }
         val locked = remember(state) { safely("ler o bloqueio") { keyguard?.isKeyguardLocked } ?: false }
@@ -160,6 +181,8 @@ internal class IslandOverlay(
             concealAlerts = locked,
             expanded = expanded,
             onExpandedChange = { expanded = it },
+            space = space,
+            style = settings.islandStyle,
             actions = IslandActions(
                 onMediaOpen = {
                     expanded = false
@@ -172,9 +195,37 @@ internal class IslandOverlay(
                     repository.dismissTransient()
                     notificationRepository.open(item, Display.DEFAULT_DISPLAY)
                 },
-                onDismiss = repository::dismissTransient,
+                onDismiss = {
+                    expanded = false
+                    repository.dismissTransient()
+                },
             ),
         )
+    }
+
+    /**
+     * Espaço livre ao redor da câmera. Com o modo de precisão, usa a posição real dos ícones; sem
+     * ele, estima: relógio e um ícone por app com notificação à esquerda; sinal, Wi-Fi, bateria e
+     * mais um ícone à direita. Sempre com 8 dp de folga de cada lado.
+     */
+    private fun spaceFor(notifications: List<NotificationItem>, measured: StatusBarMetrics?, isFullscreen: Boolean): IslandSpace {
+        val barDp = (statusBarPx / density).dp
+        val cx = cameraCenterX / density
+        val (leftEdge, rightStart) = if (measured != null && System.currentTimeMillis() - measured.measuredAt < 60_000) {
+            measured.leftEdgePx / density to measured.rightStartPx / density
+        } else {
+            val icons = notifications
+                .filter { it.importance >= android.app.NotificationManager.IMPORTANCE_LOW }
+                .map { it.packageName }
+                .distinct()
+                .size
+                .coerceAtMost(6)
+            val left = 16f + 44f + if (icons > 0) 6f + icons * 18f else 0f
+            val right = screenWidth / density - (16f + 4 * 20f)
+            left to right
+        }
+        val half = minOf(cx - (leftEdge + 8f), (rightStart - 8f) - cx).coerceAtLeast(0f)
+        return IslandSpace(available = (half * 2f).dp, fullscreen = isFullscreen, statusBarHeight = barDp)
     }
 
     /**
@@ -187,8 +238,9 @@ internal class IslandOverlay(
         val v = view ?: return
         fun px(dp: Dp) = (dp.value * density).roundToInt()
         val bubble = if (target.withBubble) 2 * (px(geometry.pillHeight) + px(IslandSizing.BUBBLE_GAP)) else 0
-        val w = (px(target.width) + bubble + px(8.dp)).coerceAtMost(screenWidth)
-        val h = px(geometry.topPadding) + px(target.height) + px(6.dp)
+        val w = (px(target.totalWidth) + bubble + px(8.dp)).coerceAtMost(screenWidth)
+        // A lente quica um pouco ao inchar: folga maior embaixo enquanto ela está aberta.
+        val h = px(geometry.topPadding) + px(target.totalHeight) + px(if (target.lens != null) 14.dp else 6.dp)
         pendingShrink?.let(handler::removeCallbacks)
         pendingShrink = null
 
@@ -219,6 +271,6 @@ internal class IslandOverlay(
     }
 
     private companion object {
-        const val SHRINK_DELAY_MS = 650L
+        const val SHRINK_DELAY_MS = 820L
     }
 }
