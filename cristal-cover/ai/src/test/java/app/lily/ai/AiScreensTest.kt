@@ -4,6 +4,8 @@ import android.app.ActivityManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.Build
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
@@ -22,6 +24,8 @@ import app.lily.ai.ui.Nav
 import app.lily.ai.ui.Permissions
 import app.lily.ai.ui.Route
 import app.lily.ai.ui.theme.LilyTheme
+import app.lily.ai.ui.screens.AssistPanel
+import app.lily.ai.ui.screens.ChatSession
 import java.io.File
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
@@ -189,6 +193,52 @@ class AiScreensTest {
     fun `tema claro`() {
         show(Route.Home, ThemeChoice.LIGHT)
         shot("ai11-inicio-claro")
+    }
+}
+
+/** O painel de voz (a lente que desce da Liquid Island), com uma pergunta e a resposta. */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [36], qualifiers = "w411dp-h1005dp-420dpi")
+class AiAssistPanelTest {
+    @get:Rule
+    val rule = createComposeRule()
+
+    @Test
+    fun `lily por voz numa lente`() {
+        val app: LilyAiApp = ApplicationProvider.getApplicationContext()
+        val graph = app.graph
+        val id = runBlocking {
+            val meta = graph.conversations.create("Capital do Brasil")
+            graph.conversations.save(
+                meta.id,
+                listOf(
+                    ChatMessage(role = Role.USER, text = "Qual é a capital do Brasil e quando foi inaugurada?"),
+                    ChatMessage(role = Role.ASSISTANT, text = "A capital é **Brasília**, inaugurada em **21 de abril de 1960**, no governo de Juscelino Kubitschek.", model = "Qwen3 1.7B · GPU", millis = 3_200),
+                ),
+            )
+            meta.id
+        }
+        val session = ChatSession(graph, app, Route.Chat(id = id))
+        rule.setContent {
+            LilyTheme(ThemeChoice.LIQUID, 0xFFB79CFF) {
+                CompositionLocalProvider(LocalGraph provides graph, LocalPermissions provides NoPermissions) {
+                    androidx.compose.foundation.layout.Box(
+                        androidx.compose.ui.Modifier.fillMaxSize().background(
+                            androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.Color(0xFFE9C6F2), androidx.compose.ui.graphics.Color(0xFF3E5AA8))),
+                        ),
+                    ) {
+                        AssistPanel(session, listenTrigger = 0, onClose = {}, onOpenApp = {}, onHub = {})
+                    }
+                }
+            }
+        }
+        rule.waitUntil(10_000) { session.messages.size == 2 }
+        rule.onNodeWithText("Abrir na L.I.L.Y").assertExists()
+        rule.waitForIdle()
+        val bitmap = rule.onRoot().captureToImage().asAndroidBitmap()
+        val dir = File("build/outputs/telas").apply { mkdirs() }
+        File(dir, "ai13-lily-por-voz.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 }
 

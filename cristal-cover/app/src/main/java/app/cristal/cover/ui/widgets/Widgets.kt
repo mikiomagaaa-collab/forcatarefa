@@ -100,6 +100,10 @@ import java.time.format.TextStyle as JavaTextStyle
 import java.util.Locale
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.material.icons.rounded.Mic
 
 /** Tudo o que os widgets precisam para se desenhar. */
 @Immutable
@@ -113,6 +117,8 @@ data class WidgetData(
     val torchOn: Boolean = false,
     /** Fonte escolhida para o relógio (a mesma do bloqueio interno). */
     val clockFont: ClockFont = ClockFont.SYSTEM,
+    /** A L.I.L.Y AI está instalada e com a ponte liberada. */
+    val lily: Boolean = false,
 )
 
 /** Ações disparadas pelos widgets; a tela que os hospeda decide o que fazer. */
@@ -132,6 +138,9 @@ class WidgetActions(
     val onCamera: () -> Unit = {},
     val onSearch: () -> Unit = {},
     val onSettings: () -> Unit = {},
+    /** Widget da L.I.L.Y: abrir a conversa (toque) e falar (microfone). */
+    val onLilyAsk: () -> Unit = {},
+    val onLilyVoice: () -> Unit = {},
 )
 
 /** Locale atual, lido de forma que a tela se atualize se o idioma do sistema mudar. */
@@ -189,6 +198,7 @@ fun WidgetCard(
         WidgetKind.ANALOG_CLOCK -> actions.onClockClick
         WidgetKind.DATE -> actions.onAgendaClick
         WidgetKind.SEARCH -> actions.onSearch
+        WidgetKind.LILY -> actions.onLilyAsk
         WidgetKind.SHORTCUTS, WidgetKind.APP_WIDGET, WidgetKind.PHOTO -> ({})
     }
     GlassSurface(
@@ -210,7 +220,42 @@ fun WidgetCard(
             WidgetKind.SHORTCUTS -> ShortcutsContent(data, actions)
             WidgetKind.SEARCH -> SearchContent()
             WidgetKind.PHOTO -> PhotoContent(extra)
+            WidgetKind.LILY -> LilyContent(data, actions)
             WidgetKind.APP_WIDGET -> Unit
+        }
+    }
+}
+
+// --- L.I.L.Y ----------------------------------------------------------------------------------------
+
+/** O orbe, o convite para perguntar e o microfone (o toque no resto abre a conversa). */
+@Composable
+private fun LilyContent(data: WidgetData, actions: WidgetActions) {
+    Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        app.cristal.cover.ui.lily.LilyGlyph(30.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text("L.I.L.Y", color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                if (data.lily) "Pergunte qualquer coisa" else "Instale a L.I.L.Y AI",
+                color = Color.White,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+            )
+        }
+        if (data.lily) {
+            Box(
+                Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Brush.linearGradient(app.cristal.cover.ui.lily.LilyColors.take(2)))
+                    .pointerInput(Unit) { detectTapGestures { actions.onLilyVoice() } }
+                    .semantics { contentDescription = "Falar com a L.I.L.Y" },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Rounded.Mic, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+            }
         }
     }
 }

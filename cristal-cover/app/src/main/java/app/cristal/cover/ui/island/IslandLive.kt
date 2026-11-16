@@ -58,6 +58,7 @@ internal val BriefBlue = Color(0xFF0A84FF)
 
 /** Cor da atividade: a da notificação do app, ou uma por categoria. */
 internal fun liveColor(live: LiveActivityData): Color {
+    if (live.item.packageName == app.cristal.cover.data.lily.LilyLink.PACKAGE) return app.cristal.cover.ui.lily.LilyAccent
     val c = live.item.color
     if (c != 0 && android.graphics.Color.alpha(c) > 0) {
         val hsv = FloatArray(3)
@@ -84,6 +85,11 @@ private fun liveIcon(live: LiveActivityData): ImageVector = when (live.category)
 /** Ícone do app (ou o da categoria, se o app não tiver ícone carregado). */
 @Composable
 internal fun LiveAppIcon(live: LiveActivityData, size: androidx.compose.ui.unit.Dp) {
+    // A L.I.L.Y (respondendo, baixando um modelo, gerando imagem) aparece com o orbe dela.
+    if (live.item.packageName == app.cristal.cover.data.lily.LilyLink.PACKAGE) {
+        app.cristal.cover.ui.lily.LilyGlyph(size)
+        return
+    }
     val icon = live.item.appIcon
     Box(Modifier.size(size).clip(RoundedCornerShape(size * 0.28f)).background(Color(0xFF2C2C2E)), contentAlignment = Alignment.Center) {
         if (icon != null) {

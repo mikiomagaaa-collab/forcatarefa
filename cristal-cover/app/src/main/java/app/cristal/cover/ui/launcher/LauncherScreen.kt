@@ -107,7 +107,15 @@ import kotlinx.coroutines.launch
 fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
     val rawSettings by viewModel.settings.collectAsStateWithLifecycle()
     val home by viewModel.home.collectAsStateWithLifecycle()
-    val widgetData by viewModel.widgetData.collectAsStateWithLifecycle()
+    val rawWidgetData by viewModel.widgetData.collectAsStateWithLifecycle()
+    // A L.I.L.Y AI pode ser instalada com o launcher aberto: confere de novo a cada volta à tela.
+    var lilyReady by remember { mutableStateOf(false) }
+    val lilyContext = androidx.compose.ui.platform.LocalContext.current
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        lilyReady = app.cristal.cover.data.lily.LilyLink.available(lilyContext)
+        onPauseOrDispose { }
+    }
+    val widgetData = remember(rawWidgetData, lilyReady) { rawWidgetData.copy(lily = lilyReady) }
     val nowBrief by viewModel.nowBrief.collectAsStateWithLifecycle()
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val quick by viewModel.quick.collectAsStateWithLifecycle()
@@ -421,6 +429,12 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
         onCamera = { openExternalIntent(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)) },
         onSearch = { scope.launch { drawer.open() } },
         onSettings = { openCristalSettings() },
+        onLilyAsk = {
+            if (!app.cristal.cover.data.lily.LilyLink.openChat(context, displayId)) showMessage("Instale a L.I.L.Y AI para conversar com ela.")
+        },
+        onLilyVoice = {
+            if (!app.cristal.cover.data.lily.LilyLink.voice(context, displayId)) showMessage("Instale a L.I.L.Y AI para falar com ela.")
+        },
     )
 
     // --- Voltar -----------------------------------------------------------------------------------
@@ -607,6 +621,14 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                 settings = settings,
                 safe = safe,
                 onAppClick = ::launchApp,
+                onAskLily = if (lilyReady) {
+                    { q ->
+                        scope.launch { drawer.close() }
+                        app.cristal.cover.data.lily.LilyLink.ask(context, q, displayId)
+                    }
+                } else {
+                    null
+                },
                 onAppHold = { app, at ->
                     strongHaptic()
                     menu = MenuState(MenuTarget.DrawerApp(app), at)
@@ -638,6 +660,10 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                             ControlKind.WALLPAPER -> openCristalSettings(SettingsActivity.PAGE_WALLPAPER)
                             ControlKind.SETTINGS -> openCristalSettings()
                             ControlKind.MEDIA -> viewModel.mediaOpen(displayId)
+                            ControlKind.LILY -> {
+                                scope.launch { panel.close() }
+                                if (!app.cristal.cover.data.lily.LilyLink.voice(context, displayId)) showMessage("Instale a L.I.L.Y AI para falar com ela.")
+                            }
                             else -> viewModel.runControl(kind)
                         }
                     },

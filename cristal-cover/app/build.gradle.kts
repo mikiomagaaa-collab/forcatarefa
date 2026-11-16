@@ -26,8 +26,8 @@ android {
         minSdk = 33
         targetSdk = 36
         // Cada build do GitHub Actions recebe um número maior, então sempre instala por cima.
-        versionCode = 160 + ciRunNumber
-        versionName = "1.6.0"
+        versionCode = 170 + ciRunNumber
+        versionName = "1.7.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
     }
@@ -136,6 +136,8 @@ dependencies {
     implementation(libs.mlkit.subject.segmentation)
 
     testImplementation(libs.junit)
+    // Só nos testes: confere que os nomes da ponte com a L.I.L.Y batem com os do módulo compartilhado.
+    testImplementation(project(":shared"))
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)

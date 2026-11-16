@@ -84,6 +84,7 @@ import app.cristal.cover.ui.glass.LocalGlassSpec
 import app.cristal.cover.ui.glass.Motion
 import app.cristal.cover.ui.glass.rememberHaptic
 import kotlin.math.roundToInt
+import androidx.compose.material.icons.rounded.AutoAwesome
 
 // --- Base de diálogo --------------------------------------------------------------------------------
 
@@ -423,6 +424,7 @@ private fun widgetInfo(kind: WidgetKind): Triple<ImageVector, String, String> = 
     WidgetKind.SHORTCUTS -> Triple(Icons.Rounded.TouchApp, "Atalhos", "Lanterna, câmera, busca e ajustes")
     WidgetKind.SEARCH -> Triple(Icons.Rounded.Search, "Busca", "Abre a gaveta de apps")
     WidgetKind.PHOTO -> Triple(Icons.Rounded.Photo, "Foto", "Uma ou várias fotos suas, em sequência")
+    WidgetKind.LILY -> Triple(Icons.Rounded.AutoAwesome, "L.I.L.Y", "Pergunte por texto ou por voz à IA do aparelho")
     WidgetKind.APP_WIDGET -> Triple(Icons.Rounded.Widgets, "Widget de app", "De outro aplicativo")
 }
 

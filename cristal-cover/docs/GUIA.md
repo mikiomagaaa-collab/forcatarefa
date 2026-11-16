@@ -398,6 +398,27 @@ quando ele está instalado e escolhido como app de mídia na nuvem (no seletor: 
 **App de mídia na nuvem** > Google Fotos). As fotos escolhidas são copiadas para Pictures/Importadas.
 Para mandar fotos ao backup do Google Fotos, selecione-as e toque no ícone de nuvem.
 
+## 9.3 L.I.L.Y no Cristal (Cristal 1.7.0 e L.I.L.Y AI 1.1.0)
+
+Instale os dois APKs da mesma rodada (a ponte entre eles só funciona com a mesma assinatura).
+
+- **Pela ilha:** com a cápsula à mostra (Configurações > Liquid Island > **Mostrar sempre**), **segure a ilha**
+  e fale. A L.I.L.Y responde numa lente logo abaixo dela, por cima de qualquer app. Para desligar:
+  Configurações > Liquid Island > **Segurar a ilha chama a L.I.L.Y**. Segurar a ilha com música ou uma
+  atividade continua expandindo, como antes.
+- **Fechou no meio?** A resposta continua: a ilha mostra "L.I.L.Y respondendo" e, no fim, chega o aviso
+  "L.I.L.Y respondeu". Tocar abre a resposta.
+- **Widget:** segure um espaço vazio da tela inicial (interna ou externa) > Widgets > **L.I.L.Y**. Tocar no
+  widget abre a conversa; o microfone abre a voz na mesma tela.
+- **Busca:** digite na busca da gaveta de apps e toque em **Perguntar à L.I.L.Y**.
+- **Central de Controle:** no editor da central, em Atalhos, adicione o módulo **L.I.L.Y**.
+- **Como assistente do Android (opcional):** Configurações do Android > Apps > Apps padrão > **Assistente
+  digital** > L.I.L.Y AI. Depois, o gesto de assistente do aparelho (como segurar o botão liga/desliga, se a
+  Motorola oferecer essa opção) abre a L.I.L.Y por voz.
+
+O microfone só liga quando você chama a L.I.L.Y (segurar a ilha, tocar no microfone ou no assistente) e
+para sozinho no fim da fala.
+
 ## 10. Problemas comuns
 
 **"App não instalado" ao atualizar.** O APK novo foi assinado com outra chave. Desinstale o antigo e

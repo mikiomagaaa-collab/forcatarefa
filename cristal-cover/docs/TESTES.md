@@ -284,3 +284,16 @@ estão implementados com as APIs oficiais e precisam ser confirmados no Razr.
 - [ ] Campo de senha e campo de código: o painel diz que nada vai para a IA
 - [ ] Sem a L.I.L.Y AI instalada, o painel explica e não mostra ações
 
+## 20. L.I.L.Y no Cristal (Cristal 1.7.0 e L.I.L.Y AI 1.1.0)
+
+- [ ] Com "Mostrar sempre" ligado, segurar a ilha parada abre a lente da L.I.L.Y logo abaixo dela, já ouvindo
+- [ ] Segurar a ilha com música ou uma atividade continua expandindo (não chama a L.I.L.Y)
+- [ ] ⚠️ Perguntar por voz com um modelo instalado: a resposta aparece na lente e é lida em voz alta
+- [ ] Fechar a lente no meio da resposta: a ilha mostra "L.I.L.Y respondendo" com o orbe; no fim, chega o aviso "L.I.L.Y respondeu"
+- [ ] Baixar um modelo e gerar uma imagem: a ilha mostra o orbe e a porcentagem
+- [ ] Widget L.I.L.Y na tela interna e na externa: tocar abre a conversa; o microfone abre a voz na mesma tela
+- [ ] Busca da gaveta: digitar e tocar em "Perguntar à L.I.L.Y" abre a conversa já respondendo
+- [ ] Módulo L.I.L.Y na Central de Controle (no launcher e por cima de outro app)
+- [ ] Sem a L.I.L.Y AI instalada: o widget diz "Instale a L.I.L.Y AI" e nada abre
+- [ ] ⚠️ Escolher a L.I.L.Y AI como assistente digital do Android e chamá-la pelo gesto do aparelho
+

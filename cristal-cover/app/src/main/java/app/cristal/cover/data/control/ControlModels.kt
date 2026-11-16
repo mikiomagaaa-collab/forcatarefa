@@ -68,6 +68,7 @@ enum class ControlKind(
     SEARCH("Buscar apps", ControlGroup.SHORTCUTS, ToggleSizes),
     WALLPAPER("Papel de parede", ControlGroup.SHORTCUTS, ToggleSizes),
     SETTINGS("Configurações do Cristal", ControlGroup.SHORTCUTS, ToggleSizes),
+    LILY("L.I.L.Y", ControlGroup.SHORTCUTS, ToggleSizes),
     ;
 
     val defaultSize: ModuleSize get() = sizes.first()

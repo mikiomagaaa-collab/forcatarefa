@@ -44,6 +44,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -101,6 +104,11 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
     private var voiceTurn = false
 
     val busy: Boolean get() = streaming != null
+
+    private val _working = MutableStateFlow(false)
+
+    /** true enquanto uma resposta é gerada; para quem observa sem interface (o aviso da ilha). */
+    val working: StateFlow<Boolean> = _working.asStateFlow()
 
     init {
         graph.scope.launch {
@@ -280,7 +288,18 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
 
     private fun respond(user: ChatMessage) {
         val answerId = UUID.randomUUID().toString()
+        _working.value = true
         job = graph.scope.launch {
+            try {
+                answer(user, answerId)
+            } finally {
+                _working.value = false
+            }
+        }
+    }
+
+    private suspend fun answer(user: ChatMessage, answerId: String) {
+        run {
             val id = ensureConversation(user)
             graph.conversations.save(id, messages.toList())
             val ownImage = user.file("image")
@@ -306,7 +325,7 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
                     )
                 }
                 finish(id, answer)
-                return@launch
+                return@run
             }
             val model = engine.model
             streaming = Streaming(answerId, "", model.name, imageFile != null, audioFile != null)

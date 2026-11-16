@@ -64,6 +64,10 @@ import app.cristal.cover.ui.components.SheetState
 import app.cristal.cover.ui.glass.Motion
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Spacer
 
 /**
  * Liga a rolagem de uma lista ao painel que a contém: quando a lista chega ao fim e o dedo continua
@@ -115,6 +119,8 @@ fun AppDrawer(
     safe: SafeLayout,
     onAppClick: (AppInfo) -> Unit,
     onAppHold: (AppInfo, Offset) -> Unit,
+    /** Com a L.I.L.Y AI instalada: "Perguntar à L.I.L.Y" com o que foi digitado na busca. */
+    onAskLily: ((String) -> Unit)? = null,
 ) {
     val visible by remember { derivedStateOf { state.progress.value > 0.001f } }
     if (!visible) return
@@ -181,6 +187,28 @@ fun AppDrawer(
                     onImeAction = { filtered.firstOrNull()?.let(onAppClick) },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 )
+                if (onAskLily != null && query.isNotBlank()) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, top = 10.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(Color.White.copy(alpha = 0.13f))
+                            .clickable { onAskLily(query) }
+                            .padding(horizontal = 14.dp, vertical = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        app.cristal.cover.ui.lily.LilyGlyph(22.dp)
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            "Perguntar à L.I.L.Y: “${query.trim()}”",
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
             if (filtered.isEmpty()) {
                 Text(

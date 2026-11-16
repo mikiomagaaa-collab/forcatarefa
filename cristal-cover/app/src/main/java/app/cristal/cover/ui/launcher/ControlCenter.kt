@@ -152,6 +152,7 @@ import app.cristal.cover.ui.widgets.formatTime
 import app.cristal.cover.ui.widgets.rememberMinuteTicker
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.rounded.AutoAwesome
 
 @Stable
 class ControlCenterActions(
@@ -1158,6 +1159,7 @@ private fun iconOf(kind: ControlKind, active: Boolean): ImageVector = when (kind
     ControlKind.SEARCH -> Icons.Rounded.Search
     ControlKind.WALLPAPER -> Icons.Rounded.Wallpaper
     ControlKind.SETTINGS -> Icons.Rounded.Settings
+    ControlKind.LILY -> Icons.Rounded.AutoAwesome
 }
 
 /** Cor do controle aceso (a mesma lógica de cores do iOS: azul para rádios, laranja para avião…). */

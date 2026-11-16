@@ -46,6 +46,7 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 | Now Brief no lugar do painel Hoje: atividades em andamento, linha do tempo da agenda e dos lembretes, tarefas e sugestões | Feito (1.6.0) |
 | L.I.L.Y AI: app próprio com conversa, roteador de modelos, Model Hub, ferramentas de texto, imagem e áudio, geração de imagem experimental, memória e versão de voz para a tela externa | Feito (1.0.0); a inferência ainda precisa ser medida no Razr |
 | L.I.L.Y Gallery: biblioteca do aparelho, álbuns, visualizador, editor, lixeira oficial, importação pelo seletor do Android (inclui o Google Fotos) e ações da L.I.L.Y | Feito (1.0.0) |
+| L.I.L.Y no Cristal: segurar a Liquid Island chama a L.I.L.Y por voz (uma lente logo abaixo da ilha); respostas, downloads de modelos e geração de imagem aparecem na ilha como Live Updates com o orbe; widget L.I.L.Y; "Perguntar à L.I.L.Y" na busca da gaveta; módulo L.I.L.Y na Central de Controle | Feito (Cristal 1.7.0 e L.I.L.Y AI 1.1.0) |
 | Biblioteca de apps, páginas próprias da tela externa | Planejado |
 
 ## Estado real do projeto
@@ -53,7 +54,7 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 O que **foi verificado** durante o desenvolvimento:
 
 - compila do zero (debug e release com R8) com as versões estáveis atuais das ferramentas;
-- 225 testes automáticos em JVM passam (95 no Cristal, 41 no teclado, 16 no módulo compartilhado, 65 na
+- 232 testes automáticos em JVM passam (100 no Cristal, 41 no teclado, 16 no módulo compartilhado, 67 na
   L.I.L.Y AI e 8 na Gallery). No launcher: lógica da grade, detecção da tela externa,
   regras de compatibilidade, segurança dos comandos de shell, backup, papéis de parede por área,
   encaixe e edição da Central de Controle, **compilação real do shader AGSL** e **16 telas montadas e
@@ -128,7 +129,8 @@ você pede. Não há nenhum provedor remoto; o indicador de cada conversa diz "N
 | Áudio | Ditado pelo reconhecedor do Android (no aparelho quando o idioma está instalado), transcrição e resumo de áudios com o Gemma 4 E2B, leitura em voz alta (vozes do Android), identificação de idioma (ML Kit) |
 | Ferramentas de texto | Corrigir, reescrever (5 tons), resumir, expandir, traduzir (ML Kit ou o modelo no perfil Qualidade), explicar, organizar, escrever e sugerir resposta, com o jeito informal preservado |
 | Memória | Só o que você manda guardar ("Guardar na memória" numa mensagem ou na tela Memória); recusa senhas, documentos, cartões e códigos; ligar e desligar cada uma ou todas; histórico de conversas não vira memória |
-| Integrações | Teclado (ponte de assinatura), Cristal (lembretes pela confirmação do Info Brief; nada é criado sem o toque), Gallery (fotos chegam com permissão só delas), Liquid Island (Live Updates oficiais dos downloads e da geração) |
+| L.I.L.Y por voz | Um painel em lente no topo da tela, logo abaixo da Liquid Island, por cima de qualquer app: abre ouvindo, mostra a pergunta, a resposta chegando e o modelo; dá para falar de novo (acompanhamento), digitar, ouvir a resposta e continuar no app. Abre pela ilha, pelo widget e pela Central do Cristal e também como **assistente digital do Android** (Apps padrão). Fechado no meio, a resposta continua: um Live Update mostra "respondendo" na ilha e um aviso traz a resposta |
+| Integrações | Teclado (ponte de assinatura), Cristal (voz pela ilha, widget, busca da gaveta e Central de Controle; lembretes pela confirmação do Info Brief, nada é criado sem o toque), Gallery (fotos chegam com permissão só delas), Liquid Island (Live Updates oficiais da voz, dos downloads e da geração, com o orbe da L.I.L.Y) |
 | Tela externa | Versão de voz: tocar no orbe, falar e ouvir; ao abrir o aparelho, a mesma conversa continua na tela interna, até com a resposta em andamento |
 | Aparência | Orbe em AGSL, fundo aurora, vidro, temas Liquid Glass, AMOLED, Claro, Roxo e Personalizado |
 | Teste do aparelho | Configurações > **Testar este aparelho**: roda cada modelo de conversa instalado na GPU e na CPU, o OCR, a ampliação e a voz, e mede carregamento, velocidade, memória e temperatura. Gera um relatório para copiar e enviar; o que falha aparece como falha |

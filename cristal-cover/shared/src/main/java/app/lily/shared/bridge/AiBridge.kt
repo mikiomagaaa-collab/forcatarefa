@@ -50,6 +50,21 @@ object AiBridge {
     const val CODE_FAILED = "failed"
     const val CODE_BUSY = "busy"
 
+    /** A L.I.L.Y por voz (painel em lente): só apps com a mesma assinatura chamam esta ação. */
+    const val ACTION_VOICE = "app.lily.ai.action.VOICE"
+
+    /** Perguntar um texto (abre a conversa já enviando): só apps com a mesma assinatura. */
+    const val ACTION_ASK = "app.lily.ai.action.ASK"
+
+    fun voiceIntent(): Intent = Intent(ACTION_VOICE).setPackage(PACKAGE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+    fun askIntent(text: String): Intent =
+        Intent(ACTION_ASK).setPackage(PACKAGE).putExtra(Intent.EXTRA_TEXT, text).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+    /** Abre a L.I.L.Y AI numa conversa nova. */
+    fun chatIntent(): Intent =
+        Intent().setClassName(PACKAGE, "app.lily.ai.ui.MainActivity").putExtra("route", "chat").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
     /** Abre a L.I.L.Y AI no Model Hub (para instalar um modelo). */
     fun hubIntent(): Intent = Intent().setClassName(PACKAGE, "app.lily.ai.ui.MainActivity").putExtra("route", "hub").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 

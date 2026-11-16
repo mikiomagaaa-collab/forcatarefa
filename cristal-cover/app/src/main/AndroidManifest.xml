@@ -53,8 +53,20 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.hardware.nfc" android:required="false" />
 
+    <!--
+        L.I.L.Y: o Cristal abre a L.I.L.Y AI (voz e "perguntar") por entradas protegidas por uma
+        permissão de assinatura, declarada aqui também para valer em qualquer ordem de instalação.
+    -->
+    <permission
+        android:name="app.lily.ai.permission.USE_AI"
+        android:description="@string/use_ai_description"
+        android:label="@string/use_ai_label"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="app.lily.ai.permission.USE_AI" />
+
     <queries>
         <package android:name="moe.shizuku.privileged.api" />
+        <package android:name="app.lily.ai" />
     </queries>
 
     <application

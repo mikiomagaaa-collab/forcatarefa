@@ -293,6 +293,9 @@ internal class IslandOverlay(
                 },
                 onBriefAccept = briefRepository::accept,
                 onBriefLater = briefRepository::later,
+                onAssist = {
+                    if (settings.islandLily) app.cristal.cover.data.lily.LilyLink.voice(service, Display.DEFAULT_DISPLAY)
+                },
             ),
         )
     }

@@ -2,6 +2,7 @@ package app.lily.ai
 
 import android.app.Application
 import android.content.ComponentCallbacks2
+import app.lily.ai.assist.AssistController
 import app.lily.ai.core.DeviceMonitor
 import app.lily.ai.core.Profile
 import app.lily.ai.core.RouterInput
@@ -37,6 +38,7 @@ class AiGraph(val app: Application) {
     val perf = PerfStore(File(app.filesDir, "perf.json"))
     val imageGen = ImageGenJobs(app)
     val tools = AiTools(this)
+    val assist: AssistController by lazy { AssistController(this, app) }
     val voice: Voice by lazy { Voice(app) }
 
     init {

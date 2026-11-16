@@ -121,6 +121,8 @@ class IslandActions(
     val onBriefAccept: (BriefSuggestion) -> Unit = {},
     /** Info Brief: "agora não" (a sugestão vai para o histórico). */
     val onBriefLater: (BriefSuggestion) -> Unit = {},
+    /** Segurar a ilha sem nada para expandir: chama a L.I.L.Y por voz. */
+    val onAssist: () -> Unit = {},
 )
 
 /**
@@ -387,7 +389,11 @@ fun LiquidIsland(
                             }
                         },
                         onLongPress = {
-                            if (primary is IslandActivity.Media || primary is IslandActivity.Live) setExpanded(!expanded)
+                            when (primary) {
+                                is IslandActivity.Media, is IslandActivity.Live -> setExpanded(!expanded)
+                                null, is IslandActivity.Charging, is IslandActivity.Ringer -> actions.onAssist()
+                                else -> Unit
+                            }
                         },
                     )
                 }

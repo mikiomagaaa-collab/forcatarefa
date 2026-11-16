@@ -244,6 +244,8 @@ data class Settings(
     val islandRinger: Boolean = true,
     /** Ajuste fino da altura, em dp, para alinhar com a câmera. */
     val islandOffsetY: Float = 0f,
+    /** Segurar a ilha chama a L.I.L.Y (com a L.I.L.Y AI instalada). */
+    val islandLily: Boolean = true,
     val coverClockScale: Float = 1f,
     val coverClockX: Float = 0f,
     val coverClockY: Float = 0f,

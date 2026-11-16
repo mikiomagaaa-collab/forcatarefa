@@ -86,6 +86,48 @@
             </intent-filter>
         </activity>
 
+        <!--
+            O painel de voz da L.I.L.Y: abre como assistente digital do aparelho (o Android o lista em
+            Apps padrão > Assistente digital) e pela ilha, pelo widget e pela Central do Cristal.
+        -->
+        <activity
+            android:name=".ui.AssistActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|density|uiMode|fontScale"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true"
+            android:taskAffinity="app.lily.ai.assist"
+            android:theme="@style/Theme.Lily.Assist"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Entradas só para os apps do Liquid Flip (mesma assinatura): voz e "perguntar". -->
+        <activity-alias
+            android:name=".ui.VoiceEntry"
+            android:exported="true"
+            android:permission="app.lily.ai.permission.USE_AI"
+            android:targetActivity=".ui.AssistActivity">
+            <intent-filter>
+                <action android:name="app.lily.ai.action.VOICE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".ui.AskEntry"
+            android:exported="true"
+            android:permission="app.lily.ai.permission.USE_AI"
+            android:targetActivity=".ui.MainActivity">
+            <intent-filter>
+                <action android:name="app.lily.ai.action.ASK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity-alias>
+
         <service
             android:name=".models.DownloadService"
             android:exported="false"

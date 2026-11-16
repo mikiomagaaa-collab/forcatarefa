@@ -474,6 +474,12 @@ internal class ControlCenterOverlay(
                                         close()
                                         mediaRepository.openPlayer(p.displayId)
                                     }
+                                    ControlKind.LILY -> {
+                                        close()
+                                        if (!app.cristal.cover.data.lily.LilyLink.voice(service, p.displayId)) {
+                                            Toast.makeText(service, "Instale a L.I.L.Y AI para falar com ela.", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
                                     else -> controller.runControl(kind)
                                 }
                             },

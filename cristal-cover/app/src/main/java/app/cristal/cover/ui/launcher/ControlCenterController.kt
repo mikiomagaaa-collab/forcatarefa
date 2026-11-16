@@ -95,7 +95,7 @@ class ControlCenterController(
             ControlKind.CALCULATOR -> sink.openIntent(Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_CALCULATOR))
             ControlKind.CAMERA -> sink.openIntent(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA))
             ControlKind.MEDIA, ControlKind.BATTERY, ControlKind.BRIGHTNESS, ControlKind.VOLUME, ControlKind.CONNECTIVITY,
-            ControlKind.SCREENSHOT, ControlKind.SEARCH, ControlKind.WALLPAPER, ControlKind.SETTINGS -> Unit
+            ControlKind.SCREENSHOT, ControlKind.SEARCH, ControlKind.WALLPAPER, ControlKind.SETTINGS, ControlKind.LILY -> Unit
         }
     }
 

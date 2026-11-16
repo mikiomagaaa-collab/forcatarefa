@@ -119,9 +119,15 @@ class MainActivity : ComponentActivity() {
                 if (uri != null) nav.go(if (tool == "ASK") Route.Chat(image = uri) else Route.ImageTool(uri, task))
             }
         }
+        // "Perguntar à L.I.L.Y" do Cristal: só pela entrada protegida por assinatura (envia direto).
+        if (intent.action == ACTION_ASK && intent.component?.className == ASK_ENTRY) {
+            intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() }?.let { nav.go(Route.Chat(draft = it.take(4_000), send = true)) }
+        }
+        intent.getStringExtra(EXTRA_CONVERSATION)?.let { nav.go(Route.Chat(id = it)) }
         when (intent.getStringExtra(EXTRA_ROUTE)) {
             "hub" -> nav.go(Route.Hub())
             "imagegen" -> nav.go(Route.ImageGen())
+            "chat" -> nav.go(Route.Chat())
         }
     }
 
@@ -131,6 +137,9 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_ROUTE = "route"
+        const val EXTRA_CONVERSATION = "conversation"
+        const val ACTION_ASK = "app.lily.ai.action.ASK"
+        const val ASK_ENTRY = "app.lily.ai.ui.AskEntry"
         const val EXTRA_TOOL = "tool"
         const val ACTION_IMAGE_TOOL = "app.lily.ai.action.IMAGE_TOOL"
         val NOTIFICATIONS = Manifest.permission.POST_NOTIFICATIONS

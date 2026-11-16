@@ -269,6 +269,32 @@ class ChatFlowTest {
         assertTrue(diagnostics.state.value is DiagState.Done)
     }
 
+    @Test
+    fun `painel de voz fechado no meio vira live update e depois aviso`() {
+        install(Catalog.qwen3Small)
+        graph.engines = FakeEngine(stepMs = 150)
+        val nm = app.getSystemService(android.app.NotificationManager::class.java)
+        val assist = graph.assist
+        val s = assist.session()
+        assist.attach()
+        s.send("Qual é a capital do Brasil?")
+        waitUntil { s.streaming?.text?.isNotEmpty() == true }
+        assist.detach()
+        waitUntil { nm.activeNotifications.any { it.id == 7201 } }
+        val working = nm.activeNotifications.first { it.id == 7201 }.notification
+        assertTrue("Live Update contínuo", working.flags and android.app.Notification.FLAG_ONGOING_EVENT != 0)
+        assertEquals("L.I.L.Y respondendo", working.extras.getString(android.app.Notification.EXTRA_TITLE))
+        answered(s, 1)
+        waitUntil { nm.activeNotifications.any { it.id == 7202 } }
+        assertFalse("o aviso de trabalhando some", nm.activeNotifications.any { it.id == 7201 })
+        val done = nm.activeNotifications.first { it.id == 7202 }.notification
+        assertTrue(done.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString().startsWith("Olá!"))
+        // Reabrir o painel tira os avisos e continua a mesma conversa (acompanhamento).
+        assist.attach()
+        assertFalse(nm.activeNotifications.any { it.id == 7202 })
+        assertTrue(assist.session() === s)
+    }
+
     // --- Ponte com o teclado ------------------------------------------------------------------
 
     private fun bridge(action: String, text: String, style: String = "NATURAL"): List<Message> {

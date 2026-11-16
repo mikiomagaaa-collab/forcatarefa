@@ -113,6 +113,7 @@ object PrefKeys {
     val BRIEF_ALARM = booleanPreferencesKey("brief_alarm")
     val ISLAND_STYLE = stringPreferencesKey("island_style")
     val ISLAND_ALWAYS = booleanPreferencesKey("island_always")
+    val ISLAND_LILY = booleanPreferencesKey("island_lily")
     val ISLAND_MEDIA = booleanPreferencesKey("island_media")
     val ISLAND_ALERTS = booleanPreferencesKey("island_alerts")
     val ISLAND_CHARGING = booleanPreferencesKey("island_charging")
@@ -235,6 +236,7 @@ internal fun Preferences.toSettings(): Settings {
         briefAlarm = this[PrefKeys.BRIEF_ALARM] ?: d.briefAlarm,
         islandStyle = enumOr(PrefKeys.ISLAND_STYLE, d.islandStyle),
         islandAlwaysVisible = this[PrefKeys.ISLAND_ALWAYS] ?: d.islandAlwaysVisible,
+        islandLily = this[PrefKeys.ISLAND_LILY] ?: d.islandLily,
         islandMedia = this[PrefKeys.ISLAND_MEDIA] ?: d.islandMedia,
         islandAlerts = this[PrefKeys.ISLAND_ALERTS] ?: d.islandAlerts,
         islandCharging = this[PrefKeys.ISLAND_CHARGING] ?: d.islandCharging,

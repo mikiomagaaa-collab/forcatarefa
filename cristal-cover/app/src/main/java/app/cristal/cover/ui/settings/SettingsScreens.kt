@@ -1186,6 +1186,18 @@ private fun IslandPage(
                     onChange = { vm.set(PrefKeys.ISLAND_ALWAYS, it) },
                     subtitle = "A cápsula fica visível mesmo sem nada acontecendo.",
                 )
+                val lilyReady = app.cristal.cover.data.lily.LilyLink.available(androidx.compose.ui.platform.LocalContext.current)
+                SwitchRow(
+                    title = "Segurar a ilha chama a L.I.L.Y",
+                    checked = settings.islandLily,
+                    onChange = { vm.set(PrefKeys.ISLAND_LILY, it) },
+                    subtitle = if (lilyReady) {
+                        "Com a cápsula à mostra (Mostrar sempre) ou durante o carregamento, segure a ilha e fale: a L.I.L.Y responde numa lente logo abaixo."
+                    } else {
+                        "Instale a L.I.L.Y AI (da mesma rodada do Cristal) para usar."
+                    },
+                    enabled = lilyReady,
+                )
                 GlassButton("Ver demonstração", Modifier.fillMaxWidth().padding(top = 6.dp)) { vm.islandDemo() }
             }
         }
