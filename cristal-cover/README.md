@@ -1,8 +1,9 @@
 # Cristal Cover
 
 Launcher e tela de bloqueio em **vidro líquido** para o Motorola Razr 40 Ultra (Android 16), na tela
-externa e na interna, e o **L.I.L.Y Keyboard**, um teclado completo (app separado, pasta `keyboard/`).
-Kotlin + Jetpack Compose.
+externa e na interna, e três apps irmãos (instalados separados): o **L.I.L.Y Keyboard** (pasta
+`keyboard/`), a **L.I.L.Y AI**, assistente que roda inteiramente no aparelho (pasta `ai/`), e a
+**L.I.L.Y Gallery**, galeria e editor de fotos (pasta `gallery/`). Kotlin + Jetpack Compose.
 
 > **Este projeto é independente do site que divide o repositório com ele.** Tudo o que é do app está
 > dentro de `cristal-cover/`; o workflow `build.yml` só roda quando algo nessa pasta muda e não publica
@@ -30,7 +31,7 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 | Controles reais: brilho, rotação, Não perturbe, avião, localização, NFC, modo escuro, economia de bateria | Feito (API do Android, Shizuku ou ajuste do sistema) |
 | Depth Effect: objeto da foto recortado no aparelho (ML Kit) na frente do relógio, no bloqueio interno e no Cover Clock | Feito (1.3.0) |
 | Papel de parede espacial (move com a inclinação; presets com camadas de profundidade) | Feito (1.3.0) |
-| L.I.L.Y Keyboard (teclado, L.I.L.Y Correct, deslize, emojis, área de transferência, voz, Keyboard Studio) | Feito (1.2.0: Info Brief), sem IA |
+| L.I.L.Y Keyboard (teclado, L.I.L.Y Correct, deslize, emojis, área de transferência, voz, Keyboard Studio) | Feito (1.2.0: Info Brief; 1.3.0: painel L.I.L.Y com a IA do aparelho) |
 | Liquid Island: ilha dinâmica em volta da câmera, por cima de qualquer app (música, chamadas, timers, carregando, silencioso, notificações, música expandida) | Feito (1.4.0) |
 | Bloqueio no estilo iOS 26: relógio de vidro esticado, data com clima, widgets redondos, notificações embaixo | Feito (1.4.0) |
 | Central de Controle no estilo iOS 26 (botões ativos brancos, status, desligar) e fonte Inter | Feito (1.4.0) |
@@ -43,19 +44,17 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 | L.I.L.Y Live Integration: Live Updates do Android 16 e perfis de apps de entrega, corrida e navegação, sem inventar dados | Feito (1.6.0) |
 | Info Brief: o teclado reconhece compromissos no aparelho, a esfera voa até a ilha, lembrete com confirmação (alarme exato, repetir, alarme sonoro) | Feito (1.6.0) |
 | Now Brief no lugar do painel Hoje: atividades em andamento, linha do tempo da agenda e dos lembretes, tarefas e sugestões | Feito (1.6.0) |
+| L.I.L.Y AI: app próprio com conversa, roteador de modelos, Model Hub, ferramentas de texto, imagem e áudio, geração de imagem experimental, memória e versão de voz para a tela externa | Feito (1.0.0); a inferência ainda precisa ser medida no Razr |
+| L.I.L.Y Gallery: biblioteca do aparelho, álbuns, visualizador, editor, lixeira oficial, importação pelo seletor do Android (inclui o Google Fotos) e ações da L.I.L.Y | Feito (1.0.0) |
 | Biblioteca de apps, páginas próprias da tela externa | Planejado |
-| L.I.L.Y AI (modelos locais) e as ferramentas de escrita com IA do teclado | Adiado a pedido; exige medições no aparelho real |
-
-Sobre a L.I.L.Y AI: nenhum motor ou modelo foi incluído (o teclado funciona sem ela). O próprio requisito pede testes no Razr 40
-Ultra antes de integrar qualquer coisa, e este projeto nunca foi executado no aparelho durante o
-desenvolvimento. Incluir um runtime pesado sem medir memória, temperatura e latência seria chute.
 
 ## Estado real do projeto
 
 O que **foi verificado** durante o desenvolvimento:
 
 - compila do zero (debug e release com R8) com as versões estáveis atuais das ferramentas;
-- 147 testes automáticos em JVM passam (95 no Cristal e 52 no teclado). No launcher: lógica da grade, detecção da tela externa,
+- 212 testes automáticos em JVM passam (95 no Cristal, 41 no teclado, 16 no módulo compartilhado, 52 na
+  L.I.L.Y AI e 8 na Gallery). No launcher: lógica da grade, detecção da tela externa,
   regras de compatibilidade, segurança dos comandos de shell, backup, papéis de parede por área,
   encaixe e edição da Central de Controle, **compilação real do shader AGSL** e **16 telas montadas e
   desenhadas** pelo pipeline de hardware (incluindo a central e o efeito de profundidade), no tamanho
@@ -68,10 +67,20 @@ O que **foi verificado** durante o desenvolvimento:
   a integração com apps, o reconhecedor do Info Brief com os exemplos do pedido e os casos que não podem
   virar sugestão (hipóteses, perguntas, negações, passado), os gatilhos do teclado, o contrato da ponte,
   os lembretes (aviso único, repetição, adiar, gravação), o Now Brief, a folha de confirmação e a
-  transição de fechamento, com 55 telas desenhadas;
+  transição de fechamento, com 55 telas desenhadas. Na L.I.L.Y AI: o roteador (perfis, bateria,
+  temperatura, memória livre, escolha manual, nunca um modelo não instalado), a compatibilidade com o
+  aparelho, as fichas do catálogo (versões fixadas, tamanhos e SHA-256), a loja de modelos, o download com
+  retomada por Range, servidor que ignora o Range, pausa e recusa de arquivo adulterado, a memória
+  (recusa senhas, CPF, cartão e códigos), o histórico (busca sem acento, anexos apagados juntos), o áudio
+  (WAV e reamostragem), os filtros clássicos, documentos, o markdown e 12 telas desenhadas (incluindo a
+  tela externa). No teclado, o painel da L.I.L.Y e as regras de campos protegidos. Na Gallery, o editor
+  (corte, giro e cores de verdade) e 7 telas;
 - lint sem erros.
 
-O que **não foi verificado**: o app **nunca rodou em um Razr de verdade**. Tudo o que depende de
+O que **não foi verificado**: os apps **nunca rodaram em um Razr de verdade**. Na L.I.L.Y AI, os
+motores nativos (LiteRT-LM e LiteRT, bibliotecas do Google) não rodam nos testes em JVM: a conversa,
+a visão, o áudio, a ampliação com Real-ESRGAN e a geração de imagem estão **implementados com as APIs
+oficiais, mas faltam testar no aparelho** (velocidade, memória, temperatura e a GPU do Snapdragon). Tudo o que depende de
 comportamento não documentado da Motorola está marcado com ⚠️ no [checklist](docs/TESTES.md) e precisa
 ser confirmado no aparelho.
 
@@ -91,8 +100,57 @@ internet. Ativa-se pelo mecanismo oficial (Configurações > Teclados); nada é 
 | Keyboard Studio | 11 temas (Liquid Glass, One UI, Minimalista, AMOLED, Clássico, Lavanda, Violeta, Prata, Aurora…), editor de cores, vidro, transparência, cantos, espaçamento, fundo da galeria, prévia antes de aplicar, exportar/importar |
 | Info Brief | Reconhece no aparelho horários, datas, tarefas, lugares, rotinas e viagens (PT-BR e EN) 1,5 s depois de você parar de digitar e ao enviar; a expressão brilha em azul, vira uma esfera e voa até a Liquid Island. Nunca em senha, código, e-mail, endereço web ou modo anônimo; frases hipotéticas, perguntas e passado não viram sugestão. Ao Cristal vai só o compromisso entendido, por uma permissão de assinatura (os dois apps precisam da mesma chave). Sem o Cristal, "Criar lembrete" abre a agenda do aparelho |
 
-Não tem (de propósito): ferramentas de escrita com IA, botão da L.I.L.Y, gramática e concordância
-(dependem da L.I.L.Y AI), GIFs e tradução (exigem internet).
+| L.I.L.Y (1.3.0) | Botão na barra: Perguntar, Corrigir, Reescrever (5 tons), Traduzir (6 idiomas), Resumir, Responder (à mensagem copiada) e Escrever, sobre o texto selecionado ou antes do cursor. A resposta aparece numa prévia; só muda o campo com "Substituir" ou "Inserir". No estilo informal, "vc", "pq", "tbm" e "nn" ficam. Nada vai para a IA sem um toque; senha, números e códigos nunca vão; textos copiados que o Android marca como sensíveis também não. Precisa da L.I.L.Y AI instalada com a mesma assinatura |
+
+Não tem (de propósito): GIFs (exigem internet). O próprio teclado continua sem permissão de internet:
+a L.I.L.Y roda em outro app do aparelho.
+
+## L.I.L.Y AI (pasta `ai/`)
+
+App próprio (`app.lily.ai`). **Tudo roda no aparelho**: a internet só é usada para baixar modelos (do
+Hugging Face, fixados numa versão e conferidos por SHA-256) e pacotes de tradução do ML Kit, quando
+você pede. Não há nenhum provedor remoto; o indicador de cada conversa diz "No aparelho".
+
+| Parte | Como funciona |
+| --- | --- |
+| Conversa | Respostas em pedaços (streaming), parar, gerar de novo, copiar, ler em voz alta, compartilhar, markdown (listas, títulos, código copiável), fotos, áudios e documentos anexados (PDF e texto: o texto embutido do PDF é lido pelo Android e as páginas escaneadas passam pelo OCR, tudo no aparelho), ditado e modo de voz (pergunta falada → resposta lida). Histórico com busca (sem acento), fixadas, projetos, renomear e apagar (anexos juntos) |
+| Roteador (AI Router) | Escolhe o mecanismo por tarefa com dados reais: o que está instalado, compatibilidade, memória livre, temperatura, bateria, economia de energia e o perfil (Eco, Equilibrado, Qualidade). GPU com volta automática para a CPU. Escolha manual por conversa. A tela mostra os motivos da escolha |
+| Model Hub | Ficha completa (desenvolvedor, arquitetura, parâmetros, quantização, modalidades, tamanho, espaço, memória, contexto, mecanismo, licença, versão, página oficial), classificação real (Compatível, Compatível com limitações, Experimental, Incompatível) calculada com o aparelho, download em primeiro plano com pausar, retomar, cancelar e conferir, atualizar, desinstalar, padrão por categoria, histórico de instalações e o que foi **medido neste aparelho** (carregamento e caracteres por segundo, só depois de usar) |
+| Modelos de linguagem (LiteRT-LM) | Qwen3 0.6B e 1.7B, Gemma 4 E2B (texto, imagem e áudio), Ministral 3 3B, Phi-4 mini, SmolVLM2 500M e Qwen3.5 0.8B Vision. Um carregado por vez, descarregado depois de alguns minutos sem uso, quando o Android pede memória ou antes da geração de imagem; recusa com o aparelho crítico de quente |
+| Visão | Descrever e perguntar sobre fotos (modelo de visão); sem ele, o ML Kit diz o que reconhece e avisa o que falta. Extrair texto (OCR), identificar objetos e remover fundo (ML Kit) |
+| Aprimoramento | Melhorar foto, remover ruído (filtro bilateral) e ampliar 4× com o Real-ESRGAN x4v3 (LiteRT, em blocos, com progresso real e parar); sem o modelo, ampliação clássica 2×. Antes e depois com divisória, salvar em Pictures/L.I.L.Y |
+| Geração de imagem | iris-3b Turbo (motor Kotlin oficial do litert-community, Apache 2.0), **experimental**: 768 × 768, minutos por imagem, ~3,2 GB de memória, sem imagem de referência. Serviço em primeiro plano com Live Update (a Liquid Island mostra o progresso), parar, semente, estilos |
+| Áudio | Ditado pelo reconhecedor do Android (no aparelho quando o idioma está instalado), transcrição e resumo de áudios com o Gemma 4 E2B, leitura em voz alta (vozes do Android), identificação de idioma (ML Kit) |
+| Ferramentas de texto | Corrigir, reescrever (5 tons), resumir, expandir, traduzir (ML Kit ou o modelo no perfil Qualidade), explicar, organizar, escrever e sugerir resposta, com o jeito informal preservado |
+| Memória | Só o que você manda guardar ("Guardar na memória" numa mensagem ou na tela Memória); recusa senhas, documentos, cartões e códigos; ligar e desligar cada uma ou todas; histórico de conversas não vira memória |
+| Integrações | Teclado (ponte de assinatura), Cristal (lembretes pela confirmação do Info Brief; nada é criado sem o toque), Gallery (fotos chegam com permissão só delas), Liquid Island (Live Updates oficiais dos downloads e da geração) |
+| Tela externa | Versão de voz: tocar no orbe, falar e ouvir; ao abrir o aparelho, a mesma conversa continua na tela interna, até com a resposta em andamento |
+| Aparência | Orbe em AGSL, fundo aurora, vidro, temas Liquid Glass, AMOLED, Claro, Roxo e Personalizado |
+
+Limitações reais da L.I.L.Y AI:
+
+- **Falta testar no aparelho**: velocidade, memória e temperatura de cada modelo no Snapdragon 8+ Gen 1, a
+  GPU (OpenCL) com cada modelo e a geração de imagem (os números do iris-3b publicados são de outros
+  aparelhos: 128–133 s no Galaxy S26 e 469–504 s no Pixel 8a).
+- Arquivos de áudio só são transcritos com um modelo que ouve (Gemma 4 E2B); o reconhecedor do
+  Android só trabalha com o microfone.
+- O SmolVLM2 responde melhor em inglês. O iris-3b gera só 768 × 768 (recorte na Gallery).
+- O APK é grande (as bibliotecas nativas do LiteRT e do ML Kit somam perto de 75 MB); os modelos
+  ficam fora dele e somam de 330 MB a 11 GB, conforme o que você instalar.
+
+## L.I.L.Y Gallery (pasta `gallery/`)
+
+App próprio (`app.lily.gallery`), sem IA dentro: as ações de IA abrem a L.I.L.Y AI.
+
+| Parte | Como funciona |
+| --- | --- |
+| Biblioteca | Fotos e vídeos do MediaStore, por mês, com miniaturas do cache oficial do Android; busca por nome, álbum ou mês; acesso total ou só a fotos escolhidas (Android 14+) |
+| Álbuns | Pastas do aparelho; "Criadas pela L.I.L.Y" (Pictures/L.I.L.Y) em destaque; favoritas e lixeira |
+| Visualizador | Deslizar entre fotos, zoom com pinça e toque duplo, vídeos com o reprodutor do Android, informações (data, tamanho, pasta), compartilhar |
+| Editor | Exposição, contraste, saturação, temperatura, matiz, vinheta, "Automático" pelo histograma, 8 filtros, corte com proporções (livre, original, 1:1, 4:5, 9:16, 16:9), girar e espelhar. Salva como cópia ao lado da original ou por cima (com a confirmação do Android) |
+| Lixeira e favoritos | Pela API oficial (createTrashRequest, createFavoriteRequest): o Android confirma, e os itens ficam 30 dias na lixeira. Com "gerenciamento de mídia" liberado, sem confirmar a cada vez |
+| Google Fotos | Pelos caminhos oficiais: importar pelo seletor do Android (que mostra o Google Fotos como app de mídia na nuvem), enviar fotos ao Google Fotos para o backup e abrir o app |
+| L.I.L.Y | Perguntar sobre a foto, descrever, extrair texto, identificar objetos, melhorar, remover ruído, ampliar e remover fundo; gerar imagens. Os resultados voltam ao álbum da L.I.L.Y |
 
 ## Arquitetura
 
@@ -221,6 +279,90 @@ O APK sai em `app/build/outputs/apk/release/`. Requisitos: JDK 21 e Android SDK 
 ```
 cristal-cover/
 ├── README.md
+├── ai/
+│   ├── build.gradle.kts
+│   ├── proguard-rules.pro
+│   └── src/
+│       ├── main/
+│       │   ├── AndroidManifest.xml
+│       │   ├── assets/
+│       │   ├── java/app/lily/ai/
+│       │   │   ├── AiGraph.kt
+│       │   │   ├── LilyAiApp.kt
+│       │   │   ├── bridge/
+│       │   │   │   ├── AiBridgeService.kt
+│       │   │   │   └── CristalBridge.kt
+│       │   │   ├── core/
+│       │   │   │   ├── Device.kt
+│       │   │   │   ├── Router.kt
+│       │   │   │   └── Tasks.kt
+│       │   │   ├── data/
+│       │   │   │   ├── AiSettings.kt
+│       │   │   │   ├── Conversations.kt
+│       │   │   │   ├── MediaSaver.kt
+│       │   │   │   ├── Memory.kt
+│       │   │   │   └── Perf.kt
+│       │   │   ├── engine/
+│       │   │   │   ├── Audio.kt
+│       │   │   │   ├── Enhance.kt
+│       │   │   │   ├── Llm.kt
+│       │   │   │   ├── Prompts.kt
+│       │   │   │   ├── SuperRes.kt
+│       │   │   │   └── Vision.kt
+│       │   │   ├── imagegen/
+│       │   │   │   ├── ImageGen.kt
+│       │   │   │   └── iris/
+│       │   │   │       ├── HostOps.kt
+│       │   │   │       ├── IrisPipeline.kt
+│       │   │   │       ├── Json.kt
+│       │   │   │       ├── LiteRtExec.kt
+│       │   │   │       ├── PromptTokens.kt
+│       │   │   │       ├── QwenTokenizer.kt
+│       │   │   │       └── RunFiles.kt
+│       │   │   ├── models/
+│       │   │   │   ├── Catalog.kt
+│       │   │   │   ├── Compatibility.kt
+│       │   │   │   ├── DownloadService.kt
+│       │   │   │   ├── Downloader.kt
+│       │   │   │   ├── Downloads.kt
+│       │   │   │   └── ModelStore.kt
+│       │   │   ├── tools/
+│       │   │   │   └── AiTools.kt
+│       │   │   └── ui/
+│       │   │       ├── MainActivity.kt
+│       │   │       ├── Nav.kt
+│       │   │       ├── screens/
+│       │   │       │   ├── ChatScreen.kt
+│       │   │       │   ├── ChatSession.kt
+│       │   │       │   ├── ChatViews.kt
+│       │   │       │   ├── Common.kt
+│       │   │       │   ├── CoverScreen.kt
+│       │   │       │   ├── HistoryScreen.kt
+│       │   │       │   ├── HomeScreen.kt
+│       │   │       │   ├── HubScreen.kt
+│       │   │       │   ├── ImageGenScreen.kt
+│       │   │       │   ├── ImageToolScreen.kt
+│       │   │       │   ├── Markdown.kt
+│       │   │       │   ├── MemoryScreen.kt
+│       │   │       │   ├── ModelScreen.kt
+│       │   │       │   ├── Network.kt
+│       │   │       │   ├── SettingsScreen.kt
+│       │   │       │   ├── Shared.kt
+│       │   │       │   ├── TextToolScreen.kt
+│       │   │       │   └── ToolsScreen.kt
+│       │   │       └── theme/
+│       │   │           ├── Components.kt
+│       │   │           ├── LilyTheme.kt
+│       │   │           └── Visuals.kt
+│       │   └── res/
+│       └── test/java/app/lily/ai/
+│           ├── AiScreensTest.kt
+│           ├── DownloaderTest.kt
+│           ├── EnhanceTest.kt
+│           ├── ModelsTest.kt
+│           ├── NavTest.kt
+│           ├── RouterTest.kt
+│           └── TextAndDataTest.kt
 ├── app/
 │   ├── build.gradle.kts
 │   ├── proguard-rules.pro
@@ -358,6 +500,29 @@ cristal-cover/
 ├── gradle.properties
 ├── gradlew
 ├── gradlew.bat
+├── gallery/
+│   ├── build.gradle.kts
+│   ├── proguard-rules.pro
+│   └── src/
+│       ├── main/
+│       │   ├── AndroidManifest.xml
+│       │   ├── assets/
+│       │   ├── java/app/lily/gallery/
+│       │   │   ├── LilyAi.kt
+│       │   │   ├── data/
+│       │   │   │   ├── Edits.kt
+│       │   │   │   └── Media.kt
+│       │   │   └── ui/
+│       │   │       ├── Editor.kt
+│       │   │       ├── Library.kt
+│       │   │       ├── MainActivity.kt
+│       │   │       ├── Permission.kt
+│       │   │       ├── Theme.kt
+│       │   │       ├── Trash.kt
+│       │   │       └── Viewer.kt
+│       │   └── res/
+│       └── test/java/app/lily/gallery/
+│           └── GalleryScreensTest.kt
 ├── keyboard/
 │   ├── build.gradle.kts
 │   ├── proguard-rules.pro
@@ -365,11 +530,13 @@ cristal-cover/
 │       ├── main/
 │       │   ├── AndroidManifest.xml
 │       │   ├── assets/
-│       │   │   ├── emoji.tsv
-│       │   │   ├── en.dict
-│       │   │   └── pt_br.dict
 │       │   ├── java/app/lily/keyboard/
 │       │   │   ├── LilyApp.kt
+│       │   │   ├── ai/
+│       │   │   │   └── KeyboardAi.kt
+│       │   │   ├── brief/
+│       │   │   │   ├── BriefBridge.kt
+│       │   │   │   └── InfoBrief.kt
 │       │   │   ├── clipboard/
 │       │   │   │   └── ClipboardHistory.kt
 │       │   │   ├── core/
@@ -394,6 +561,8 @@ cristal-cover/
 │       │   │   │   ├── StudioComponents.kt
 │       │   │   │   └── VoicePermissionActivity.kt
 │       │   │   ├── ui/
+│       │   │   │   ├── AiPanel.kt
+│       │   │   │   ├── BriefOverlay.kt
 │       │   │   │   ├── Feedback.kt
 │       │   │   │   ├── KeyGeometry.kt
 │       │   │   │   ├── KeyboardRoot.kt
@@ -404,11 +573,29 @@ cristal-cover/
 │       │   └── res/
 │       └── test/java/app/lily/keyboard/
 │           ├── EngineTest.kt
+│           ├── InfoBriefTest.kt
 │           ├── InputControllerTest.kt
+│           ├── KeyboardAiTest.kt
 │           └── KeyboardScreensTest.kt
 ├── keystore/
 │   └── cristal-ci.jks
-└── settings.gradle.kts
+├── settings.gradle.kts
+└── shared/
+    ├── build.gradle.kts
+    ├── consumer-rules.pro
+    └── src/
+        ├── main/
+        │   ├── AndroidManifest.xml
+        │   └── java/app/lily/shared/
+        │       ├── bridge/
+        │       │   ├── AiBridge.kt
+        │       │   └── CristalBrief.kt
+        │       └── brief/
+        │           ├── BriefDetector.kt
+        │           ├── BriefIntents.kt
+        │           └── BriefText.kt
+        └── test/java/app/lily/shared/
+            └── BriefDetectorTest.kt
 ```
 
 ## Melhorias futuras

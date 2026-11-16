@@ -239,3 +239,47 @@ Teste pelo menos: WhatsApp, YouTube, Spotify, Google Maps, Chrome, Câmera, um a
 - [ ] Editor do bloqueio: segurar o bloqueio, autenticar, arrastar o relógio (X, Y), mudar a profundidade (Z) na interna e na externa; salvar.
 - [ ] Wallpaper Library: criar, renomear, duplicar e aplicar uma coleção.
 - [ ] Dock: altura, tamanho dos ícones, estilo e rótulos; ícones tingidos com o espectro, inclusive em apps sem ícone temático (TikTok); widget de foto e tamanho dos widgets.
+
+## 17. L.I.L.Y AI (1.0.0)
+
+Os itens com ⚠️ dependem dos motores nativos (LiteRT-LM e LiteRT), que não rodam nos testes em JVM:
+estão implementados com as APIs oficiais e precisam ser confirmados no Razr.
+
+- [ ] A tela inicial recomenda um modelo com o tamanho e a compatibilidade; **Baixar** pede a notificação e mostra o progresso na notificação e na Liquid Island
+- [ ] Pausar, retomar (de onde parou) e cancelar o download; com dados móveis e "só Wi-Fi", a IA pergunta antes
+- [ ] ⚠️ Primeira mensagem: "Carregando Qwen3 1.7B" e depois a resposta em pedaços; anote o tempo de carregamento e a velocidade que aparecem na ficha do modelo (Medido neste aparelho)
+- [ ] ⚠️ GPU: no perfil Qualidade a conversa roda na GPU; se a GPU recusar o modelo, a IA volta para a CPU sozinha (a pílula do topo mostra GPU ou CPU)
+- [ ] ⚠️ Temperatura e memória: 10 minutos de conversa sem travar o launcher; com o aparelho quente, o roteador passa para a CPU e explica
+- [ ] Parar a resposta no meio: o que já chegou fica salvo como "Resposta interrompida"
+- [ ] Trocar o modelo da conversa (toque na pílula do topo) e ver "Por que este modelo"
+- [ ] ⚠️ Foto na conversa com o Gemma 4 E2B: descreve; sem modelo de visão, o ML Kit lista objetos e texto e oferece o Model Hub
+- [ ] ⚠️ Áudio de até 30 s (arquivo ou gravação) com o Gemma 4 E2B: transcrição e resumo
+- [ ] ⚠️ Documento na conversa: um PDF com texto e um PDF escaneado (o OCR lê as páginas); perguntar sobre ele e fazer uma pergunta de acompanhamento
+- [ ] Ditado e modo de voz: perguntar falando e ouvir a resposta (Configurações > Voz)
+- [ ] "Guardar na memória" numa mensagem; uma senha ou CPF é recusado; desligar a memória
+- [ ] Mensagem com compromisso ("vou ao show às 7 da noite"): aparece "Compromisso identificado" e o Cristal abre a confirmação
+- [ ] ⚠️ Ferramentas de imagem: extrair texto, objetos, remover fundo, remover ruído, ampliar 4× (Real-ESRGAN) com antes e depois; salvar vai para Pictures/L.I.L.Y
+- [ ] ⚠️ Gerar imagem com o iris-3b: tempo total, memória livre antes e depois; parar no meio; a imagem aparece na Gallery
+- [ ] Tela externa: falar com o orbe; abrir o aparelho e ver a mesma conversa
+- [ ] Apagar todas as conversas e memórias em Configurações > Privacidade
+
+## 18. L.I.L.Y Gallery (1.0.0)
+
+- [ ] Permitir todas as fotos ou só algumas; no acesso parcial, "Escolher mais" mostra o seletor
+- [ ] A grade por mês rola sem travar com milhares de fotos; vídeos mostram a duração
+- [ ] Álbuns: "Criadas pela L.I.L.Y" aparece primeiro depois de salvar algo na IA
+- [ ] Visualizador: deslizar, zoom com pinça e toque duplo, vídeo toca
+- [ ] Editor: ajustes, filtros, corte 1:1, girar; **Salvar como cópia** cria a foto ao lado da original; **Substituir a original** pede a confirmação do Android
+- [ ] Lixeira: mover, restaurar e apagar para sempre (com a confirmação do Android)
+- [ ] Importar pelo seletor: com o Google Fotos como app de mídia na nuvem, fotos da nuvem aparecem e são copiadas para Pictures/Importadas
+- [ ] Botão ✦ da L.I.L.Y numa foto: cada ação abre a L.I.L.Y AI já com a foto
+
+## 19. L.I.L.Y no teclado (1.3.0)
+
+- [ ] O botão ✦ aparece no começo da barra depois de atualizar
+- [ ] Corrigir "vc viu q a prova mudou?" no estilo informal: "vc" continua "vc"
+- [ ] Reescrever com um tom, traduzir, resumir e escrever; **Substituir** troca só o texto usado; **Inserir** acrescenta
+- [ ] Responder: copiar uma mensagem recebida e tocar em Responder
+- [ ] Campo de senha e campo de código: o painel diz que nada vai para a IA
+- [ ] Sem a L.I.L.Y AI instalada, o painel explica e não mostra ações
+

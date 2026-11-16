@@ -31,7 +31,9 @@ O APK é gerado pelo GitHub Actions, de graça, toda vez que algo muda na pasta 
    está o arquivo `cristal-cover-1.0.0-N.apk`.
 
 > **Qual arquivo usar?** O `cristal-cover-apk` é a versão otimizada (cerca de 4 MB): é essa que você quer.
-> O teclado vem no artefato **lily-keyboard-apk** (arquivo `lily-keyboard-….apk`, sem `-debug`).
+> O teclado vem no artefato **lily-keyboard-apk** (arquivo `lily-keyboard-….apk`, sem `-debug`), a IA no
+> **lily-ai-apk** (`lily-ai-1.0.0-N.apk`, cerca de 85 MB) e a galeria no **lily-gallery-apk**
+> (`lily-gallery-1.0.0-N.apk`).
 > O `cristal-cover-apk-debug` é dezenas de vezes maior e mais lento; só serve para investigar problemas.
 
 ### Rodar o build de novo quando quiser
@@ -58,6 +60,12 @@ enquanto os APKs forem assinados com a mesma chave; veja a parte 8.)
 e siga os dois passos da tela (ligar em Configurações > Teclados e escolher como teclado). O Android
 mostra um aviso padrão de que "o teclado pode coletar o que você digita": ele aparece para qualquer
 teclado; o L.I.L.Y não tem acesso à internet.
+
+### L.I.L.Y AI e L.I.L.Y Gallery
+
+Também são apps separados: instale `lily-ai-….apk` e `lily-gallery-….apk` do mesmo jeito. Instale os
+APKs da **mesma rodada** do GitHub Actions: o teclado e a Gallery só conversam com a IA quando os apps
+têm a mesma assinatura (a chave de CI do repositório já garante isso).
 
 ## 3. Primeira abertura
 
@@ -347,6 +355,43 @@ desliga em Configurações > Aparência > **Flip Transition**.
 **Modo de precisão da ilha (opcional).** Configurações > Liquid Island > **Modo de precisão**: um segundo serviço de
 acessibilidade, restrito à barra de status do sistema, mede os ícones reais para a ilha nunca cobri-los.
 Vem desligado.
+
+## 9.2 L.I.L.Y AI, Gallery e a L.I.L.Y no teclado (novidade)
+
+**Primeiro modelo.** Abra a **L.I.L.Y AI**. Na primeira vez, o cartão **Comece por aqui** recomenda o
+modelo certo para o aparelho (no Razr 40 Ultra, o Qwen3 1.7B, com menos de 1 GB). Toque em **Baixar**:
+
+- o Android pergunta se a L.I.L.Y pode mostrar notificações. Permita para ver o progresso na notificação
+  e na Liquid Island (o download funciona mesmo sem);
+- por padrão, os downloads são só no Wi-Fi; nos dados móveis a IA pergunta antes (Configurações > Downloads);
+- o download continua com o app fechado e pode ser pausado e retomado; no fim, o arquivo é conferido
+  (SHA-256) antes de ficar disponível.
+
+Depois disso tudo funciona **sem internet**. Para fotos e áudio, baixe o **Gemma 4 E2B** (2,4 GB) no
+**Model Hub** (ícone de cubo na tela inicial). Cada ficha mostra a compatibilidade calculada para o seu
+aparelho, o espaço necessário, a licença e, depois do primeiro uso, a velocidade medida aí.
+
+**Microfone.** Só é pedido quando você toca no microfone. Nada fica ouvindo em segundo plano.
+
+**Tela externa.** A L.I.L.Y também abre na tela externa (no Cristal, ou pelo atalho de apps da Motorola),
+numa versão de voz. Ao abrir o aparelho, a conversa continua na tela interna.
+
+**Gerar imagens (experimental).** No Model Hub, **iris-3b Turbo** (11,3 GB). Cada imagem leva minutos e
+usa cerca de 3,2 GB de memória: feche outros apps antes. Você pode sair do app durante a geração.
+
+**L.I.L.Y no teclado.** Com a IA e um modelo instalados, toque no botão ✦ da barra do teclado (para quem
+atualizou, ele aparece sozinho no começo da barra). Escolha uma ação: a resposta aparece numa prévia e o
+texto só muda quando você toca em **Substituir** ou **Inserir**. Para **Responder**, copie antes a
+mensagem que recebeu. Em campos de senha e de códigos, o painel não lê nada.
+
+**Gallery.** Na primeira abertura, toque em **Permitir acesso às fotos**: você pode liberar todas ou só
+algumas (dá para escolher mais depois). Para não confirmar a cada vez que mandar algo para a lixeira ou
+favoritar: menu ⋮ > **Lixeira e favoritos sem confirmar sempre** e ligue a Gallery.
+
+**Google Fotos.** Menu ⋮ > **Importar fotos**: o seletor do Android mostra também as fotos do Google Fotos
+quando ele está instalado e escolhido como app de mídia na nuvem (no seletor: ⋮ > **Configurações** >
+**App de mídia na nuvem** > Google Fotos). As fotos escolhidas são copiadas para Pictures/Importadas.
+Para mandar fotos ao backup do Google Fotos, selecione-as e toque no ícone de nuvem.
 
 ## 10. Problemas comuns
 

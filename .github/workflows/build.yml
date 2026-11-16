@@ -1,4 +1,5 @@
-# Compila o app Android "Cristal Cover" (pasta cristal-cover/).
+# Compila os apps Android do Liquid Flip (pasta cristal-cover/): Cristal Cover, L.I.L.Y Keyboard,
+# L.I.L.Y AI e L.I.L.Y Gallery.
 #
 # Este workflow é independente do site: só roda quando algo dentro de cristal-cover/ muda
 # (ou quando é disparado à mão) e não publica nada no GitHub Pages.
@@ -33,7 +34,7 @@ jobs:
   build:
     name: Compilar e testar
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 75
     defaults:
       run:
         working-directory: cristal-cover
@@ -86,21 +87,26 @@ jobs:
       - name: Nomear os arquivos
         id: info
         run: |
-          versao="1.6.0-${GITHUB_RUN_NUMBER}"
+          run="${GITHUB_RUN_NUMBER}"
+          versao="1.6.0-${run}"
           mkdir -p saida
           cp app/build/outputs/apk/release/app-release.apk "saida/cristal-cover-${versao}.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "saida/cristal-cover-${versao}-debug.apk"
-          cp keyboard/build/outputs/apk/release/keyboard-release.apk "saida/lily-keyboard-${versao}.apk"
-          cp keyboard/build/outputs/apk/debug/keyboard-debug.apk "saida/lily-keyboard-${versao}-debug.apk"
+          cp keyboard/build/outputs/apk/release/keyboard-release.apk "saida/lily-keyboard-1.3.0-${run}.apk"
+          cp keyboard/build/outputs/apk/debug/keyboard-debug.apk "saida/lily-keyboard-1.3.0-${run}-debug.apk"
+          cp ai/build/outputs/apk/release/ai-release.apk "saida/lily-ai-1.0.0-${run}.apk"
+          cp gallery/build/outputs/apk/release/gallery-release.apk "saida/lily-gallery-1.0.0-${run}.apk"
           ls -la saida
           echo "versao=${versao}" >> "$GITHUB_OUTPUT"
           {
-            echo "### Cristal Cover ${versao}"
+            echo "### Liquid Flip (execução ${run})"
             echo ""
-            echo "Baixe o artefato **cristal-cover-apk** no fim desta página, extraia o .zip e instale o arquivo"
-            echo "\`cristal-cover-${versao}.apk\` (é a versão otimizada; a \`-debug\` é só para diagnóstico)."
+            echo "Baixe os artefatos no fim desta página, extraia os .zip e instale os .apk:"
             echo ""
-            echo "O teclado é um app separado: artefato **lily-keyboard-apk**, arquivo \`lily-keyboard-${versao}.apk\`."
+            echo "- **cristal-cover-apk**: \`cristal-cover-${versao}.apk\` (launcher e tela externa; a \`-debug\` é só para diagnóstico)"
+            echo "- **lily-keyboard-apk**: \`lily-keyboard-1.3.0-${run}.apk\` (teclado, agora com a L.I.L.Y)"
+            echo "- **lily-ai-apk**: \`lily-ai-1.0.0-${run}.apk\` (a IA, no aparelho; os modelos são baixados no Model Hub)"
+            echo "- **lily-gallery-apk**: \`lily-gallery-1.0.0-${run}.apk\` (galeria e editor de fotos)"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publicar o APK como artefato
@@ -123,7 +129,23 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lily-keyboard-apk
-          path: cristal-cover/saida/lily-keyboard-${{ steps.info.outputs.versao }}*.apk
+          path: cristal-cover/saida/lily-keyboard-*.apk
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publicar o APK da L.I.L.Y AI
+        uses: actions/upload-artifact@v4
+        with:
+          name: lily-ai-apk
+          path: cristal-cover/saida/lily-ai-*.apk
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publicar o APK da L.I.L.Y Gallery
+        uses: actions/upload-artifact@v4
+        with:
+          name: lily-gallery-apk
+          path: cristal-cover/saida/lily-gallery-*.apk
           if-no-files-found: error
           retention-days: 90
 
@@ -141,6 +163,8 @@ jobs:
           path: |
             cristal-cover/app/build/reports/lint-results-debug.html
             cristal-cover/keyboard/build/reports/lint-results-debug.html
+            cristal-cover/ai/build/reports/lint-results-debug.html
+            cristal-cover/gallery/build/reports/lint-results-debug.html
           if-no-files-found: ignore
           retention-days: 14
 
@@ -165,6 +189,18 @@ jobs:
           name: lily-keyboard-apk
           path: apk
 
+      - name: Baixar o APK da L.I.L.Y AI
+        uses: actions/download-artifact@v4
+        with:
+          name: lily-ai-apk
+          path: apk
+
+      - name: Baixar o APK da L.I.L.Y Gallery
+        uses: actions/download-artifact@v4
+        with:
+          name: lily-gallery-apk
+          path: apk
+
       - name: Criar a Release
         uses: softprops/action-gh-release@v2
         with:
@@ -172,12 +208,15 @@ jobs:
           name: Cristal Cover ${{ needs.build.outputs.versao }}
           target_commitish: ${{ github.sha }}
           body: |
-            APK do Cristal Cover, launcher e tela de bloqueio em vidro líquido para a tela externa do Razr,
-            e do L.I.L.Y Keyboard, o teclado (app separado).
+            APKs do Liquid Flip para o Razr: Cristal Cover (launcher e tela de bloqueio em vidro líquido
+            para a tela externa), L.I.L.Y Keyboard (teclado), L.I.L.Y AI (assistente que roda no aparelho)
+            e L.I.L.Y Gallery (galeria e editor). São apps separados.
 
             Baixe o arquivo `.apk` abaixo no celular e toque nele para instalar.
             Guia completo: `cristal-cover/docs/GUIA.md`.
           files: |
             apk/cristal-cover-*.apk
             apk/lily-keyboard-*[0-9].apk
+            apk/lily-ai-*.apk
+            apk/lily-gallery-*.apk
           fail_on_unmatched_files: true
