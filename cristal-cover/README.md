@@ -23,19 +23,27 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 | Wallpaper Studio: 4 áreas independentes, enquadramento, filtros e "igual a outra área" | Feito |
 | Cover Clock: bloqueio minimalista da tela externa | Feito |
 | Relógio: 12 fontes (10 embutidas, licença OFL) e formato adaptativo (cresce, estica, empilha; com profundidade passa por trás do objeto) | Feito (1.3.0) |
-| Flip Transition: chegada com mola ao trocar de tela e recolhimento pela dobradiça | Primeira versão |
+| Flip Transition: em **qualquer app**, pela dobradiça a tela vira um cartão que encolhe em direção à dobra com a faixa de luz da ilha (desfaz no modo flex); a tela inicial chega com mola | Feito (1.6.0) |
 | Widgets (9 embutidos + de outros apps), gaveta | Feito |
 | Liquid Control Center: 29 tipos de módulo, 6 tamanhos, páginas, editor, predefinições Liquid Flip/iOS/One UI, centrais separadas por tela | Feito (1.3.0) |
+| Central de Controle em **qualquer app**: puxar do canto superior direito nas duas telas, acompanhando o dedo, com o vidro refletindo o app de baixo | Feito (1.6.0) |
 | Controles reais: brilho, rotação, Não perturbe, avião, localização, NFC, modo escuro, economia de bateria | Feito (API do Android, Shizuku ou ajuste do sistema) |
 | Depth Effect: objeto da foto recortado no aparelho (ML Kit) na frente do relógio, no bloqueio interno e no Cover Clock | Feito (1.3.0) |
 | Papel de parede espacial (move com a inclinação; presets com camadas de profundidade) | Feito (1.3.0) |
-| L.I.L.Y Keyboard (teclado, L.I.L.Y Correct, deslize, emojis, área de transferência, voz, Keyboard Studio) | Feito (1.1.0: tema automático claro/escuro, Inter, prévia em balão), sem IA |
+| L.I.L.Y Keyboard (teclado, L.I.L.Y Correct, deslize, emojis, área de transferência, voz, Keyboard Studio) | Feito (1.2.0: Info Brief), sem IA |
 | Liquid Island: ilha dinâmica em volta da câmera, por cima de qualquer app (música, chamadas, timers, carregando, silencioso, notificações, música expandida) | Feito (1.4.0) |
 | Bloqueio no estilo iOS 26: relógio de vidro esticado, data com clima, widgets redondos, notificações embaixo | Feito (1.4.0) |
 | Central de Controle no estilo iOS 26 (botões ativos brancos, status, desligar) e fonte Inter | Feito (1.4.0) |
 | Design System Liquid Flip: tokens (cores, tipografia Inter, espaço de 4 dp, cantos concêntricos, molas), 6 materiais configuráveis, 7 temas e componentes base, com página de prévia | Fase A feita (1.5.0); as telas adotam o sistema fase a fase |
-| Ícones nos modos escuro e tingido, biblioteca de apps, páginas próprias da tela externa | Planejado (fase B) |
-| Liquid Island Live (espaço inteligente, integração com apps pelos Live Updates do Android 16), Info Brief no teclado e Now Brief | Protótipo aguardando aprovação; não implementado |
+| Editor do bloqueio: segurar o bloqueio, autenticar e arrastar o relógio (X, Y e profundidade Z), interna e externa separadas | Feito (1.6.0) |
+| Wallpaper Library: coleções com papéis de parede, relógio, posição, fontes, cores e efeitos; criar, renomear, duplicar, aplicar | Feito (1.6.0) |
+| Liberdade na tela inicial: dock maior e configurável (altura, ícones, estilo, rótulos), ícones monocromáticos e tingidos com espectro de cor (forçado também em apps sem ícone temático), widget de foto, tamanho dos widgets | Feito (1.6.0) |
+| Notificações duplicadas (aviso do sistema + ilha): guia por app e desligar de uma vez com o Shizuku | Feito (1.6.0) |
+| Liquid Island 2: lente expandida (uma gota que se solta da cápsula e fica abaixo da barra de status, sem cobrir ícones), espaço livre entre os ícones, modo de precisão opcional, estilos Nativa e Liquid Glass | Feito (1.6.0) |
+| L.I.L.Y Live Integration: Live Updates do Android 16 e perfis de apps de entrega, corrida e navegação, sem inventar dados | Feito (1.6.0) |
+| Info Brief: o teclado reconhece compromissos no aparelho, a esfera voa até a ilha, lembrete com confirmação (alarme exato, repetir, alarme sonoro) | Feito (1.6.0) |
+| Now Brief no lugar do painel Hoje: atividades em andamento, linha do tempo da agenda e dos lembretes, tarefas e sugestões | Feito (1.6.0) |
+| Biblioteca de apps, páginas próprias da tela externa | Planejado |
 | L.I.L.Y AI (modelos locais) e as ferramentas de escrita com IA do teclado | Adiado a pedido; exige medições no aparelho real |
 
 Sobre a L.I.L.Y AI: nenhum motor ou modelo foi incluído (o teclado funciona sem ela). O próprio requisito pede testes no Razr 40
@@ -47,7 +55,7 @@ desenvolvimento. Incluir um runtime pesado sem medir memória, temperatura e lat
 O que **foi verificado** durante o desenvolvimento:
 
 - compila do zero (debug e release com R8) com as versões estáveis atuais das ferramentas;
-- 99 testes automáticos em JVM passam (89 até a 1.4.0, mais 10 do Design System). No launcher: lógica da grade, detecção da tela externa,
+- 147 testes automáticos em JVM passam (95 no Cristal e 52 no teclado). No launcher: lógica da grade, detecção da tela externa,
   regras de compatibilidade, segurança dos comandos de shell, backup, papéis de parede por área,
   encaixe e edição da Central de Controle, **compilação real do shader AGSL** e **16 telas montadas e
   desenhadas** pelo pipeline de hardware (incluindo a central e o efeito de profundidade), no tamanho
@@ -55,7 +63,12 @@ O que **foi verificado** durante o desenvolvimento:
   real, a digitação por deslize com traços simulados, o controlador de texto num campo de mentira
   (correção, desfazer, maiúsculas, pontuação, senha) e 6 telas desenhadas. No Design System: escala
   tipográfica, molas, cantos, contraste dos 7 temas, materiais, leitura das preferências e a página de
-  prévia desenhada em três temas;
+  prévia desenhada em três temas. Na 1.6.0: o editor do bloqueio, as coleções, o dock, os ícones
+  forçados, o widget de foto, a lente da ilha (um teste confere que nenhum texto ou botão sai da curva),
+  a integração com apps, o reconhecedor do Info Brief com os exemplos do pedido e os casos que não podem
+  virar sugestão (hipóteses, perguntas, negações, passado), os gatilhos do teclado, o contrato da ponte,
+  os lembretes (aviso único, repetição, adiar, gravação), o Now Brief, a folha de confirmação e a
+  transição de fechamento, com 55 telas desenhadas;
 - lint sem erros.
 
 O que **não foi verificado**: o app **nunca rodou em um Razr de verdade**. Tudo o que depende de
@@ -76,6 +89,7 @@ internet. Ativa-se pelo mecanismo oficial (Configurações > Teclados); nada é 
 | Painéis | Emojis com busca em português, recentes e favoritos; área de transferência (1 hora, fixados, sem senhas e códigos); edição de texto; ditado por voz no aparelho |
 | Ergonomia | 3 tamanhos + altura fina, margens, subir o teclado, modo de uma mão (lado e largura), última fileira maior; compacto sozinho na tela externa |
 | Keyboard Studio | 11 temas (Liquid Glass, One UI, Minimalista, AMOLED, Clássico, Lavanda, Violeta, Prata, Aurora…), editor de cores, vidro, transparência, cantos, espaçamento, fundo da galeria, prévia antes de aplicar, exportar/importar |
+| Info Brief | Reconhece no aparelho horários, datas, tarefas, lugares, rotinas e viagens (PT-BR e EN) 1,5 s depois de você parar de digitar e ao enviar; a expressão brilha em azul, vira uma esfera e voa até a Liquid Island. Nunca em senha, código, e-mail, endereço web ou modo anônimo; frases hipotéticas, perguntas e passado não viram sugestão. Ao Cristal vai só o compromisso entendido, por uma permissão de assinatura (os dois apps precisam da mesma chave). Sem o Cristal, "Criar lembrete" abre a agenda do aparelho |
 
 Não tem (de propósito): ferramentas de escrita com IA, botão da L.I.L.Y, gramática e concordância
 (dependem da L.I.L.Y AI), GIFs e tradução (exigem internet).
@@ -150,6 +164,15 @@ Dois modos, e em nenhum deles o bloqueio do Android é removido:
    o keyguard, para o caso de a Motorola não deixar a activity aparecer na tela externa.
 
 ## Limitações reais (Android 16 e Motorola)
+
+- **Central em qualquer app:** a faixa invisível do canto superior direito fica com os toques daquele
+  canto da barra de status (puxe a cortina do sistema pelo resto da barra). Ela some com a tela
+  bloqueada, em tela cheia e deitado. Apps com conteúdo protegido (banco, DRM) aparecem pretos na
+  captura do vidro e da transição de fechamento: é o próprio Android que esconde.
+- **Transição de fechamento** depende do sensor da dobradiça; sem ele, só a tela inicial anima.
+- **Info Brief:** o destaque azul no campo usa o texto em composição do Android; em apps com editor
+  próprio pode aparecer só como sublinhado. O gatilho "ao enviar" vale quando o app limpa o campo ou
+  quando você envia pela tecla do teclado. O aviso no minuto exato precisa de "Alarmes e lembretes".
 
 - **Não dá para substituir a tela de bloqueio.** O Cristal desenha por cima. Com uma tela sobre o
   bloqueio, o leitor de digital lateral só é ativado depois que o usuário desliza para destravar.
@@ -390,7 +413,7 @@ cristal-cover/
 
 ## Melhorias futuras
 
-1. Redimensionar widgets arrastando as bordas.
+1. Redimensionar widgets arrastando as bordas (hoje: grade e botões de largura/altura).
 2. Extrair uma cor de destaque do papel de parede para botões e seleção.
 3. Brilho do vidro reagindo também ao conteúdo que passa por trás (adaptação por elemento).
 4. Atalhos de apps (app shortcuts) no menu do ícone e selo de notificações nos ícones.

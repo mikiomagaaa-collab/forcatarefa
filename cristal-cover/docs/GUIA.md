@@ -319,6 +319,35 @@ caminho mais simples no celular é o Termux:
    O arquivo `ci/build.yml` é a versão do workflow para um repositório em que o projeto fica na raiz.
 5. Abra o repositório novo no navegador, toque em **Actions** e acompanhe o build. Depois siga a parte 1.
 
+## 9.1 Novidades da 1.6.0 que pedem um passo seu
+
+**Info Brief (teclado + Cristal).** Instale os dois APKs da mesma rodada (`cristal-cover-1.6.0.apk` e
+`lily-keyboard-1.2.0.apk`): a ponte entre eles só funciona com a mesma assinatura. No teclado, abra
+**L.I.L.Y Keyboard > Info Brief** para ligar, escolher o que reconhecer e o destaque no texto. No Cristal,
+**Configurações > Info Brief** mostra os lembretes, o histórico e duas permissões:
+
+- **Notificações:** o Cristal pede na primeira vez que você criar um lembrete. Sem ela, o lembrete só
+  aparece no Now Brief.
+- **Alarmes e lembretes:** toque em **Abrir** e ligue o Cristal. Sem isso o aviso funciona, mas pode
+  atrasar alguns minutos.
+
+**Notificações aparecendo duas vezes (aviso do sistema + ilha).** Configurações > Liquid Island >
+**Notificação aparecendo duas vezes?**: cada app com aviso flutuante aparece numa lista; toque nele para
+abrir o ajuste do canal e desligue **Pop-up na tela** (ou "Mostrar como pop-up"). Com o Shizuku ativo, o
+interruptor **Pop-ups do sistema** desliga os avisos flutuantes de uma vez (e religa quando quiser).
+
+**Central de Controle em qualquer app.** Já vem ligada: puxe para baixo a partir do canto superior
+direito, em qualquer app e nas duas telas. Para desligar: Configurações > Gestos > Liquid Control Center >
+**Em qualquer app**. Depois de atualizar, se o Android pedir, reative o serviço de acessibilidade do
+Cristal (a captura de tela usada pelo vidro e pela transição é uma capacidade nova do serviço).
+
+**Transição de fechamento em qualquer app.** Usa o sensor da dobradiça e a acessibilidade; liga e
+desliga em Configurações > Aparência > **Flip Transition**.
+
+**Modo de precisão da ilha (opcional).** Configurações > Liquid Island > **Modo de precisão**: um segundo serviço de
+acessibilidade, restrito à barra de status do sistema, mede os ícones reais para a ilha nunca cobri-los.
+Vem desligado.
+
 ## 10. Problemas comuns
 
 **"App não instalado" ao atualizar.** O APK novo foi assinado com outra chave. Desinstale o antigo e
@@ -350,3 +379,10 @@ parede.
 Cristal, ou simplesmente desinstale o app. Nada no sistema fica alterado. Se você usou a escala de algum
 app e a tela externa ficou com tudo pequeno, abra o Cristal uma vez (ele desfaz a escala) ou rode
 `adb shell wm density reset -d 1`.
+
+**A esfera do Info Brief não chega na ilha e aparece um chip no teclado.** O Cristal não está instalado,
+a Liquid Island está desligada, o teclado está na tela externa ou os dois APKs não são da mesma rodada.
+Reinstale o teclado depois do Cristal, os dois da mesma versão.
+
+**O lembrete não tocou na hora.** Confira Configurações > Info Brief: notificações permitidas e
+"Alarmes e lembretes" liberado. Se o aparelho estava desligado na hora, o Cristal avisa assim que ligar.

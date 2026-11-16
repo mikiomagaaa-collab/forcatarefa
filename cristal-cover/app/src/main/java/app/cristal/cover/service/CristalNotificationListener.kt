@@ -184,7 +184,10 @@ class CristalNotificationListener : NotificationListenerService() {
         var promoted = false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
             shortText = safely("texto curto do Live Update") { n.shortCriticalText }?.takeIf { it.isNotBlank() }
-            promoted = n.flags and Notification.FLAG_PROMOTED_ONGOING != 0 || safely("pedido de destaque") { n.isRequestPromotedOngoing } == true
+            // isRequestPromotedOngoing só existe a partir do Android 16 QPR2 (36.1).
+            val canAskPromoted = Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1
+            promoted = n.flags and Notification.FLAG_PROMOTED_ONGOING != 0 ||
+                (canAskPromoted && safely("pedido de destaque") { n.isRequestPromotedOngoing } == true)
             val style = safely("estilo de progresso") {
                 if (extras.getString(Notification.EXTRA_TEMPLATE)?.endsWith("ProgressStyle") == true) {
                     Notification.Builder.recoverBuilder(this@CristalNotificationListener, n).style as? Notification.ProgressStyle

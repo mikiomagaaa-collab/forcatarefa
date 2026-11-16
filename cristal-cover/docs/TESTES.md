@@ -208,3 +208,34 @@ Teste pelo menos: WhatsApp, YouTube, Spotify, Google Maps, Chrome, Câmera, um a
 - [ ] Ligar o carregador mostra "Carregando" por alguns segundos; mudar para vibrar mostra "Silencioso".
 - [ ] Uma notificação nova aparece na ilha; com o aparelho bloqueado, só o nome do app.
 - [ ] A barra de status continua respondendo a toques fora da ilha.
+
+### Liquid Island 2 (1.6.0)
+
+- [ ] Música expandida (tocar na cápsula): uma gota sai da cápsula, desce até logo abaixo da barra de status e vira a lente; nenhum ícone da barra fica coberto. ⚠️
+- [ ] Com muitas notificações na barra, a cápsula fica só com o ícone ou com o anel em volta da câmera.
+- [ ] Em vídeo em tela cheia ou deitado, a ilha some (chamada continua como anel).
+- [ ] Pedido no iFood/Uber (ou qualquer app com Live Update): a ilha mostra o tempo que o app escreveu e a etapa; expandida, a barra de progresso. Nada inventado. ⚠️
+- [ ] Estilo Liquid Glass (Configurações > Liquid Island > Aparência) muda o vidro da ilha.
+
+## 15. Info Brief e Now Brief (1.6.0)
+
+- [ ] Num chat, escreva "Vou ir ao show às 7 horas da noite." e pare: em 1,5 s a expressão brilha em azul no campo e na barra, vira uma esfera e voa até a ilha. ⚠️
+- [ ] A ilha mostra "Compromisso identificado · Show · 19:00" com **Criar lembrete** e **Agora não**.
+- [ ] **Criar lembrete** com a data incerta abre a folha de confirmação (dia, horário, repetir, alarme); confirmar cria o lembrete e a ilha mostra "Lembrete criado".
+- [ ] Na hora, a notificação do lembrete aparece (na ilha, sem aviso duplicado quando a ilha está ligada); **Adiar 10 min** e **Concluir** funcionam.
+- [ ] "Não posso esquecer de entregar o trabalho" vira tarefa (sem data) e aparece em Tarefas no Now Brief.
+- [ ] Enviar a mensagem sem esperar a pausa também gera a sugestão (gatilho "ao enviar").
+- [ ] "Se eu for ao show às 7…", perguntas e campos de senha **não** geram sugestão.
+- [ ] Desligar em L.I.L.Y Keyboard > Info Brief para tudo; em Cristal > Info Brief, o histórico mostra o que foi criado e dispensado.
+- [ ] O painel à esquerda da primeira página agora é o Now Brief: resumo do dia, atividades em andamento, próximos compromissos e lembretes, tarefas e sugestões.
+
+## 16. Em qualquer app (1.6.0)
+
+- [ ] Em qualquer app, puxar para baixo do canto superior direito abre a Central de Controle acompanhando o dedo, com o vidro mostrando o app de baixo; voltar ou deslizar para cima fecha. ⚠️
+- [ ] Na tela externa também funciona; com a tela bloqueada, não abre.
+- [ ] O resto da barra de status continua abrindo a cortina do sistema.
+- [ ] Fechar o aparelho dentro de um app: a tela encolhe em direção à dobra com a faixa de luz; parar no meio (modo flex) desfaz a animação em vez de congelar a tela. ⚠️
+- [ ] Ao terminar de fechar, o Cristal aparece na tela externa com a chegada em mola ("Assumir a tela externa" ligado).
+- [ ] Editor do bloqueio: segurar o bloqueio, autenticar, arrastar o relógio (X, Y), mudar a profundidade (Z) na interna e na externa; salvar.
+- [ ] Wallpaper Library: criar, renomear, duplicar e aplicar uma coleção.
+- [ ] Dock: altura, tamanho dos ícones, estilo e rótulos; ícones tingidos com o espectro, inclusive em apps sem ícone temático (TikTok); widget de foto e tamanho dos widgets.
