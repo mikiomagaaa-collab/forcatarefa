@@ -8,11 +8,24 @@
     <!-- Ditado por voz: só é pedida quando você toca no microfone pela primeira vez. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
-    <!-- Para encontrar o serviço de reconhecimento de voz do aparelho (Android 11+). -->
+    <!--
+        Info Brief: ponte com o Cristal, no próprio aparelho. Permissão de assinatura (só apps
+        assinados com a mesma chave). O teclado também a declara, para valer em qualquer ordem de
+        instalação.
+    -->
+    <permission
+        android:name="app.cristal.cover.permission.INFO_BRIEF"
+        android:description="@string/brief_permission_description"
+        android:label="@string/brief_permission_label"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="app.cristal.cover.permission.INFO_BRIEF" />
+
+    <!-- Para encontrar o serviço de reconhecimento de voz do aparelho (Android 11+) e o Cristal. -->
     <queries>
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
+        <package android:name="app.cristal.cover" />
     </queries>
 
     <application

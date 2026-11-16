@@ -1,5 +1,7 @@
 package app.lily.keyboard.core
 
+import app.lily.keyboard.brief.BriefKind
+
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
@@ -213,6 +215,14 @@ data class KeyboardSettings(
     val personalLearning: Boolean = true,
     val clipboardHistory: Boolean = true,
     val onboardingDone: Boolean = false,
+
+    // Info Brief
+    /** Reconhece compromissos no que você digita e oferece um lembrete (tudo no aparelho). */
+    val infoBrief: Boolean = true,
+    /** Destaca a expressão reconhecida no próprio campo de texto, por um instante. */
+    val briefHighlight: Boolean = true,
+    /** O que o Info Brief reconhece. */
+    val briefKinds: Set<BriefKind> = BriefKind.entries.toSet(),
 ) {
     val allThemes: List<KeyboardTheme> get() = Themes.builtIn + customThemes
 

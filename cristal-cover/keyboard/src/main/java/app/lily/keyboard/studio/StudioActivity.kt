@@ -1,5 +1,9 @@
 package app.lily.keyboard.studio
 
+import androidx.compose.material.icons.rounded.Event
+import app.lily.keyboard.brief.BriefBridge
+import app.lily.keyboard.brief.BriefKind
+import app.lily.keyboard.brief.CristalBrief
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -105,14 +109,22 @@ class StudioActivity : ComponentActivity() {
     }
 }
 
-private enum class Page { HOME, THEMES, EDITOR, LAYOUT, TYPING, TOOLBAR, LANGUAGES, VOICE, CLIPBOARD, PRIVACY, ABOUT }
+private enum class Page { HOME, THEMES, EDITOR, LAYOUT, TYPING, TOOLBAR, LANGUAGES, VOICE, CLIPBOARD, PRIVACY, BRIEF, ABOUT }
 
 @Composable
 private fun StudioApp(start: String?) {
     val context = LocalContext.current
     val store = remember { KeyboardStore.get(context) }
     val settings by store.settings.collectAsState()
-    var page by rememberSaveable { mutableStateOf(if (start == "temas") Page.THEMES.name else Page.HOME.name) }
+    var page by rememberSaveable {
+        mutableStateOf(
+            when (start) {
+                "temas" -> Page.THEMES.name
+                "brief" -> Page.BRIEF.name
+                else -> Page.HOME.name
+            },
+        )
+    }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
     val current = Page.valueOf(page)
     BackHandler(enabled = current != Page.HOME) { page = if (current == Page.EDITOR) Page.THEMES.name else Page.HOME.name }
@@ -131,6 +143,7 @@ private fun StudioApp(start: String?) {
         Page.VOICE -> VoicePage(store, settings, back)
         Page.CLIPBOARD -> ClipboardPage(store, settings, back)
         Page.PRIVACY -> PrivacyPage(store, settings, back)
+        Page.BRIEF -> BriefPage(store, settings, back)
         Page.ABOUT -> AboutPage(back)
     }
 }
@@ -184,6 +197,7 @@ private fun HomePage(settings: KeyboardSettings, go: (Page) -> Unit) {
         item { NavItem(Icons.Rounded.Language, "Idiomas", "Português (Brasil) e inglês") { go(Page.LANGUAGES) } }
         item { NavItem(Icons.Rounded.Mic, "Ditado por voz", "Reconhecimento no aparelho") { go(Page.VOICE) } }
         item { NavItem(Icons.Rounded.ContentPaste, "Área de transferência", "Histórico de 1 hora, itens fixados") { go(Page.CLIPBOARD) } }
+        item { NavItem(Icons.Rounded.Event, "Info Brief", if (settings.infoBrief) "Ligado: compromissos viram lembretes na Liquid Island" else "Desligado") { go(Page.BRIEF) } }
         item { NavItem(Icons.Rounded.Shield, "Privacidade", "Dicionário pessoal e o que fica guardado") { go(Page.PRIVACY) } }
         item { NavItem(Icons.Rounded.Info, "Sobre", "Versão, créditos e limitações") { go(Page.ABOUT) } }
     }
@@ -681,6 +695,7 @@ private fun PrivacyPage(store: KeyboardStore, settings: KeyboardSettings, onBack
                 Info("• O app não tem permissão de internet: nada do que você digita sai do aparelho.")
                 Info("• Campos de senha: sem sugestões, sem aprendizado, sem histórico.")
                 Info("• Apps que pedem modo anônimo (ex.: aba anônima) não ensinam palavras ao teclado.")
+                Info("• Info Brief: a análise é no próprio teclado. Ao Cristal (no mesmo aparelho) vai só o compromisso entendido, nunca a mensagem.")
                 Info("• Nada vai para backup na nuvem.")
             }
         }
@@ -692,6 +707,78 @@ private fun PrivacyPage(store: KeyboardStore, settings: KeyboardSettings, onBack
                     models.user.clear()
                     count = 0
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BriefPage(store: KeyboardStore, settings: KeyboardSettings, onBack: () -> Unit) {
+    val context = LocalContext.current
+    val bridge = remember { BriefBridge(context) }
+    var tick by remember { mutableIntStateOf(0) }
+    LifecycleResumeEffect(Unit) {
+        tick++
+        onPauseOrDispose { }
+    }
+    val cristal = remember(tick) { bridge.installed() }
+    val linked = remember(tick) { bridge.available() }
+    StudioScaffold("Info Brief", onBack) {
+        item {
+            Section {
+                Info("O teclado percebe compromissos, datas, tarefas e lugares no que você escreve e oferece um lembrete, sem você sair da conversa. Ex.: “Vou ao show às 7 horas da noite.”")
+                SwitchItem("Ligar o Info Brief", settings.infoBrief, "Desligado, o teclado não analisa nada") { v -> store.update { it.copy(infoBrief = v) } }
+            }
+        }
+        item {
+            Section("Como aparece") {
+                SwitchItem(
+                    "Destacar no texto",
+                    settings.briefHighlight,
+                    "A expressão recebe um brilho azul por um instante",
+                    enabled = settings.infoBrief,
+                ) { v -> store.update { it.copy(briefHighlight = v) } }
+                Info("A sugestão aparece 1,5 s depois que você para de digitar e também ao enviar a mensagem. A expressão vira uma esfera azul que voa até a Liquid Island, onde você escolhe “Criar lembrete” ou “Agora não”. Nada é criado sem a sua confirmação.")
+            }
+        }
+        item {
+            Section("O que reconhecer") {
+                for (kind in BriefKind.entries) {
+                    SwitchItem(kind.label, kind in settings.briefKinds, kind.example, enabled = settings.infoBrief) { v ->
+                        store.update { s -> s.copy(briefKinds = if (v) s.briefKinds + kind else s.briefKinds - kind) }
+                    }
+                }
+            }
+        }
+        item {
+            Section("Com o Cristal") {
+                Info(
+                    when {
+                        linked -> "Conectado: as sugestões vão para a Liquid Island, os lembretes avisam na hora e ficam no Now Brief. O histórico fica no Cristal > Info Brief."
+                        cristal -> "O Cristal está instalado, mas a ponte não foi liberada. Reinstale o teclado depois do Cristal (os dois precisam ser da mesma versão do Liquid Flip)."
+                        else -> "Sem o Cristal, a sugestão fica na barra do teclado e “Criar lembrete” abre a agenda do aparelho já preenchida."
+                    },
+                )
+                if (cristal) {
+                    StudioButton("Abrir o Info Brief no Cristal", Modifier.fillMaxWidth()) {
+                        runCatching {
+                            context.startActivity(
+                                Intent("android.intent.action.APPLICATION_PREFERENCES")
+                                    .setPackage(CristalBrief.PACKAGE)
+                                    .putExtra("page", "BRIEF")
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Section("Privacidade") {
+                Info("• Tudo é analisado no teclado, no aparelho. O teclado não tem internet.")
+                Info("• Nunca analisa senhas, códigos, e-mails, endereços web nem campos em modo anônimo.")
+                Info("• Só a última frase é lida, e nada do que você digita é guardado. Ao Cristal vai só o compromisso entendido (título, horário e a expressão).")
+                Info("• Frases hipotéticas (“se eu for…”, “talvez”), perguntas e coisas que já passaram não viram sugestão.")
             }
         }
     }

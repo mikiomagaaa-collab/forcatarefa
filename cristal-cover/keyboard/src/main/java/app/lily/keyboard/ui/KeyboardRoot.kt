@@ -114,6 +114,9 @@ fun KeyboardRoot(
     bottomInset: Dp = 0.dp,
     themeOverride: KeyboardTheme? = null,
     initialPanel: Panel = Panel.KEYS,
+    /** Info Brief: a sugestão do momento (null quando não há nada a mostrar). */
+    brief: app.lily.keyboard.brief.BriefUi? = null,
+    briefActions: BriefActions = BriefActions(),
 ) {
     val ui by controller.state.collectAsState()
     val theme = Themes.resolve(themeOverride ?: settings.theme, androidx.compose.foundation.isSystemInDarkTheme())
@@ -258,6 +261,8 @@ fun KeyboardRoot(
                         onHide = host::hideKeyboard,
                     )
                 }
+                // Info Brief por cima da barra (só com as teclas à mostra).
+                if (brief != null && panel == Panel.KEYS) BriefOverlay(brief, theme, briefActions, Modifier.matchParentSize())
             }
 
             OneHandFrame(settings = settings, store = store, theme = theme, enabled = settings.oneHanded && !compact) {

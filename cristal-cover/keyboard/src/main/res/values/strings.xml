@@ -4,4 +4,6 @@
     <string name="ime_name">L.I.L.Y Keyboard</string>
     <string name="subtype_pt">Português (Brasil)</string>
     <string name="subtype_en">English (US)</string>
+    <string name="brief_permission_label">Info Brief do L.I.L.Y</string>
+    <string name="brief_permission_description">Permite que o L.I.L.Y Keyboard mande ao Cristal os compromissos reconhecidos (título e horário), para a Liquid Island oferecer um lembrete.</string>
 </resources>

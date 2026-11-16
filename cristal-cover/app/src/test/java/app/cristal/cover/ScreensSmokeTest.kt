@@ -48,6 +48,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.swipeRight
 import app.cristal.cover.data.apps.AppInfo
 import app.cristal.cover.data.battery.BatteryState
@@ -104,6 +105,9 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import app.cristal.cover.ui.launcher.SafeLayout
+import app.cristal.cover.data.brief.Reminder
+import app.cristal.cover.data.island.BriefSuggestion
+import app.cristal.cover.data.island.LiveIntegration
 import app.cristal.cover.ui.launcher.NowBriefActions
 import app.cristal.cover.ui.launcher.NowBriefData
 import app.cristal.cover.ui.launcher.NowBriefPanel
@@ -280,6 +284,7 @@ class ScreensSmokeTest {
         settings: Settings,
         initialPage: Int = 1,
         sceneLayout: HomeLayout = layout,
+        nowBrief: NowBriefData = NowBriefData(),
         overlay: @Composable () -> Unit = {},
     ) {
         CristalTheme(settings = settings) {
@@ -307,7 +312,7 @@ class ScreensSmokeTest {
                                 widgetData = widgetData,
                                 widgetActions = widgetActions,
                                 callbacks = callbacks,
-                                todayPanel = { NowBriefPanel(widgetData, widgetActions, NowBriefData(), NowBriefActions()) },
+                                todayPanel = { NowBriefPanel(widgetData, widgetActions, nowBrief, NowBriefActions()) },
                             )
                         }
                     }
@@ -339,6 +344,35 @@ class ScreensSmokeTest {
         rule.onRoot().performTouchInput { swipeRight() }
         rule.onRoot().performTouchInput { swipeRight() }
         shot("03-painel-hoje")
+    }
+
+    @Test
+    fun `now brief com lembretes sugestoes e entrega`() {
+        val delivery = NotificationItem(
+            "entrega", "br.com.brainweb.ifood", "iFood", "Seu pedido saiu para entrega", "Chega em 12 min",
+            now - 60_000, 0, false, false, Notification.VISIBILITY_PUBLIC, null, apps[3].icon, null,
+            ongoing = true,
+        )
+        val tomorrow9 = java.time.LocalDate.now().plusDays(1).atTime(9, 0).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val data = NowBriefData(
+            reminders = listOf(
+                Reminder(1, "Show", now + 5 * 3_600_000L, now, source = "info_brief"),
+                Reminder(2, "Entregar o trabalho", null, now, kind = "task"),
+                Reminder(3, "Aula", tomorrow9 - 3_600_000L, now, weekly = true),
+            ),
+            suggestions = listOf(
+                BriefSuggestion(9, "Passar no shopping", tomorrow9, dateConfirmed = true, kind = "place", sourceText = "passar no shopping amanhã", timeConfirmed = false, place = "shopping"),
+            ),
+            lives = listOfNotNull(LiveIntegration.toLive(delivery)),
+        )
+        rule.setContent { Scene(Settings(glassQuality = GlassQuality.LIQUID), initialPage = 0, nowBrief = data) }
+        rule.onNodeWithContentDescription("Now Brief").assertExists()
+        rule.onNodeWithText("Seu pedido saiu para entrega").assertExists()
+        shot("51-now-brief")
+        rule.onNodeWithContentDescription("Now Brief").performTouchInput { swipeUp() }
+        shot("51b-now-brief-tarefas")
+        rule.onNodeWithText("Entregar o trabalho").assertExists()
+        rule.onNodeWithText("Passar no shopping").assertExists()
     }
 
     @Test

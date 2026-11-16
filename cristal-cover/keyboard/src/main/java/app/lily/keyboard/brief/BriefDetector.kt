@@ -47,6 +47,14 @@ data class BriefCandidate(
  * fora: a ideia é sugerir pouco e acertar.
  */
 object BriefDetector {
+    /**
+     * Fronteira de palavra que entende acentos. O `\b` do Java só conhece letras ASCII ("às" e
+     * "amanhã" ficariam sem fronteira); esta funciona igual no Android (ICU) e nos testes (JVM).
+     */
+    private const val WB = "(?:(?<=[\\p{L}\\p{N}_])(?![\\p{L}\\p{N}_])|(?<![\\p{L}\\p{N}_])(?=[\\p{L}\\p{N}_]))"
+
+    private fun rx(pattern: String): Regex = Regex(pattern.replace("\\b", WB))
+
     private const val NUMBER = "(\\d{1,2}|uma|um|duas|dois|tr[êe]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze)"
     private val numberWords = mapOf(
         "um" to 1, "uma" to 1, "dois" to 2, "duas" to 2, "três" to 3, "tres" to 3, "quatro" to 4, "cinco" to 5,
@@ -55,63 +63,63 @@ object BriefDetector {
 
     // --- Horários ---------------------------------------------------------------------------------
     /** "às 7 horas da noite", "às 19h", "7h30", "às 8 e meia", "lá pelas 9 da noite". */
-    private val ptTime = Regex(
+    private val ptTime = rx(
         "(?:\\b(às|as|pelas|umas|por volta das|lá pelas|la pelas|a partir das|até as|até às)\\s+)?" +
             "\\b$NUMBER(?:\\s*([:h])\\s*(\\d{2}))?(?:\\s*(hs|h|horas|hora)\\b)?" +
             "(?:\\s+e\\s+(meia|\\d{1,2}))?" +
             "(?:\\s+(?:da|de)\\s+(manh[ãa]|tarde|noite|madrugada))?",
     )
-    private val ptNoonMidnight = Regex("\\b(?:ao\\s+|à\\s+|a\\s+)?(meio[- ]dia|meia[- ]noite)\\b")
+    private val ptNoonMidnight = rx("\\b(?:ao\\s+|à\\s+|a\\s+)?(meio[- ]dia|meia[- ]noite)\\b")
 
     /** "at 7pm", "at 7:30 pm", "at 19:00", "7 o'clock". */
-    private val enTime = Regex(
-        "(?:\\b(at|around|by)\\s+)?\\b(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm|a\\.m\\.|p\\.m\\.|o'?clock)?\\b",
+    private val enTime = rx(
+        "(?:\\b(at|around|by)\\s+)?\\b(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm|a\\.m\\.?|p\\.m\\.?|o'?clock)?(?![a-z0-9])",
     )
 
     /** Período solto: "hoje à noite", "amanhã de manhã". */
-    private val ptPeriod = Regex("\\b(?:à|a|de|pela|na)\\s+(manh[ãa]|tarde|noite)\\b")
-    private val enPeriod = Regex("\\b(?:in the|this)\\s+(morning|afternoon|evening)\\b|\\b(tonight)\\b")
+    private val ptPeriod = rx("\\b(?:à|a|de|pela|na)\\s+(manh[ãa]|tarde|noite)\\b")
+    private val enPeriod = rx("\\b(?:in the|this)\\s+(morning|afternoon|evening)\\b|\\b(tonight)\\b")
 
     // --- Datas -----------------------------------------------------------------------------------
-    private val ptToday = Regex("\\bhoje\\b")
-    private val ptAfterTomorrow = Regex("\\bdepois de amanh[ãa]\\b")
-    private val ptTomorrow = Regex("\\bamanh[ãa]\\b")
-    private val ptWeekday = Regex("\\b(segunda|ter[çc]a|quarta|quinta|sexta|s[áa]bado|domingo)(s)?(?:[- ]feiras?)?\\b")
-    private val ptDayOfMonth = Regex("\\bdia\\s+(\\d{1,2})\\b(?:\\s+de\\s+(janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro))?")
-    private val ptMonthDate = Regex("\\b(\\d{1,2})\\s+de\\s+(janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\\b")
-    private val numericDate = Regex("\\b(\\d{1,2})/(\\d{1,2})(?:/(\\d{2,4}))?\\b")
-    private val ptNextWeek = Regex("\\b(?:semana que vem|pr[óo]xima semana)\\b")
-    private val ptNextMonth = Regex("\\b(?:m[êe]s que vem|pr[óo]ximo m[êe]s)\\b")
-    private val ptWeekend = Regex("\\b(?:fim|final) de semana\\b")
-    private val enToday = Regex("\\b(today|tonight)\\b")
-    private val enTomorrow = Regex("\\btomorrow\\b")
-    private val enWeekday = Regex("\\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)(s)?\\b")
-    private val enNextWeek = Regex("\\bnext week\\b")
-    private val enNextMonth = Regex("\\bnext month\\b")
-    private val enWeekend = Regex("\\b(?:this|next)? ?weekend\\b")
+    private val ptToday = rx("\\bhoje\\b")
+    private val ptAfterTomorrow = rx("\\bdepois de amanh[ãa]\\b")
+    private val ptTomorrow = rx("\\bamanh[ãa]\\b")
+    private val ptWeekday = rx("\\b(segunda|ter[çc]a|quarta|quinta|sexta|s[áa]bado|domingo)(s)?(?:[- ]feiras?)?\\b")
+    private val ptDayOfMonth = rx("\\bdia\\s+(\\d{1,2})\\b(?:\\s+de\\s+(janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro))?")
+    private val ptMonthDate = rx("\\b(\\d{1,2})\\s+de\\s+(janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\\b")
+    private val numericDate = rx("\\b(\\d{1,2})/(\\d{1,2})(?:/(\\d{2,4}))?\\b")
+    private val ptNextWeek = rx("\\b(?:semana que vem|pr[óo]xima semana)\\b")
+    private val ptNextMonth = rx("\\b(?:m[êe]s que vem|pr[óo]ximo m[êe]s)\\b")
+    private val ptWeekend = rx("\\b(?:fim|final) de semana\\b")
+    private val enToday = rx("\\b(today|tonight)\\b")
+    private val enTomorrow = rx("\\btomorrow\\b")
+    private val enWeekday = rx("\\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)(s)?\\b")
+    private val enNextWeek = rx("\\bnext week\\b")
+    private val enNextMonth = rx("\\bnext month\\b")
+    private val enWeekend = rx("\\b(?:this|next)? ?weekend\\b")
 
     private val months = listOf("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro")
 
     // --- Filtros ---------------------------------------------------------------------------------
-    private val hypothetical = Regex(
+    private val hypothetical = rx(
         "\\b(?:talvez|quem sabe|seria|será que|sera que|e se|imagina|imagine|hipoteticamente|supondo|caso|maybe|perhaps|would|could|if i|if we|if you|in case|suppose)\\b|" +
             "\\bse\\s+(?:eu|a gente|você|voce|vc|der|puder|não|nao|tiver|for|fosse|chover|sobrar|rolar|ele|ela|eles|elas|vocês)\\b",
     )
-    private val past = Regex("\\b(?:ontem|anteontem|semana passada|m[êe]s passado|ano passado|fui|fomos|foi|teve|tivemos|aconteceu|viajei|viajamos|yesterday|last week|last month|went|was|were)\\b")
-    private val rescheduled = Regex("\\b(?:remarcad[ao]s?|adiad[ao]s?|mudou para|passou para|ficou para|moved to|rescheduled)\\b")
-    private val negated = Regex("\\b(?:não|nao|nunca|jamais)\\s+(?:vou|vamos|irei|iremos|vai|vão|tenho|temos|posso|podemos|consigo|dá|da|rola|marquei)\\b|\\b(?:won't|can't|cannot|not going)\\b")
+    private val past = rx("\\b(?:ontem|anteontem|semana passada|m[êe]s passado|ano passado|fui|fomos|foi|teve|tivemos|aconteceu|viajei|viajamos|yesterday|last week|last month|went|was|were)\\b")
+    private val rescheduled = rx("\\b(?:remarcad[ao]s?|adiad[ao]s?|mudou para|passou para|ficou para|moved to|rescheduled)\\b")
+    private val negated = rx("\\b(?:não|nao|nunca|jamais)\\s+(?:vou|vamos|irei|iremos|vai|vão|tenho|temos|posso|podemos|consigo|dá|da|rola|marquei)\\b|\\b(?:won't|can't|cannot|not going)\\b")
 
     // --- Tarefas, lugares, viagens --------------------------------------------------------------
     /** Pistas fortes: viram tarefa mesmo sem data. */
-    private val strongTask = Regex(
+    private val strongTask = rx(
         "\\b(?:não posso (?:me )?esquecer de|nao posso (?:me )?esquecer de|não (?:posso )?esquecer de|nao esquecer de|não esqueça de|nao esqueca de|" +
             "preciso lembrar de|tenho que lembrar de|lembrar de|me lembra de|não deixar de|nao deixar de|" +
             "don't forget to|dont forget to|remember to|must not forget to)\\s+",
     )
 
     /** Pistas fracas: só valem junto com uma data ou um horário. */
-    private val weakTask = Regex("\\b(?:preciso|tenho que|tenho de|vou ter que|devo|need to|have to|gotta)\\s+(?:de\\s+)?")
-    private val placeVerb = Regex(
+    private val weakTask = rx("\\b(?:preciso|tenho que|tenho de|vou ter que|devo|need to|have to|gotta)\\s+(?:de\\s+)?")
+    private val placeVerb = rx(
         "\\b(?:passar|ir|dar uma passada|dar um pulo)\\s+(?:lá\\s+)?(?:no|na|em|ao|à|a|pelo|pela|pro|pra|para o|para a)\\s+([a-zà-ú]+(?:\\s+[a-zà-ú]+)?)|" +
             "\\b(?:go|stop by|drop by|pass by)\\s+(?:to\\s+)?(?:the\\s+)?([a-z]+(?:\\s+[a-z]+)?)",
     )
@@ -123,11 +131,11 @@ object BriefDetector {
         "pet shop", "petshop", "biblioteca", "prefeitura", "detran", "consultório", "consultorio", "laboratório", "laboratorio",
         "mall", "supermarket", "pharmacy", "bank", "bakery", "gym", "post office", "hospital", "school", "office", "airport", "library",
     )
-    private val trip = Regex("\\b(?:vou|vamos|irei|iremos|minha|nossa|a)\\s+(?:viajar|viagem)\\b|\\bviajar\\b|\\b(?:going to travel|trip)\\b")
-    private val tripTo = Regex("\\b(?:para|pra|to)\\s+([A-ZÀ-Ú][\\wÀ-ú]+(?:\\s+[A-ZÀ-Ú][\\wÀ-ú]+)?)")
+    private val trip = rx("\\b(?:vou|vamos|irei|iremos|minha|nossa|a)\\s+(?:viajar|viagem)\\b|\\bviajar\\b|\\b(?:going to travel|trip)\\b")
+    private val tripTo = rx("\\b(?:para|pra|to)\\s+([A-ZÀ-Ú][\\wÀ-ú]+(?:\\s+[A-ZÀ-Ú][\\wÀ-ú]+)?)")
 
     /** Verbos de compromisso: sem um evento nomeado, só eles fazem um horário virar sugestão. */
-    private val commitment = Regex(
+    private val commitment = rx(
         "\\b(?:vou|vamos|irei|iremos|marquei|marcamos|combinei|combinamos|tenho|temos|te encontro|nos encontramos|começa|começo|" +
             "i'll|i will|we'll|we will|i have|we have|meet|meeting)\\b",
     )
@@ -218,13 +226,13 @@ object BriefDetector {
             }
         }
         // 4) Compromisso com horário ou data.
-        if ((time != null || date != null) && BriefKind.EVENT in kinds) {
-            val title = when {
-                noun != null -> withCompanion(noun.second, sentence, noun.first)
-                commitment.containsMatchIn(lower) && time != null -> "Compromisso"
-                else -> return null
-            }
-            if (resolved == null) return null
+        val eventTitle = when {
+            noun != null -> withCompanion(noun.second, sentence, noun.first)
+            commitment.containsMatchIn(lower) && time != null -> "Compromisso"
+            else -> null
+        }
+        if ((time != null || date != null) && BriefKind.EVENT in kinds && eventTitle != null && resolved != null) {
+            val title = eventTitle
             return build(BriefKind.EVENT, title, resolved, date?.confirmed == true, time != null && !time.ambiguous, false, findPlace(lower)?.takeIf { noun == null }, sentence, offset, listOfNotNull(time?.range, date?.range))
         }
         // 5) Lugar sem data, com intenção ("vou passar na farmácia").
@@ -232,7 +240,7 @@ object BriefDetector {
             val m = placeVerb.find(lower) ?: return null
             val place = findPlace(m.value) ?: return null
             val text = sentence.substring(m.range.first, m.range.last + 1)
-            return build(BriefKind.PLACE, capitalize(text), null, false, false, false, place, sentence, offset, listOf(m.range))
+            return build(BriefKind.PLACE, capitalize(text), resolved, date?.confirmed == true, false, false, place, sentence, offset, listOfNotNull(m.range, date?.range))
         }
         return null
     }
@@ -240,7 +248,7 @@ object BriefDetector {
     // --- Peças -----------------------------------------------------------------------------------
 
     private data class TimeHit(val hour: Int, val minute: Int, val ambiguous: Boolean, val range: IntRange, val period: String?)
-    private data class DateHit(val date: LocalDate, val confirmed: Boolean, val weekly: Boolean, val range: IntRange)
+    private data class DateHit(val date: LocalDate, val confirmed: Boolean, val weekly: Boolean, val range: IntRange, val weekday: Boolean = false)
 
     /** A última frase (do último ponto final, exclamação, interrogação ou quebra de linha em diante). */
     private fun lastSentence(text: String): Pair<Int, String> {
@@ -269,10 +277,10 @@ object BriefDetector {
             val period = m.groups[7]?.value
             val hasMinutes = sep == ":" || (sep == "h" && mm != null)
             val explicit = hasMinutes || unit != null || period != null || sep == "h"
-            // "as 3 camisas": o artigo "as" só vale com algo que confirme horário.
+            // "às 8" é horário. "as 3 camisas", "umas 3 pessoas": esses também são artigos, então só
+            // valem com algo que confirme o horário (unidade, minutos, período ou fim da frase).
             if (prefix == null && !explicit) continue
-            if (prefix == "as" && !explicit && !endsAsTime(s, m.range.last + 1)) continue
-            if (prefix == "às" && !explicit && !endsAsTime(s, m.range.last + 1)) continue
+            if (prefix in articleLike && !explicit && !endsAsTime(s, m.range.last + 1)) continue
             if (hour > 23) continue
             val minute = when {
                 mm != null -> mm
@@ -282,7 +290,7 @@ object BriefDetector {
             }
             if (minute > 59) continue
             // "19h", "7h30", "19:00": formato de 24 h, sem dúvida. "às 7", "7 horas": sem período, ambíguo.
-            val twentyFour = sep != null
+            val twentyFour = sep != null || unit == "h" || unit == "hs"
             val ambiguous = period == null && hour in 1..12 && !twentyFour
             val adjusted = when {
                 period == null -> hour
@@ -312,6 +320,8 @@ object BriefDetector {
         }
         return null
     }
+
+    private val articleLike = setOf("as", "umas", "pelas")
 
     /** Depois de "às 7" vem fim de frase, pontuação, ou uma palavra de data/período? */
     private fun endsAsTime(s: String, from: Int): Boolean {
@@ -376,8 +386,8 @@ object BriefDetector {
         }
         val before = s.substring(0, m.range.first).takeLast(18)
         val after = s.substring(m.range.last + 1).take(10)
-        val weekly = Regex("\\b(?:toda|todo|todas|todos|every)\\b(?:\\s+(?:as|os|a|o))?\\s*$").containsMatchIn(before) || m.groups[2] != null && Regex("\\b(?:às|as|aos|nas|nos|on)\\s*$").containsMatchIn(before)
-        val next = Regex("\\bpr[óo]xim[ao]\\s*$|\\bnext\\s*$").containsMatchIn(before) || after.trimStart().startsWith("que vem")
+        val weekly = rx("\\b(?:toda|todo|todas|todos|every)\\b(?:\\s+(?:as|os|a|o))?\\s*$").containsMatchIn(before) || m.groups[2] != null && rx("\\b(?:às|as|aos|nas|nos|on)\\s*$").containsMatchIn(before)
+        val next = rx("\\bpr[óo]xim[ao]\\s*$|\\bnext\\s*$").containsMatchIn(before) || after.trimStart().startsWith("que vem")
         val base = today.with(TemporalAdjusters.nextOrSame(day))
         val date = when {
             next && base == today -> today.plusWeeks(1)
@@ -385,7 +395,7 @@ object BriefDetector {
             else -> base
         }
         val end = if (after.trimStart().startsWith("que vem")) m.range.last + 1 + after.indexOf("que vem") + "que vem".length - 1 else m.range.last
-        return DateHit(date, true, weekly, m.range.first..end)
+        return DateHit(date, true, weekly, m.range.first..end, weekday = true)
     }
 
     private fun monthIndex(name: String): Int = months.indexOfFirst { it.replace('ç', 'c') == name.replace('ç', 'c') } + 1
@@ -404,7 +414,7 @@ object BriefDetector {
     private fun findEvent(s: String): Pair<Int, String>? {
         var best: Pair<Int, String>? = null
         for ((word, title) in events) {
-            val m = Regex("\\b${Regex.escape(word)}\\b").find(s) ?: continue
+            val m = rx("\\b${Regex.escape(word)}\\b").find(s) ?: continue
             if (best == null || m.range.first < best.first) best = m.range.first to title
         }
         // "trabalho" só é evento se não houver outro (em "entregar o trabalho" é tarefa).
@@ -412,7 +422,7 @@ object BriefDetector {
     }
 
     private fun findPlace(s: String): String? {
-        val m = placeVerb.find(s) ?: return places.firstOrNull { Regex("\\b${Regex.escape(it)}\\b").containsMatchIn(s) && Regex("\\b(?:no|na|ao|à|pro|pra)\\s+${Regex.escape(it)}\\b").containsMatchIn(s) }
+        val m = placeVerb.find(s) ?: return places.firstOrNull { rx("\\b${Regex.escape(it)}\\b").containsMatchIn(s) && rx("\\b(?:no|na|ao|à|pro|pra)\\s+${Regex.escape(it)}\\b").containsMatchIn(s) }
         val words = (m.groups[1]?.value ?: m.groups[2]?.value ?: return null).split(' ')
         return when {
             words.size >= 2 && "${words[0]} ${words[1]}" in places -> "${words[0]} ${words[1]}"
@@ -423,7 +433,7 @@ object BriefDetector {
 
     /** "Jantar com Ana" quando a frase diz "jantar com a Ana". */
     private fun withCompanion(title: String, sentence: String, at: Int): String {
-        val m = Regex("\\bcom\\s+(?:a\\s+|o\\s+)?([A-ZÀ-Ú][\\wÀ-ú]+)").find(sentence, at) ?: return title
+        val m = rx("\\bcom\\s+(?:a\\s+|o\\s+)?([A-ZÀ-Ú][\\wÀ-ú]+)").find(sentence, at) ?: return title
         return if (m.range.first - at < 40) "$title com ${m.groupValues[1]}" else title
     }
 
@@ -433,9 +443,9 @@ object BriefDetector {
         val from = cue.range.last + 1
         var to = sentence.length
         for (r in listOfNotNull(time?.range, date?.range)) if (r.first in from until to) to = r.first
-        val stop = Regex("[,;.!?]|\\s(?:e depois|mas|porque|pois|que é|and|but|because)\\s").find(lower, from)
+        val stop = rx("[,;.!?]|\\s(?:e depois|mas|porque|pois|que é|and|but|because)\\s").find(lower, from)
         if (stop != null && stop.range.first < to) to = stop.range.first
-        val words = sentence.substring(from, to).trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+        val words = sentence.substring(from, to).trim().split(rx("\\s+")).filter { it.isNotEmpty() }
         // Tira preposições soltas no fim ("…o trabalho na").
         val cleaned = words.take(7).dropLastWhile { it.lowercase(Locale.ROOT) in dangling || it.lowercase(Locale.ROOT) in setOf("hoje", "amanhã", "amanha") }
         if (cleaned.isEmpty() || cleaned.joinToString(" ").length < 3) return null
@@ -458,8 +468,9 @@ object BriefDetector {
                     else -> time.hour
                 }
             }
+            if (time.ambiguous && date != null && hour < 12 && date.date == now.toLocalDate() && date.date.atTime(hour, time.minute).isBefore(now)) hour += 12
             val t = LocalTime.of(hour.coerceIn(0, 23), time.minute)
-            if (date != null) return date.date.atTime(t)
+            if (date != null) return date.date.atTime(t).nextWeekIfPast(date, now)
             val today = now.toLocalDate().atTime(t)
             return if (today.isAfter(now.plusMinutes(5))) today else today.plusDays(1)
         }
@@ -470,10 +481,14 @@ object BriefDetector {
                 period == "tarde" || period == "afternoon" -> 15
                 else -> 20
             }
-            return date.date.atTime(h, 0)
+            return date.date.atTime(h, 0).nextWeekIfPast(date, now)
         }
         return null
     }
+
+    /** "Sexta às 19h" dito na sexta às 20h é a próxima sexta (e uma rotina começa na próxima vez). */
+    private fun LocalDateTime.nextWeekIfPast(date: DateHit, now: LocalDateTime): LocalDateTime =
+        if ((date.weekly || date.weekday) && isBefore(now)) plusWeeks(1) else this
 
     private fun build(
         kind: BriefKind,
