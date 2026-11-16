@@ -10,6 +10,9 @@ import android.view.inputmethod.EditorInfo
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import app.lily.keyboard.core.KeyboardSettings
+import app.lily.shared.brief.BriefCandidate
+import app.lily.shared.brief.BriefDetector
+import app.lily.shared.bridge.CristalBrief
 import app.lily.keyboard.engine.EditorConfig
 import java.time.LocalDateTime
 import java.util.Locale

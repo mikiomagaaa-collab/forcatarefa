@@ -95,6 +95,7 @@ fun PanelHeader(panel: Panel, theme: KeyboardTheme, onBack: () -> Unit) {
         Panel.EDIT -> "Edição de texto"
         Panel.VOICE -> "Ditado por voz"
         Panel.LANGUAGE -> "Idioma e teclados"
+        Panel.AI -> "L.I.L.Y · no aparelho"
         Panel.KEYS -> ""
     }
     Row(Modifier.fillMaxSize().padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -3,6 +3,7 @@
 
     <!--
         Privacidade: o teclado NÃO pede acesso à internet. Nada do que você digita sai do aparelho.
+        A L.I.L.Y (IA) também roda no aparelho e só recebe texto quando você toca numa ação dela.
     -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Ditado por voz: só é pedida quando você toca no microfone pela primeira vez. -->
@@ -20,12 +21,24 @@
         android:protectionLevel="signature" />
     <uses-permission android:name="app.cristal.cover.permission.INFO_BRIEF" />
 
+    <!--
+        L.I.L.Y no teclado: ponte com a L.I.L.Y AI (outro app do aparelho, mesma assinatura). O texto
+        só vai para a IA num toque explícito numa ação; campos de senha e de códigos ficam de fora.
+    -->
+    <permission
+        android:name="app.lily.ai.permission.USE_AI"
+        android:description="@string/use_ai_description"
+        android:label="@string/use_ai_label"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="app.lily.ai.permission.USE_AI" />
+
     <!-- Para encontrar o serviço de reconhecimento de voz do aparelho (Android 11+) e o Cristal. -->
     <queries>
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
         <package android:name="app.cristal.cover" />
+        <package android:name="app.lily.ai" />
     </queries>
 
     <application

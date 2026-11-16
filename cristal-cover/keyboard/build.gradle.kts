@@ -18,8 +18,8 @@ android {
         applicationId = "app.lily.keyboard"
         minSdk = 33
         targetSdk = 36
-        versionCode = 120 + ciRunNumber
-        versionName = "1.2.0"
+        versionCode = 130 + ciRunNumber
+        versionName = "1.3.0"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -81,6 +81,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":shared"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

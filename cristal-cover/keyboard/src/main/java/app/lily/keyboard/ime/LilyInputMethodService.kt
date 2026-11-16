@@ -1,5 +1,10 @@
 package app.lily.keyboard.ime
 
+import android.content.ClipDescription
+import android.content.ClipboardManager
+import app.lily.keyboard.ai.AiSource
+import app.lily.keyboard.ai.KeyboardAi
+import app.lily.shared.bridge.AiBridge
 import android.content.Intent
 import android.graphics.drawable.ColorDrawable
 import android.inputmethodservice.InputMethodService
@@ -11,7 +16,7 @@ import android.text.Spanned
 import android.text.style.BackgroundColorSpan
 import android.view.Display
 import app.lily.keyboard.brief.BriefBridge
-import app.lily.keyboard.brief.BriefCandidate
+import app.lily.shared.brief.BriefCandidate
 import app.lily.keyboard.brief.InfoBrief
 import app.lily.keyboard.ui.BriefActions
 import android.view.KeyEvent
@@ -58,6 +63,7 @@ import kotlinx.coroutines.launch
 
 private const val BRIEF_TEXT = 400
 private const val HIGHLIGHT_MS = 1_500L
+private const val AI_TEXT = 4_000
 
 /**
  * O serviço do L.I.L.Y Keyboard. O Android o chama quando um campo de texto pede o teclado; ele
@@ -81,6 +87,7 @@ class LilyInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     private lateinit var emojiHistory: EmojiHistory
     private lateinit var feedback: Feedback
     private lateinit var brief: InfoBrief
+    private lateinit var ai: KeyboardAi
 
     private val worker = Executors.newSingleThreadExecutor { r -> Thread(r, "lily-sugestoes") }
     private val main = Handler(Looper.getMainLooper())
@@ -173,6 +180,55 @@ class LilyInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         override fun hideKeyboard() {
             requestHideSelf(0)
         }
+
+        override fun aiSource(): AiSource {
+            val config = controller.state.value.config
+            val c = ic
+            // Em campo protegido, nem lê o texto.
+            if (config.password || c == null) return KeyboardAi.sourceFor(config, null, null)
+            return KeyboardAi.sourceFor(config, c.getSelectedText(0)?.toString(), c.getTextBeforeCursor(AI_TEXT, 0)?.toString())
+        }
+
+        override fun replaceSource(source: AiSource, text: String): Boolean {
+            val c = ic ?: return false
+            val src = source as? AiSource.Text ?: return false
+            controller.confirmComposing()
+            beforeEdit()
+            c.beginBatchEdit()
+            try {
+                if (src.selection) {
+                    if (c.getSelectedText(0)?.toString() != src.text) return false
+                    c.commitText(text, 1)
+                } else {
+                    if (c.getTextBeforeCursor(src.text.length, 0)?.toString() != src.text) return false
+                    c.deleteSurroundingText(src.text.length, 0)
+                    c.commitText(text, 1)
+                }
+            } finally {
+                c.endBatchEdit()
+            }
+            return true
+        }
+
+        override fun insertText(text: String) {
+            // Com um trecho selecionado, insere depois dele (sem apagar a seleção).
+            if (selStart >= 0 && selEnd > selStart) ic?.setSelection(selEnd, selEnd)
+            val before = ic?.getTextBeforeCursor(1, 0)?.toString().orEmpty()
+            val sep = if (before.isEmpty() || before.last().isWhitespace()) "" else " "
+            controller.commitRaw(sep + text)
+        }
+
+        override fun clipboardText(): String? {
+            val clip = getSystemService(ClipboardManager::class.java)?.primaryClip ?: return null
+            // O Android marca textos sensíveis copiados (senhas, códigos): esses não vão para a IA.
+            if (clip.description?.extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE) == true) return null
+            return clip.getItemAt(0)?.coerceToText(this@LilyInputMethodService)?.toString()?.take(AI_TEXT)
+        }
+
+        override fun openAiHub() {
+            runCatching { startActivity(AiBridge.hubIntent()) }
+            requestHideSelf(0)
+        }
     }
 
     override fun onCreate() {
@@ -205,6 +261,7 @@ class LilyInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             displayId = { window?.window?.decorView?.display?.displayId ?: Display.DEFAULT_DISPLAY }
             visible = { isInputViewShown }
         }
+        ai = KeyboardAi(this) { store.settings.value }
         models.preload(store.settings.value.language)
         clipboard.attach(this) { store.settings.value.clipboardHistory }
 
@@ -247,6 +304,7 @@ class LilyInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                     bottomInset = bottomInset.value.dp,
                     brief = briefUi,
                     briefActions = briefActions,
+                    ai = ai,
                 )
             }
         }
@@ -274,6 +332,8 @@ class LilyInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     override fun onFinishInputView(finishingInput: Boolean) {
         endHighlight()
+        // O teclado saiu: solta a ligação com a IA (ela pode liberar a memória do modelo).
+        if (::ai.isInitialized) ai.release()
         controller.finishInput()
         voice.reset()
         super.onFinishInputView(finishingInput)
@@ -343,6 +403,7 @@ class LilyInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     override fun onDestroy() {
         endHighlight()
+        if (::ai.isInitialized) ai.release()
         clipboard.detach()
         voice.reset()
         models.user.save()

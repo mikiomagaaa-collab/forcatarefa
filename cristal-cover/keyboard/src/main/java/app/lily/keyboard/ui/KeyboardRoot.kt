@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.EmojiEmotions
 import androidx.compose.material.icons.rounded.KeyboardHide
@@ -93,9 +94,22 @@ interface KeyboardHost {
     fun showInputMethodPicker() {}
     fun requestVoicePermission() {}
     fun hideKeyboard() {}
+
+    /** L.I.L.Y: o texto selecionado ou antes do cursor (nunca de campos de senha ou de códigos). */
+    fun aiSource(): app.lily.keyboard.ai.AiSource = app.lily.keyboard.ai.AiSource.Blocked("Indisponível nesta prévia.")
+
+    /** Troca o texto de origem pela resposta; false se o campo mudou desde o pedido. */
+    fun replaceSource(source: app.lily.keyboard.ai.AiSource, text: String): Boolean = false
+
+    fun insertText(text: String) {}
+
+    /** O texto copiado (para "Responder"); null se não há ou se o Android o marcou como sensível. */
+    fun clipboardText(): String? = null
+
+    fun openAiHub() {}
 }
 
-enum class Panel { KEYS, EMOJI, CLIPBOARD, EDIT, VOICE, LANGUAGE }
+enum class Panel { KEYS, EMOJI, CLIPBOARD, EDIT, VOICE, LANGUAGE, AI }
 
 /**
  * O teclado inteiro: barra de sugestões/atalhos, teclas ou painéis, fundo do tema e o modo de uma mão.
@@ -117,6 +131,8 @@ fun KeyboardRoot(
     /** Info Brief: a sugestão do momento (null quando não há nada a mostrar). */
     brief: app.lily.keyboard.brief.BriefUi? = null,
     briefActions: BriefActions = BriefActions(),
+    /** A L.I.L.Y no teclado (null na prévia do Studio). */
+    ai: app.lily.keyboard.ai.KeyboardAi? = null,
 ) {
     val ui by controller.state.collectAsState()
     val theme = Themes.resolve(themeOverride ?: settings.theme, androidx.compose.foundation.isSystemInDarkTheme())
@@ -245,6 +261,7 @@ fun KeyboardRoot(
                         onItem = { item ->
                             toolbarOpen = false
                             when (item) {
+                                ToolbarItem.AI -> panel = Panel.AI
                                 ToolbarItem.EMOJI -> panel = Panel.EMOJI
                                 ToolbarItem.CLIPBOARD -> panel = Panel.CLIPBOARD
                                 ToolbarItem.EDIT -> panel = Panel.EDIT
@@ -308,6 +325,7 @@ fun KeyboardRoot(
                         },
                     )
                     Panel.EDIT -> EditPanel(height = panelHeight, theme = theme, onAction = controller::editAction, onDelete = controller::onDelete)
+                    Panel.AI -> AiPanel(height = panelHeight, theme = theme, ai = ai, host = host, onClose = { panel = Panel.KEYS })
                     Panel.VOICE -> VoicePanel(
                         height = panelHeight,
                         theme = theme,
@@ -520,6 +538,7 @@ private fun Toolbar(
             if (canClose) RoundButton(Icons.Rounded.Widgets, "Voltar às sugestões", theme, size = 34.dp, onClick = onClose)
             for (item in items) {
                 val icon = when (item) {
+                    ToolbarItem.AI -> Icons.Rounded.AutoAwesome
                     ToolbarItem.EMOJI -> Icons.Rounded.EmojiEmotions
                     ToolbarItem.CLIPBOARD -> Icons.Rounded.ContentPaste
                     ToolbarItem.EDIT -> Icons.Rounded.TextFields

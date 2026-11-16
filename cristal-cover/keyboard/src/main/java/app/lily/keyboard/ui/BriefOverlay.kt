@@ -52,12 +52,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
-import app.lily.keyboard.brief.BriefCandidate
+import app.lily.shared.brief.BriefCandidate
+import app.lily.shared.brief.BriefText
 import app.lily.keyboard.brief.BriefPhase
 import app.lily.keyboard.brief.BriefUi
 import app.lily.keyboard.core.KeyboardTheme
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /** Ações do Info Brief na barra do teclado. */
@@ -72,17 +72,7 @@ private val BriefBlue = Color(0xFF0A84FF)
 private val BriefCyan = Color(0xFF64D2FF)
 
 /** "Show · Hoje 19:00?" para o chip. */
-internal fun briefSummary(c: BriefCandidate, today: LocalDate = LocalDate.now()): String {
-    val at = c.at ?: return c.title
-    val pt = Locale.forLanguageTag("pt-BR")
-    val day = when (at.toLocalDate()) {
-        today -> "Hoje"
-        today.plusDays(1) -> "Amanhã"
-        else -> DateTimeFormatter.ofPattern("EEE d/M", pt).format(at).replaceFirstChar { it.uppercase() }
-    }
-    val time = if (c.timeConfirmed || c.kind.wire == "event") " " + DateTimeFormatter.ofPattern("HH:mm", pt).format(at) else ""
-    return "${c.title} · $day$time" + if (c.dateConfirmed) "" else "?"
-}
+internal fun briefSummary(c: BriefCandidate, today: LocalDate = LocalDate.now()): String = BriefText.summary(c, today)
 
 /**
  * O Info Brief na barra de sugestões. Na fase de brilho, a expressão reconhecida aparece num chip

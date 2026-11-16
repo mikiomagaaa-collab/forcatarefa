@@ -429,6 +429,11 @@ class InputController(
         setResult(CorrectionResult.EMPTY)
     }
 
+    /** Confirma a palavra em composição como está, sem inserir nada (antes de a L.I.L.Y trocar o texto). */
+    fun confirmComposing() {
+        if (composing.isNotEmpty()) commitComposing(autoCorrect = false, separator = "")
+    }
+
     /** Texto pronto (emoji, área de transferência, ditado): confirma a palavra atual como está e insere. */
     fun commitRaw(text: String) {
         if (composing.isNotEmpty()) commitComposing(autoCorrect = false, separator = "")

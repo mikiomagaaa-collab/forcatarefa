@@ -23,7 +23,9 @@ class KeyboardStore private constructor(context: Context) {
     private fun load(): KeyboardSettings {
         val raw = prefs.getString(KEY_SETTINGS, null) ?: return KeyboardSettings()
         return try {
-            json.decodeFromString(KeyboardSettings.serializer(), raw)
+            val s = json.decodeFromString(KeyboardSettings.serializer(), raw)
+            // Quem atualizou ganha o atalho da L.I.L.Y na barra uma vez (pode tirar no Studio).
+            if (!s.aiToolbar && ToolbarItem.AI !in s.toolbar) s.copy(toolbar = listOf(ToolbarItem.AI) + s.toolbar, aiToolbar = true) else s
         } catch (t: Throwable) {
             Log.w(TAG, "Preferências inválidas; usando os padrões", t)
             KeyboardSettings()

@@ -22,12 +22,12 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import app.lily.keyboard.brief.BriefBridge
-import app.lily.keyboard.brief.BriefCandidate
-import app.lily.keyboard.brief.BriefDetector
-import app.lily.keyboard.brief.BriefKind
+import app.lily.shared.brief.BriefCandidate
+import app.lily.shared.brief.BriefDetector
+import app.lily.shared.brief.BriefKind
 import app.lily.keyboard.brief.BriefPhase
 import app.lily.keyboard.brief.BriefUi
-import app.lily.keyboard.brief.CristalBrief
+import app.lily.shared.bridge.CristalBrief
 import app.lily.keyboard.brief.InfoBrief
 import app.lily.keyboard.core.KeyboardSettings
 import app.lily.keyboard.core.Themes

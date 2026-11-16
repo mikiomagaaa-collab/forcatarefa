@@ -22,3 +22,6 @@ dependencyResolutionManagement {
 rootProject.name = "cristal-cover"
 include(":app")
 include(":keyboard")
+include(":ai")
+include(":shared")
+include(":gallery")

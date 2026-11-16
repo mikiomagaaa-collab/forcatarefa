@@ -2,8 +2,8 @@ package app.lily.keyboard.studio
 
 import androidx.compose.material.icons.rounded.Event
 import app.lily.keyboard.brief.BriefBridge
-import app.lily.keyboard.brief.BriefKind
-import app.lily.keyboard.brief.CristalBrief
+import app.lily.shared.brief.BriefKind
+import app.lily.shared.bridge.CristalBrief
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager

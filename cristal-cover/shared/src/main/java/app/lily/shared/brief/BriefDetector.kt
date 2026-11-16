@@ -1,6 +1,5 @@
-package app.lily.keyboard.brief
+package app.lily.shared.brief
 
-import androidx.compose.runtime.Immutable
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -23,7 +22,6 @@ enum class BriefKind(val wire: String, val label: String, val example: String) {
  * Um compromisso reconhecido. [start] e [end] marcam a expressão no texto analisado (para o
  * destaque azul); [at] é o momento resolvido (null numa tarefa sem data).
  */
-@Immutable
 data class BriefCandidate(
     val kind: BriefKind,
     val title: String,

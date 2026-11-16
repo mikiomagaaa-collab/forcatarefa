@@ -6,4 +6,6 @@
     <string name="subtype_en">English (US)</string>
     <string name="brief_permission_label">Info Brief do L.I.L.Y</string>
     <string name="brief_permission_description">Permite que o L.I.L.Y Keyboard mande ao Cristal os compromissos reconhecidos (título e horário), para a Liquid Island oferecer um lembrete.</string>
+    <string name="use_ai_label">Usar a L.I.L.Y AI</string>
+    <string name="use_ai_description">Permite que os apps do Liquid Flip (teclado e galeria) peçam tarefas de texto à L.I.L.Y AI, que roda no aparelho.</string>
 </resources>

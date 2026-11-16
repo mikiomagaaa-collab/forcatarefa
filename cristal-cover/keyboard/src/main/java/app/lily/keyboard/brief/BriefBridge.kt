@@ -1,5 +1,9 @@
 package app.lily.keyboard.brief
 
+import app.lily.shared.bridge.CristalBrief
+import app.lily.shared.brief.BriefCandidate
+import app.lily.shared.brief.BriefIntents
+
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -10,36 +14,6 @@ import android.provider.CalendarContract
 import android.util.Log
 import androidx.compose.ui.geometry.Offset
 import java.time.ZoneId
-
-/**
- * Cópia do contrato do Cristal (os dois apps são independentes; os nomes precisam bater com
- * `app.cristal.cover.data.brief.BriefContract`).
- */
-internal object CristalBrief {
-    const val PACKAGE = "app.cristal.cover"
-    const val PERMISSION = "app.cristal.cover.permission.INFO_BRIEF"
-    const val ACTION_SUGGEST = "app.cristal.cover.action.BRIEF_SUGGEST"
-    const val ACTION_ACCEPT = "app.cristal.cover.action.BRIEF_ACCEPT"
-    const val EXTRA_ID = "id"
-    const val EXTRA_TITLE = "title"
-    const val EXTRA_KIND = "kind"
-    const val EXTRA_WHEN = "when"
-    const val EXTRA_DATE_CONFIRMED = "date_confirmed"
-    const val EXTRA_TIME_CONFIRMED = "time_confirmed"
-    const val EXTRA_WEEKLY = "weekly"
-    const val EXTRA_PLACE = "place"
-    const val EXTRA_EXPRESSION = "expression"
-    const val EXTRA_ORIGIN_X = "origin_x"
-    const val EXTRA_ORIGIN_Y = "origin_y"
-    const val EXTRA_DISPLAY = "display"
-
-    /** Sem resposta: o Cristal não está instalado, não tem a ponte ou não respondeu a tempo. */
-    const val RESULT_NONE = 0
-    const val RESULT_SHOWN = 1
-    const val RESULT_STORED = 2
-    const val RESULT_OFF = 3
-    const val RESULT_DUPLICATE = 4
-}
 
 /**
  * A ponte com o Cristal, no próprio aparelho: um broadcast explícito para o pacote do Cristal,
@@ -123,17 +97,7 @@ open class BriefBridge(private val context: Context) {
         return intent
     }
 
-    private fun fill(intent: Intent, c: BriefCandidate, id: Long): Intent = intent
-        .setPackage(CristalBrief.PACKAGE)
-        .putExtra(CristalBrief.EXTRA_ID, id)
-        .putExtra(CristalBrief.EXTRA_TITLE, c.title)
-        .putExtra(CristalBrief.EXTRA_KIND, c.kind.wire)
-        .putExtra(CristalBrief.EXTRA_WHEN, c.at?.atZone(ZoneId.systemDefault())?.toInstant()?.toEpochMilli() ?: -1L)
-        .putExtra(CristalBrief.EXTRA_DATE_CONFIRMED, c.dateConfirmed)
-        .putExtra(CristalBrief.EXTRA_TIME_CONFIRMED, c.timeConfirmed)
-        .putExtra(CristalBrief.EXTRA_WEEKLY, c.weekly)
-        .putExtra(CristalBrief.EXTRA_PLACE, c.place)
-        .putExtra(CristalBrief.EXTRA_EXPRESSION, c.expression)
+    private fun fill(intent: Intent, c: BriefCandidate, id: Long): Intent = BriefIntents.fill(intent, c, id)
 
     private companion object {
         const val TAG = "LilyInfoBrief"

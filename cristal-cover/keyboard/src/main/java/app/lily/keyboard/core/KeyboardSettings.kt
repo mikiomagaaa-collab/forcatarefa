@@ -1,6 +1,6 @@
 package app.lily.keyboard.core
 
-import app.lily.keyboard.brief.BriefKind
+import app.lily.shared.brief.BriefKind
 
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
@@ -144,6 +144,7 @@ enum class KeyboardLanguage(val label: String, val asset: String, val tag: Strin
 /** Atalhos da barra superior. */
 @Serializable
 enum class ToolbarItem(val label: String) {
+    AI("L.I.L.Y"),
     EMOJI("Emojis"),
     CLIPBOARD("Área de transferência"),
     EDIT("Edição de texto"),
@@ -207,7 +208,7 @@ data class KeyboardSettings(
 
     // Barra
     val toolbar: List<ToolbarItem> = listOf(
-        ToolbarItem.EMOJI, ToolbarItem.CLIPBOARD, ToolbarItem.EDIT, ToolbarItem.VOICE, ToolbarItem.ONE_HAND, ToolbarItem.THEMES, ToolbarItem.SETTINGS,
+        ToolbarItem.AI, ToolbarItem.EMOJI, ToolbarItem.CLIPBOARD, ToolbarItem.EDIT, ToolbarItem.VOICE, ToolbarItem.ONE_HAND, ToolbarItem.THEMES, ToolbarItem.SETTINGS,
     ),
 
     // Voz e privacidade
@@ -223,6 +224,9 @@ data class KeyboardSettings(
     val briefHighlight: Boolean = true,
     /** O que o Info Brief reconhece. */
     val briefKinds: Set<BriefKind> = BriefKind.entries.toSet(),
+
+    /** O atalho da L.I.L.Y já foi posto na barra (uma vez, para quem atualizou o teclado). */
+    val aiToolbar: Boolean = false,
 ) {
     val allThemes: List<KeyboardTheme> get() = Themes.builtIn + customThemes
 

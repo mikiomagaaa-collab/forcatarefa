@@ -1,7 +1,7 @@
-package app.lily.keyboard
+package app.lily.shared
 
-import app.lily.keyboard.brief.BriefDetector
-import app.lily.keyboard.brief.BriefKind
+import app.lily.shared.brief.BriefDetector
+import app.lily.shared.brief.BriefKind
 import java.time.LocalDate
 import java.time.LocalDateTime
 import org.junit.Assert.assertEquals

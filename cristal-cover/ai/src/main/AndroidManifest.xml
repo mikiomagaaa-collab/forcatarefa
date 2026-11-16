@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Só para baixar modelos do Hugging Face e pacotes de idioma: a IA roda no aparelho. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROCESSING" />
+    <!-- Microfone: só depois de um toque no botão de voz; nunca em segundo plano. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!--
+        Ponte com o teclado e a Gallery: só apps com a mesma assinatura do Liquid Flip.
+        Ponte de lembretes com o Cristal (Info Brief): declarada aqui também, para valer em qualquer
+        ordem de instalação.
+    -->
+    <permission
+        android:name="app.lily.ai.permission.USE_AI"
+        android:description="@string/use_ai_description"
+        android:label="@string/use_ai_label"
+        android:protectionLevel="signature" />
+    <permission
+        android:name="app.cristal.cover.permission.INFO_BRIEF"
+        android:description="@string/brief_permission_description"
+        android:label="@string/brief_permission_label"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="app.cristal.cover.permission.INFO_BRIEF" />
+
+    <queries>
+        <package android:name="app.cristal.cover" />
+        <package android:name="app.lily.gallery" />
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".LilyAiApp"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:largeHeap="true"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Lily"
+        android:enableOnBackInvokedCallback="true">
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|density|uiMode|fontScale"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- "Compartilhar com a L.I.L.Y": imagens e textos de qualquer app (e da L.I.L.Y Gallery). -->
+            <intent-filter android:label="@string/share_label">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <intent-filter android:label="@string/share_label">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="audio/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="app.lily.ai.action.IMAGE_TOOL" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".models.DownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <service
+            android:name=".imagegen.ImageGenService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProcessing" />
+
+        <service
+            android:name=".bridge.AiBridgeService"
+            android:exported="true"
+            android:permission="app.lily.ai.permission.USE_AI" />
+    </application>
+</manifest>

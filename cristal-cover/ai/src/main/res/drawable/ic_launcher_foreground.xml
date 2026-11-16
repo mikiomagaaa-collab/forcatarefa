@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A esfera da L.I.L.Y: um orbe com luz em espectro (a mesma da Liquid Island). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M54,54m-24,0a24,24 0,1 1,48 0a24,24 0,1 1,-48 0">
+        <aapt:attr xmlns:aapt="http://schemas.android.com/aapt" name="android:fillColor">
+            <gradient android:type="radial" android:centerX="46" android:centerY="44" android:gradientRadius="34"
+                android:startColor="#FFFFFFFF" android:centerColor="#FFB79CFF" android:endColor="#FF3E7BFF" />
+        </aapt:attr>
+    </path>
+    <path android:pathData="M54,54m-24,0a24,24 0,1 1,48 0a24,24 0,1 1,-48 0" android:strokeWidth="1.6" android:fillColor="#00000000">
+        <aapt:attr xmlns:aapt="http://schemas.android.com/aapt" name="android:strokeColor">
+            <gradient android:type="sweep" android:centerX="54" android:centerY="54"
+                android:startColor="#FFFF7A2E" android:centerColor="#FF9E52FF" android:endColor="#FF40EBF2" />
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#E6FFFFFF" android:pathData="M54,40 C55,49 59,53 68,54 C59,55 55,59 54,68 C53,59 49,55 40,54 C49,53 53,49 54,40Z" />
+</vector>
