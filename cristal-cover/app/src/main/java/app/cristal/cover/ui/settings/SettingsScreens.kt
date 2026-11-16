@@ -293,7 +293,8 @@ private fun AppearancePage(vm: SettingsViewModel, settings: Settings, wallpaper:
                 )
                 SwitchRow(
                     title = "Flip Transition",
-                    subtitle = "A tela inicial chega com uma mola ao abrir ou fechar o aparelho e recolhe conforme a dobradiça fecha.",
+                    subtitle = "Ao fechar o aparelho, a tela de qualquer app encolhe em direção à dobra com a faixa de luz da ilha; " +
+                        "a tela inicial chega com uma mola. Precisa do serviço de acessibilidade para valer fora do launcher.",
                     checked = settings.flipTransition,
                     onChange = { vm.set(PrefKeys.FLIP_TRANSITION, it) },
                 )
@@ -467,7 +468,7 @@ private fun GesturesPage(
                 ChoiceRow("Ação", options, settings.gestureSwipeDown) { vm.setEnum(PrefKeys.GESTURE_SWIPE_DOWN, it) }
             }
         }
-        item { ControlCenterCard(permissions) }
+        item { ControlCenterCard(vm, settings, permissions) }
         item {
             SettingsCard("Dois toques no fundo") {
                 ChoiceRow("Ação", options, settings.gestureDoubleTap) { vm.setEnum(PrefKeys.GESTURE_DOUBLE_TAP, it) }
@@ -1090,7 +1091,7 @@ private fun AboutPage(settings: Settings, wallpaper: ImageBitmap?, onBack: () ->
 
 /** Explica a Liquid Control Center e libera o que ela precisa para mexer no sistema. */
 @Composable
-private fun ControlCenterCard(permissions: PermissionState) {
+private fun ControlCenterCard(vm: SettingsViewModel, settings: Settings, permissions: PermissionState) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
     androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
@@ -1107,8 +1108,18 @@ private fun ControlCenterCard(permissions: PermissionState) {
         runCatching { context.startActivity(intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
     SettingsCard("Liquid Control Center") {
+        SwitchRow(
+            title = "Em qualquer app",
+            checked = settings.controlAnywhere,
+            onChange = { vm.set(PrefKeys.CONTROL_ANYWHERE, it) },
+            subtitle = if (permissions.accessibility) {
+                "Puxe para baixo a partir do canto superior direito, em qualquer app e nas duas telas. O vidro reflete o app de baixo (a captura fica só na memória)."
+            } else {
+                "Precisa do serviço de acessibilidade do Cristal ligado."
+            },
+        )
         InfoText(
-            "Deslize para baixo na tela inicial para abrir. Toque no lápis para editar: adicionar e remover controles, " +
+            "Na tela inicial, deslize para baixo para abrir. Toque no lápis para editar: adicionar e remover controles, " +
                 "mudar o tamanho, criar páginas e escolher uma predefinição (Liquid Flip, iOS ou One UI). " +
                 "A tela interna e a externa têm centrais separadas.",
         )

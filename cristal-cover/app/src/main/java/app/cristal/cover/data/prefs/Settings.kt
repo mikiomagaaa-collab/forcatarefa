@@ -229,6 +229,8 @@ data class Settings(
     val islandLive: Boolean = true,
     /** Aparência da ilha: preta (nativa) ou de vidro. */
     val islandStyle: IslandStyle = IslandStyle.NATIVE,
+    /** Liquid Control Center sobre qualquer app: puxar do canto superior direito. */
+    val controlAnywhere: Boolean = true,
     /** Info Brief: receber as sugestões do L.I.L.Y Keyboard (compromissos, tarefas, lugares). */
     val briefEnabled: Boolean = true,
     /** Lembretes criados pelo Info Brief tocam como alarme (som contínuo até tocar). */

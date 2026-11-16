@@ -22,6 +22,7 @@ import app.cristal.cover.data.launch.AppLauncher
 import app.cristal.cover.data.media.MediaRepository
 import app.cristal.cover.data.notifications.NotificationRepository
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import app.cristal.cover.data.prefs.SettingsRepository
 import app.cristal.cover.data.system.SystemBridge
@@ -57,8 +58,13 @@ class CristalAccessibilityService : AccessibilityService() {
     @Inject lateinit var mediaRepository: MediaRepository
     @Inject lateinit var notificationRepository: NotificationRepository
     @Inject lateinit var briefRepository: app.cristal.cover.data.brief.BriefRepository
+    @Inject lateinit var quickSettingsRepository: app.cristal.cover.data.system.QuickSettingsRepository
+    @Inject lateinit var controlCenterRepository: app.cristal.cover.data.control.ControlCenterRepository
+    @Inject lateinit var batteryRepository: app.cristal.cover.data.battery.BatteryRepository
 
     private var island: IslandOverlay? = null
+    private var controlCenter: ControlCenterOverlay? = null
+    private var foldTransition: FoldTransitionOverlay? = null
 
     private var scope: CoroutineScope? = null
     private var receiverRegistered = false
@@ -90,10 +96,13 @@ class CristalAccessibilityService : AccessibilityService() {
         val newScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         scope = newScope
         // Mantém o estado da tela externa "quente" para sabermos se o aparelho está fechado.
+        val fold = foldTransition ?: FoldTransitionOverlay(this).also { foldTransition = it }
         newScope.launch {
             displayRepository.state.collect { state ->
                 lockController.onCoverState(state)
                 onFoldChanged(state)
+                // Transição de fechamento sobre qualquer app (precisa do sensor da dobradiça).
+                fold.onHinge(state.hingeAngle, state.folded, settingsRepository.settings.value.flipTransition)
             }
         }
         // Liquid Island: liga e desliga conforme a configuração.
@@ -103,6 +112,19 @@ class CristalAccessibilityService : AccessibilityService() {
             settingsRepository.settings.map { it.islandEnabled }.distinctUntilChanged().collect { enabled ->
                 if (enabled) overlay.show() else overlay.hide()
             }
+        }
+
+        // Liquid Control Center sobre qualquer app (faixa no canto superior direito de cada tela).
+        controlCenter?.hide()
+        val control = ControlCenterOverlay(
+            this, newScope, settingsRepository, quickSettingsRepository, controlCenterRepository,
+            notificationRepository, mediaRepository, batteryRepository, bridge, displayRepository,
+        ).also { controlCenter = it }
+        newScope.launch {
+            combine(
+                settingsRepository.settings.map { it.controlAnywhere }.distinctUntilChanged(),
+                displayRepository.state.map { it.coverId }.distinctUntilChanged(),
+            ) { enabled, _ -> enabled }.collect { enabled -> if (enabled) control.show() else control.hide() }
         }
 
         if (!receiverRegistered) {
@@ -140,6 +162,9 @@ class CristalAccessibilityService : AccessibilityService() {
 
     private fun cleanup() {
         island?.hide()
+        controlCenter?.hide()
+        controlCenter = null
+        foldTransition?.hide()
         lockController.detachHost()
         bridge.detach()
         scope?.cancel()

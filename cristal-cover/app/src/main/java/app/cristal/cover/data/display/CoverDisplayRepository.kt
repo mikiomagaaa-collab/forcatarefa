@@ -122,13 +122,14 @@ class CoverDisplayRepository @Inject constructor(
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
         }
         val ok = safely("registrar sensor da dobradiça") {
-            sm.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+            // O sensor só avisa quando o ângulo muda; um intervalo curto deixa a transição fluida.
+            sm.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_GAME)
         } ?: false
         if (!ok) trySend(null)
         awaitClose { safely("remover sensor da dobradiça") { sm.unregisterListener(listener) } }
     }.onStart { emit(null) }.conflate()
-        // Só interessa cruzar o limiar de "fechado"; evita recomposições a cada grau.
-        .map { angle -> angle?.let { (it / 5f).toInt() * 5f } }
+        // Passos de 2°: suficiente para a transição de fechamento, sem recompor a cada décimo de grau.
+        .map { angle -> angle?.let { (it / 2f).toInt() * 2f } }
         .distinctUntilChanged()
 
     val state: StateFlow<CoverState> = combine(
