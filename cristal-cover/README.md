@@ -53,7 +53,7 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 O que **foi verificado** durante o desenvolvimento:
 
 - compila do zero (debug e release com R8) com as versões estáveis atuais das ferramentas;
-- 212 testes automáticos em JVM passam (95 no Cristal, 41 no teclado, 16 no módulo compartilhado, 52 na
+- 224 testes automáticos em JVM passam (95 no Cristal, 41 no teclado, 16 no módulo compartilhado, 64 na
   L.I.L.Y AI e 8 na Gallery). No launcher: lógica da grade, detecção da tela externa,
   regras de compatibilidade, segurança dos comandos de shell, backup, papéis de parede por área,
   encaixe e edição da Central de Controle, **compilação real do shader AGSL** e **16 telas montadas e
@@ -72,8 +72,13 @@ O que **foi verificado** durante o desenvolvimento:
   aparelho, as fichas do catálogo (versões fixadas, tamanhos e SHA-256), a loja de modelos, o download com
   retomada por Range, servidor que ignora o Range, pausa e recusa de arquivo adulterado, a memória
   (recusa senhas, CPF, cartão e códigos), o histórico (busca sem acento, anexos apagados juntos), o áudio
-  (WAV e reamostragem), os filtros clássicos, documentos, o markdown e 12 telas desenhadas (incluindo a
-  tela externa). No teclado, o painel da L.I.L.Y e as regras de campos protegidos. Na Gallery, o editor
+  (WAV e reamostragem), os filtros clássicos, documentos, o markdown, a costura dos blocos da ampliação
+  (sem emendas, em vários tamanhos) e 12 telas desenhadas (incluindo a tela externa). O fluxo inteiro da
+  conversa (pedaços, gravação, histórico sem erros, parar, memória ligada e desligada, documentos) e a
+  ponte com o teclado rodam com um motor de teste no lugar do LiteRT-LM (só nos testes). Fora dos
+  testes: as 32 URLs do catálogo foram conferidas no Hugging Face (todas respondem, com o tamanho e o
+  SHA-256 do catálogo) e os formatos do Real-ESRGAN foram lidos do próprio arquivo (entrada
+  [1,128,128,3] e saída [1,3,512,512], FLOAT32), os mesmos que o app usa. No teclado, o painel da L.I.L.Y e as regras de campos protegidos. Na Gallery, o editor
   (corte, giro e cores de verdade) e 7 telas;
 - lint sem erros.
 

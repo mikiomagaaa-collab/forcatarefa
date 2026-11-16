@@ -10,6 +10,7 @@ import app.lily.ai.data.MemoryStore
 import app.lily.ai.data.PerfStore
 import app.lily.ai.data.SettingsStore
 import app.lily.ai.engine.EngineHost
+import app.lily.ai.engine.LlmEngine
 import app.lily.ai.engine.Voice
 import app.lily.ai.imagegen.ImageGenJobs
 import app.lily.ai.models.Downloads
@@ -30,7 +31,9 @@ class AiGraph(val app: Application) {
     val settings = SettingsStore(app)
     val conversations = ConversationStore(File(app.filesDir, "conversations"))
     val memory = MemoryStore(File(app.filesDir, "memory.json"))
-    val engines = EngineHost(app, store)
+    /** O motor de linguagem (LiteRT-LM). Só os testes trocam. */
+    var engines: LlmEngine = EngineHost(app, store)
+        @androidx.annotation.VisibleForTesting internal set
     val perf = PerfStore(File(app.filesDir, "perf.json"))
     val imageGen = ImageGenJobs(app)
     val tools = AiTools(this)

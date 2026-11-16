@@ -139,3 +139,50 @@ class TextAndDataTest {
         assertEquals("Texto com negrito.", Markdown.plain("Texto com **negrito**."))
     }
 }
+
+/** A costura dos blocos do Real-ESRGAN, com um ampliador de teste (vizinho mais próximo 4×). */
+class SuperResTilingTest {
+    /** Faz o papel do modelo: NHWC 128×128×3 → NCHW 3×512×512, copiando cada pixel 4×4. */
+    private val nearest: (FloatArray) -> FloatArray = { tile ->
+        val out = FloatArray(3 * 512 * 512)
+        val plane = 512 * 512
+        for (y in 0 until 512) for (x in 0 until 512) {
+            val i = ((y / 4) * 128 + (x / 4)) * 3
+            out[y * 512 + x] = tile[i]
+            out[plane + y * 512 + x] = tile[i + 1]
+            out[2 * plane + y * 512 + x] = tile[i + 2]
+        }
+        out
+    }
+
+    private fun image(w: Int, h: Int) = IntArray(w * h) { i ->
+        val x = i % w
+        val y = i / w
+        (0xFF shl 24) or ((x * 7 % 256) shl 16) or ((y * 5 % 256) shl 8) or ((x + y) % 256)
+    }
+
+    @Test
+    fun `costura sem emendas em varios tamanhos`() {
+        for ((w, h) in listOf(100 to 60, 128 to 128, 300 to 250, 513 to 207, 1024 to 768)) {
+            val src = image(w, h)
+            var last = 0f
+            val out = app.lily.ai.engine.SuperRes.tiled(src, w, h, nearest, { last = it })
+            assertEquals(w * 4 * h * 4, out.size)
+            for (y in 0 until h * 4 step 3) for (x in 0 until w * 4 step 3) {
+                assertEquals("${w}x$h em ($x,$y)", src[(y / 4) * w + x / 4], out[y * w * 4 + x])
+            }
+            assertEquals(1f, last, 0f)
+        }
+    }
+
+    @Test
+    fun `parar interrompe a ampliacao`() {
+        var calls = 0
+        try {
+            app.lily.ai.engine.SuperRes.tiled(image(400, 400), 400, 400, { calls++; nearest(it) }, cancelled = { calls >= 2 })
+            error("deveria parar")
+        } catch (_: InterruptedException) {
+        }
+        assertEquals(2, calls)
+    }
+}

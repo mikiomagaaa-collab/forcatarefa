@@ -55,6 +55,36 @@ data class Attachments(val imageFile: File? = null, val audioFile: File? = null)
 
 class EngineRefused(message: String) : Exception(message)
 
+/**
+ * O motor de linguagem que a conversa, as ferramentas e a ponte usam. O de verdade é o [EngineHost]
+ * (LiteRT-LM); os testes trocam por um motor de teste para exercitar o app inteiro.
+ */
+interface LlmEngine {
+    val status: StateFlow<EngineStatus>
+
+    /** Quanto tempo um modelo fica carregado sem uso. */
+    var idleMillis: Long
+
+    /** Avisado a cada carregamento (o tempo medido vai para a ficha do modelo). */
+    var onLoaded: ((ModelSpec, Accel, Long) -> Unit)?
+
+    /** A resposta em pedaços (texto acumulado); cancelar a coleta interrompe a geração. */
+    fun generate(
+        choice: EngineChoice.Llm,
+        system: String?,
+        history: List<Turn>,
+        prompt: String,
+        attachments: Attachments = Attachments(),
+        temperature: Double = 0.7,
+    ): Flow<String>
+
+    /** Descarrega o modelo (libera a memória). */
+    fun unload()
+
+    /** Para quem precisa da memória já: espera a inferência atual terminar e descarrega. */
+    suspend fun unloadNow()
+}
+
 /** Um modelo de linguagem carregado no LiteRT-LM. */
 class LoadedLlm(val spec: ModelSpec, val accel: Accel, internal val engine: Engine, val loadMillis: Long)
 
@@ -63,31 +93,30 @@ class LoadedLlm(val spec: ModelSpec, val accel: Accel, internal val engine: Engi
  * descarregado depois de um tempo sem uso, quando o Android pede memória ou quando outra tarefa
  * pesada (geração de imagem) precisa do espaço. Uma inferência por vez.
  */
-class EngineHost(private val context: Context, private val store: ModelStore) {
+class EngineHost(private val context: Context, private val store: ModelStore) : LlmEngine {
     private val mutex = Mutex()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var loaded: LoadedLlm? = null
     private var idleJob: Job? = null
     private val _status = MutableStateFlow<EngineStatus>(EngineStatus.Idle)
-    val status: StateFlow<EngineStatus> = _status.asStateFlow()
+    override val status: StateFlow<EngineStatus> = _status.asStateFlow()
 
     /** Quanto tempo um modelo fica carregado sem uso (o perfil Eco usa menos). */
-    @Volatile var idleMillis: Long = 120_000L
+    @Volatile override var idleMillis: Long = 120_000L
 
-    /** Avisado a cada carregamento (o tempo medido vai para a ficha do modelo). */
-    @Volatile var onLoaded: ((ModelSpec, Accel, Long) -> Unit)? = null
+    @Volatile override var onLoaded: ((ModelSpec, Accel, Long) -> Unit)? = null
 
     /**
      * Gera a resposta em pedaços. [system] = instruções; [history] = conversa até aqui; [prompt] =
      * a nova mensagem. Cancelar a coleta interrompe a geração no motor.
      */
-    fun generate(
+    override fun generate(
         choice: EngineChoice.Llm,
         system: String?,
         history: List<Turn>,
         prompt: String,
-        attachments: Attachments = Attachments(),
-        temperature: Double = 0.7,
+        attachments: Attachments,
+        temperature: Double,
     ): Flow<String> = flow {
         refuseIfHot()
         mutex.withLock {
@@ -121,13 +150,11 @@ class EngineHost(private val context: Context, private val store: ModelStore) {
     }.flowOn(Dispatchers.Default)
         .catch { t -> throw if (t is EngineRefused) t else EngineRefused(friendly(t)) }
 
-    /** Descarrega o modelo (libera a memória). */
-    fun unload() {
+    override fun unload() {
         scope.launch { mutex.withLock { unloadLocked() } }
     }
 
-    /** Para quem precisa da memória já (geração de imagem): espera a inferência atual terminar. */
-    suspend fun unloadNow() = mutex.withLock { unloadLocked() }
+    override suspend fun unloadNow() = mutex.withLock { unloadLocked() }
 
     private fun obtain(choice: EngineChoice.Llm): LoadedLlm {
         val current = loaded

@@ -25,7 +25,7 @@ object Documents {
         val resolver = context.contentResolver
         val name = runCatching {
             resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
-        }.getOrNull() ?: "documento"
+        }.getOrNull() ?: uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() } ?: "documento"
         val mime = resolver.getType(uri).orEmpty()
         return if (mime == "application/pdf" || name.endsWith(".pdf", ignoreCase = true)) pdf(context, uri, name) else plain(context, uri, name)
     }
