@@ -38,6 +38,7 @@ sealed interface Route {
     data class ImageGen(val prompt: String = "") : Route
     data object Settings : Route
     data object Memory : Route
+    data object Diagnostics : Route
 }
 
 /** Uma tela na pilha. A chave não muda quando a rota é trocada no lugar (a conversa ganha um id). */

@@ -12,7 +12,11 @@ import android.os.Message
 import android.os.Messenger
 import androidx.test.core.app.ApplicationProvider
 import app.lily.ai.bridge.AiBridgeService
+import app.lily.ai.core.Accel
 import app.lily.ai.core.EngineChoice
+import app.lily.ai.diagnostics.DiagState
+import app.lily.ai.diagnostics.Diagnostics
+import app.lily.ai.diagnostics.Report
 import app.lily.ai.data.MsgStatus
 import app.lily.ai.data.Role
 import app.lily.ai.engine.Attachments
@@ -33,6 +37,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -61,7 +66,7 @@ class FakeEngine(
     val models = mutableListOf<String>()
     override val status = MutableStateFlow<EngineStatus>(EngineStatus.Idle)
     override var idleMillis: Long = 0
-    override var onLoaded: ((ModelSpec, app.lily.ai.core.Accel, Long) -> Unit)? = null
+    override var onLoaded: ((ModelSpec, Accel, Long) -> Unit)? = null
 
     override fun generate(choice: EngineChoice.Llm, system: String?, history: List<Turn>, prompt: String, attachments: Attachments, temperature: Double): Flow<String> = flow {
         systems += system
@@ -75,6 +80,8 @@ class FakeEngine(
             acc += p
             emit(acc)
         }
+        // Como o motor real: depois de responder, fica pronto com o modelo carregado.
+        status.value = EngineStatus.Ready(choice.model, choice.accel, 1_500)
     }
 
     override fun unload() = Unit
@@ -241,6 +248,25 @@ class ChatFlowTest {
         assertTrue(copy.exists())
         runBlocking { graph.conversations.delete(s.conversationId!!) }
         assertFalse(copy.exists())
+    }
+
+    @Test
+    fun `teste do aparelho mede os modelos e mostra as falhas`() {
+        install(Catalog.qwen3Small)
+        install(Catalog.qwen3)
+        graph.engines = FakeEngine(stepMs = 50)
+        val diagnostics = Diagnostics(graph, app)
+        var report: Report? = null
+        graph.scope.launch { report = diagnostics.run(includeGpu = false) }
+        waitUntil(60_000) { report != null }
+        val r = report!!
+        assertEquals(listOf("Qwen3 0.6B", "Qwen3 1.7B"), r.runs.map { it.model })
+        assertTrue(r.runs.all { it.error == null && it.used == Accel.CPU && it.loadMillis == 1_500L })
+        assertEquals("Olá! Tudo bem por aqui, e com você? Posso ajudar no que precisar.", r.runs.first().answer)
+        val text = r.text()
+        assertTrue(text, text.contains("Qwen3 0.6B · CPU pedida, CPU usada · carregou em 1,5 s"))
+        assertTrue(text, text.contains("Ampliação (Real-ESRGAN): — · não instalado"))
+        assertTrue(diagnostics.state.value is DiagState.Done)
     }
 
     // --- Ponte com o teclado ------------------------------------------------------------------

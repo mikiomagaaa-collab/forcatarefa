@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.RecordVoiceOver
+import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -182,6 +183,16 @@ fun SettingsScreen(nav: Nav) {
                     loaded?.let { "$it está carregado" } ?: "Nenhum modelo carregado",
                     Icons.Rounded.Memory,
                     onClick = if (loaded != null) ({ graph.engines.unload() }) else null,
+                )
+            }
+
+            SectionHeader("Teste do aparelho")
+            GlassCard(Modifier.fillMaxWidth()) {
+                SettingRow(
+                    "Testar este aparelho",
+                    "Roda os modelos instalados e mede velocidade, memória e temperatura; gera um relatório para copiar",
+                    Icons.Rounded.Speed,
+                    onClick = { nav.go(Route.Diagnostics) },
                 )
             }
 

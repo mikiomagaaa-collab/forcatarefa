@@ -371,6 +371,11 @@ Depois disso tudo funciona **sem internet**. Para fotos e áudio, baixe o **Gemm
 **Model Hub** (ícone de cubo na tela inicial). Cada ficha mostra a compatibilidade calculada para o seu
 aparelho, o espaço necessário, a licença e, depois do primeiro uso, a velocidade medida aí.
 
+**Teste do aparelho.** Depois de baixar um ou mais modelos, abra **Configurações > Testar este aparelho**
+e toque em **Começar o teste** (leva de 1 a 5 minutos; feche outros apps antes). No fim, toque em
+**Copiar o relatório** e cole numa conversa comigo: com os números reais do seu Razr dá para ajustar o
+roteador (qual modelo, GPU ou CPU) para ele.
+
 **Microfone.** Só é pedido quando você toca no microfone. Nada fica ouvindo em segundo plano.
 
 **Tela externa.** A L.I.L.Y também abre na tela externa (no Cristal, ou pelo atalho de apps da Motorola),

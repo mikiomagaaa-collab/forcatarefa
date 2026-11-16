@@ -246,6 +246,7 @@ Os itens com ⚠️ dependem dos motores nativos (LiteRT-LM e LiteRT), que não 
 estão implementados com as APIs oficiais e precisam ser confirmados no Razr.
 
 - [ ] A tela inicial recomenda um modelo com o tamanho e a compatibilidade; **Baixar** pede a notificação e mostra o progresso na notificação e na Liquid Island
+- [ ] ⚠️ **Configurações > Testar este aparelho** com os modelos instalados: o relatório traz carregamento, velocidade, memória e temperatura de cada modelo na GPU e na CPU (copie e envie)
 - [ ] Pausar, retomar (de onde parou) e cancelar o download; com dados móveis e "só Wi-Fi", a IA pergunta antes
 - [ ] ⚠️ Primeira mensagem: "Carregando Qwen3 1.7B" e depois a resposta em pedaços; anote o tempo de carregamento e a velocidade que aparecem na ficha do modelo (Medido neste aparelho)
 - [ ] ⚠️ GPU: no perfil Qualidade a conversa roda na GPU; se a GPU recusar o modelo, a IA volta para a CPU sozinha (a pílula do topo mostra GPU ou CPU)

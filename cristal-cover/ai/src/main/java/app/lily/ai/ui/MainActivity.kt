@@ -188,6 +188,7 @@ private fun FullApp(nav: Nav) {
             is Route.ImageGen -> ImageGenScreen(nav, r)
             Route.Settings -> SettingsScreen(nav)
             Route.Memory -> MemoryScreen(nav)
+            Route.Diagnostics -> app.lily.ai.ui.screens.DiagnosticsScreen(nav, entry.key)
         }
     }
 }

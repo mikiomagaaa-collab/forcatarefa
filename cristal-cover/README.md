@@ -53,7 +53,7 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 O que **foi verificado** durante o desenvolvimento:
 
 - compila do zero (debug e release com R8) com as versões estáveis atuais das ferramentas;
-- 224 testes automáticos em JVM passam (95 no Cristal, 41 no teclado, 16 no módulo compartilhado, 64 na
+- 225 testes automáticos em JVM passam (95 no Cristal, 41 no teclado, 16 no módulo compartilhado, 65 na
   L.I.L.Y AI e 8 na Gallery). No launcher: lógica da grade, detecção da tela externa,
   regras de compatibilidade, segurança dos comandos de shell, backup, papéis de parede por área,
   encaixe e edição da Central de Controle, **compilação real do shader AGSL** e **16 telas montadas e
@@ -131,6 +131,7 @@ você pede. Não há nenhum provedor remoto; o indicador de cada conversa diz "N
 | Integrações | Teclado (ponte de assinatura), Cristal (lembretes pela confirmação do Info Brief; nada é criado sem o toque), Gallery (fotos chegam com permissão só delas), Liquid Island (Live Updates oficiais dos downloads e da geração) |
 | Tela externa | Versão de voz: tocar no orbe, falar e ouvir; ao abrir o aparelho, a mesma conversa continua na tela interna, até com a resposta em andamento |
 | Aparência | Orbe em AGSL, fundo aurora, vidro, temas Liquid Glass, AMOLED, Claro, Roxo e Personalizado |
+| Teste do aparelho | Configurações > **Testar este aparelho**: roda cada modelo de conversa instalado na GPU e na CPU, o OCR, a ampliação e a voz, e mede carregamento, velocidade, memória e temperatura. Gera um relatório para copiar e enviar; o que falha aparece como falha |
 
 Limitações reais da L.I.L.Y AI:
 
