@@ -369,7 +369,8 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
             val local = (engine as? EngineChoice.Llm)?.model
             val modelName = remote?.let { "${it.label} · online" } ?: local!!.name
             // Contexto do modelo (o online costuma ser bem maior; limitado para não encarecer).
-            val contextTokens = remote?.let { (it.context.takeIf { c -> c > 0 } ?: 32_000).coerceAtMost(64_000) } ?: (local!!.contextTokens ?: 2048)
+            // O grátis leva pouco contexto para a cota do dia render (~150 respostas); os pagos, até 64 mil.
+            val contextTokens = remote?.let { if (it.free) 8_000 else (it.context.takeIf { c -> c > 0 } ?: 32_000).coerceAtMost(64_000) } ?: (local!!.contextTokens ?: 2048)
             streaming = Streaming(answerId, "", modelName, imageFile != null, audioFile != null)
             LilyPresence.thinking(PRESENCE, if (remote != null) "Pensando (online)" else "Pensando")
             val question = when {
@@ -382,7 +383,16 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
             // O histórico usa o que sobra do contexto depois da pergunta (e do documento).
             // Modelos pequenos do aparelho se perdem com conversa longa (repetem a resposta anterior):
             // levam só as duas últimas trocas, o bastante para "ele" e "isso".
-            val history = history(contextTokens, user, reserve = prompt.length, maxTurns = if (local != null && contextTokens <= 4096) 4 else Int.MAX_VALUE)
+            val history = history(
+                contextTokens,
+                user,
+                reserve = prompt.length,
+                maxTurns = when {
+                    local != null && contextTokens <= 4096 -> 4
+                    remote?.free == true -> 8
+                    else -> Int.MAX_VALUE
+                },
+            )
             val started = SystemClock.elapsedRealtime()
             var first = 0L
             var text = ""

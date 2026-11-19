@@ -1,5 +1,6 @@
 package app.lily.ai
 
+import app.lily.ai.diagnostics.CrashReport
 import android.app.Application
 import android.content.ComponentCallbacks2
 import androidx.compose.runtime.Immutable
@@ -70,7 +71,16 @@ class AiGraph(val app: Application, val safeMode: Boolean = false, private val f
         fallback()
     }
 
-    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    /**
+     * Onde as tarefas de fundo da L.I.L.Y rodam. Um erro inesperado numa delas vai para o relatório do
+     * Diagnóstico (não fatal) em vez de fechar o app.
+     */
+    val scope = CoroutineScope(
+        SupervisorJob() + Dispatchers.Main.immediate + kotlinx.coroutines.CoroutineExceptionHandler { _, t ->
+            runCatching { DiagLog.line("✗ Erro numa tarefa de fundo: ${t.javaClass.name}: ${t.message}", android.util.Log.ERROR) }
+            runCatching { CrashReport.save(app, "tarefa de fundo", t, fatal = false) }
+        },
+    )
     val settings = module(SETTINGS, null) { SettingsStore(app) }
     val device = module(DEVICE, null) { DeviceMonitor(app) }
     val store = module(MODELS, null) { ModelStore(File(app.filesDir, "models")) }

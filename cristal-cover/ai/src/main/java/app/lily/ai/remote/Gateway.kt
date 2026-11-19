@@ -430,9 +430,10 @@ class GatewayClient(private val store: GatewayStore, private val isOnline: () ->
             val error = obj["error"]?.let { e ->
                 runCatching { e.jsonObject["message"]?.jsonPrimitive?.contentOrNull }.getOrNull() ?: runCatching { e.jsonPrimitive.contentOrNull }.getOrNull() ?: e.toString()
             }
+            // OpenRouter/OpenAI: choices[0].delta.content. Workers AI (conversa grátis): "response".
             val delta = runCatching {
                 obj["choices"]?.jsonArray?.firstOrNull()?.jsonObject?.get("delta")?.jsonObject?.get("content")?.jsonPrimitive?.contentOrNull
-            }.getOrNull()
+            }.getOrNull() ?: runCatching { obj["response"]?.jsonPrimitive?.contentOrNull }.getOrNull()
             val usage = runCatching {
                 obj["usage"]?.jsonObject?.let { u ->
                     RemoteUsage(

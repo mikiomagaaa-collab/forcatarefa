@@ -186,7 +186,8 @@ async function chatText(res) {
   for (const line of raw.split('\n')) {
     if (!line.startsWith('data: ') || line === 'data: [DONE]') continue;
     const o = JSON.parse(line.slice(6));
-    text += o.choices?.[0]?.delta?.content || '';
+    // Como o app e a Web: OpenAI (choices.delta.content) ou o formato do Workers AI (response).
+    text += o.choices?.[0]?.delta?.content || (typeof o.response === 'string' ? o.response : '');
     if (o.usage) usage = o.usage;
   }
   return { text, usage, raw };
@@ -206,7 +207,7 @@ test('conversa grátis: aparece primeiro na lista, com ou sem OpenRouter', async
   assert.equal((await callJson(makeEnv(), 'GET', '/v1/models')).status, 501);
 });
 
-test('conversa grátis: responde em pedaços no formato do app, custo zero, e conta a cota', async () => {
+test('conversa grátis: repassa os pedaços sem reprocessar (pouca CPU) e conta a cota pelo uso', async () => {
   const ai = fakeAI(() => sseStream([{ response: 'Olá! ' }, { response: '2 + 2 = 4.' }, { response: '', usage: { prompt_tokens: 100, completion_tokens: 20 } }, '[DONE]']));
   const kv = new FakeKV();
   const env = makeEnv({ AI: ai, LILY_USAGE: kv });
@@ -215,7 +216,9 @@ test('conversa grátis: responde em pedaços no formato do app, custo zero, e co
   assert.equal(res.headers.get('x-lily-model'), 'free/gpt-oss-20b');
   const out = await chatText(res);
   assert.equal(out.text, 'Olá! 2 + 2 = 4.');
-  assert.equal(out.usage.cost, 0);
+  assert.equal(out.usage.completion_tokens, 20);
+  // Os bytes saem iguais aos do Workers AI (nada é reescrito pedaço a pedaço).
+  assert.match(out.raw, /"response":"Olá! "/);
   assert.equal(ai.calls[0].model, '@cf/openai/gpt-oss-20b');
   assert.equal(ai.calls[0].input.stream, true);
   assert.equal(ai.calls[0].input.messages.at(-1).content, 'Quanto é 2 + 2?');
@@ -254,5 +257,13 @@ test('cota grátis compartilhada: perto do limite recusa conversa e imagem antes
   const img = await callJson(env, 'POST', '/v1/image', { prompt: 'x' });
   assert.equal(img.status, 429);
   assert.equal(ai.calls.length, 0);
+});
+
+test('conversa grátis: resposta inteira (sem stream) vira pedaços com custo zero', async () => {
+  const ai = fakeAI({ response: 'Resposta inteira.', usage: { prompt_tokens: 10, completion_tokens: 4 } });
+  const { res } = await call(makeEnv({ AI: ai }), 'POST', '/v1/chat', { model: 'free/gpt-oss-20b', messages: [{ role: 'user', content: 'oi' }] });
+  const out = await chatText(res);
+  assert.equal(out.text, 'Resposta inteira.');
+  assert.equal(out.usage.cost, 0);
 });
 

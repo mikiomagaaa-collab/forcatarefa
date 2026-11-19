@@ -70,6 +70,9 @@ gateway recusa novos pedidos até o dia seguinte (horário UTC). Para o limite f
 2. **ID da conta**: no painel, abra *Workers e Pages*; o "Account ID" aparece na lateral. Copie.
 3. **Token de API**: no ícone de perfil > *My Profile* > *API Tokens* > *Create Token* > modelo
    **"Edit Cloudflare Workers"** > *Continue* > *Create Token*. Copie (só aparece uma vez).
+   Se a publicação falhar com erro de permissão do **Workers AI** (o gateway usa o Workers AI para a
+   conversa e as imagens grátis), edite o token e acrescente a permissão *Account* > **Workers AI** >
+   *Edit*; depois atualize o segredo `CLOUDFLARE_API_TOKEN` e edite o `PUBLICAR.md` de novo.
 
 ### 3.2 Limite de gasto (recomendado)
 

@@ -115,76 +115,70 @@ export async function handleFreeChat(body, messages, env, ctx) {
     }
   }
 
-  const { readable, writable } = new TransformStream();
-  const writer = writable.getWriter();
-  const task = (async () => {
-    let outChars = 0;
-    let usage = null;
-    try {
-      if (out instanceof ReadableStream) {
-        const reader = out.getReader();
-        const dec = new TextDecoder();
-        let buf = '';
-        for (;;) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buf += dec.decode(value, { stream: true });
-          let cut;
-          while ((cut = buf.indexOf('\n')) >= 0) {
-            const line = buf.slice(0, cut).trim();
-            buf = buf.slice(cut + 1);
-            if (!line.startsWith('data:')) continue;
-            const data = line.slice(5).trim();
-            if (!data || data === '[DONE]') continue;
-            let obj;
-            try {
-              obj = JSON.parse(data);
-            } catch {
-              continue;
-            }
-            if (obj.usage) usage = obj.usage;
-            const text = pieceText(obj);
-            if (text) {
-              outChars += text.length;
-              await writer.write(sse({ choices: [{ delta: { content: text } }] }));
-            }
-          }
-        }
-      } else {
-        const text = wholeText(out);
-        if (out?.usage) usage = out.usage;
-        outChars = text.length;
-        if (text) await writer.write(sse({ choices: [{ delta: { content: text } }] }));
-      }
-      const promptTokens = Number(usage?.prompt_tokens) || Math.ceil(inputChars / 3.5);
-      const completionTokens = Number(usage?.completion_tokens) || Math.ceil(outChars / 3.5);
-      await writer.write(sse({ choices: [{ delta: {} }], usage: { prompt_tokens: promptTokens, completion_tokens: completionTokens, cost: 0 } }));
-      await writer.write(enc.encode('data: [DONE]\n\n'));
-      await addNeurons(env, promptTokens * FREE_CHAT.neuronsPerInputToken + completionTokens * FREE_CHAT.neuronsPerOutputToken);
-    } catch (e) {
-      try {
-        await writer.write(sse({ error: { message: `O modelo grátis parou: ${String(e?.message || e).slice(0, 200)}` } }));
-      } catch {
-        // o app já fechou a conexão
-      }
-    } finally {
-      try {
-        await writer.close();
-      } catch {
-        // já fechado
-      }
-    }
-  })();
-  ctx?.waitUntil?.(task);
-  return new Response(readable, {
-    headers: {
-      'content-type': 'text/event-stream; charset=utf-8',
-      'cache-control': 'no-store',
-      'x-lily-model': FREE_CHAT.id,
-      'x-lily-price-in': '0',
-      'x-lily-price-out': '0',
+  const finish = async (promptTokens, completionTokens) => {
+    await addNeurons(env, promptTokens * FREE_CHAT.neuronsPerInputToken + completionTokens * FREE_CHAT.neuronsPerOutputToken);
+  };
+
+  // Resposta inteira (sem stream): converte uma vez só.
+  if (!(out instanceof ReadableStream)) {
+    const text = wholeText(out);
+    const promptTokens = Number(out?.usage?.prompt_tokens) || Math.ceil(inputChars / 3.5);
+    const completionTokens = Number(out?.usage?.completion_tokens) || Math.ceil(text.length / 3.5);
+    const work = finish(promptTokens, completionTokens);
+    if (ctx?.waitUntil) ctx.waitUntil(work);
+    else await work;
+    const body = new Uint8Array([
+      ...(text ? sse({ choices: [{ delta: { content: text } }] }) : []),
+      ...sse({ choices: [{ delta: {} }], usage: { prompt_tokens: promptTokens, completion_tokens: completionTokens, cost: 0 } }),
+      ...enc.encode('data: [DONE]\n\n'),
+    ]);
+    return new Response(body, { headers: chatHeaders });
+  }
+
+  // Stream: repassa os pedaços sem reprocessar (o plano grátis da Cloudflare dá ~10 ms de CPU por
+  // pedido; o app e a Web leem o formato do Workers AI). Só guarda o fim para ler o uso e conta os
+  // bytes, para estimar o gasto se o uso não vier.
+  let tail = '';
+  let bytes = 0;
+  const decoder = new TextDecoder();
+  const { readable, writable } = new TransformStream({
+    transform(chunk, controller) {
+      bytes += chunk.byteLength;
+      tail = (tail + decoder.decode(chunk, { stream: true })).slice(-4000);
+      controller.enqueue(chunk);
+    },
+    async flush() {
+      const usage = usageFromTail(tail);
+      await finish(usage?.prompt_tokens || Math.ceil(inputChars / 3.5), usage?.completion_tokens || Math.ceil(bytes / 12));
     },
   });
+  const task = out.pipeTo(writable).catch(() => {});
+  ctx?.waitUntil?.(task);
+  return new Response(readable, { headers: chatHeaders });
+}
+
+const chatHeaders = {
+  'content-type': 'text/event-stream; charset=utf-8',
+  'cache-control': 'no-store',
+  'x-lily-model': FREE_CHAT.id,
+  'x-lily-price-in': '0',
+  'x-lily-price-out': '0',
+};
+
+/** O uso (tokens) no fim do stream do Workers AI, se vier. */
+export function usageFromTail(tail) {
+  let usage = null;
+  for (const line of tail.split('\n')) {
+    const t = line.trim();
+    if (!t.startsWith('data:') || !t.includes('"usage"')) continue;
+    try {
+      const obj = JSON.parse(t.slice(5).trim());
+      if (obj.usage) usage = obj.usage;
+    } catch {
+      // linha cortada no começo do rabo
+    }
+  }
+  return usage;
 }
 
 export async function freeStatus(env) {

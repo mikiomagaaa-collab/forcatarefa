@@ -101,12 +101,22 @@ export async function handleImage(request, env) {
     }
     throw new GatewayError(502, 'O Workers AI não conseguiu gerar a imagem. Tente de novo ou mude a descrição.', msg);
   }
-  const bytes = await imageBytes(out);
-  if (!bytes || bytes.length < 100) throw new GatewayError(502, 'O Workers AI terminou sem devolver uma imagem.');
+  // Já em base64 (o formato do FLUX no Workers AI): passa direto, sem decodificar e codificar de novo
+  // (economiza CPU, que no plano grátis da Cloudflare é ~10 ms por pedido).
+  let dataUrl;
+  if (typeof out?.image === 'string' && out.image.length > 100) {
+    const b64 = out.image.replace(/^data:image\/\w+;base64,/, '');
+    const mime = b64.startsWith('iVBOR') ? 'image/png' : b64.startsWith('UklGR') ? 'image/webp' : 'image/jpeg';
+    dataUrl = `data:${mime};base64,${b64}`;
+  } else {
+    const bytes = await imageBytes(out);
+    if (!bytes || bytes.length < 100) throw new GatewayError(502, 'O Workers AI terminou sem devolver uma imagem.');
+    dataUrl = `data:${mimeOf(bytes)};base64,${toBase64(bytes)}`;
+  }
   await countImage(env);
   await addNeurons(env, IMAGE_NEURONS);
   return json({
-    image: `data:${mimeOf(bytes)};base64,${toBase64(bytes)}`,
+    image: dataUrl,
     model: IMAGE_MODEL.name,
     width: IMAGE_MODEL.width,
     height: IMAGE_MODEL.height,

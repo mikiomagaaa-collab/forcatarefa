@@ -206,11 +206,16 @@ class VideoJobs(private val context: Context, private val gateway: () -> Gateway
                     }
                     "failed" -> update(job.id) { it.copy(status = "failed", error = s.error ?: "O serviço não gerou o vídeo.", finishedAt = System.currentTimeMillis()) }
                 }
+            } catch (c: kotlinx.coroutines.CancellationException) {
+                throw c
             } catch (e: GatewayException) {
                 // Sem internet ou gateway fora: tenta de novo na próxima rodada (até 30 min).
                 if (System.currentTimeMillis() - job.startedAt > 30 * 60_000L) {
                     update(job.id) { it.copy(status = "failed", error = e.message, finishedAt = System.currentTimeMillis()) }
                 }
+            } catch (e: Exception) {
+                // Resposta fora do formato (gateway antigo ou diferente): falha este vídeo, sem derrubar o app.
+                update(job.id) { it.copy(status = "failed", error = "Resposta inesperada do gateway: ${e.message ?: e.javaClass.simpleName}", finishedAt = System.currentTimeMillis()) }
             }
         }
         return _jobs.value.any { it.active }

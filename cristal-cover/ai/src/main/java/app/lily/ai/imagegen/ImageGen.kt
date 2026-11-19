@@ -99,10 +99,10 @@ class ImageGenJobs(private val context: Context) {
         online = scope.launch {
             try {
                 val out = gateway.image(prompt + style.suffix, seed)
-                val bytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-                    android.util.Base64.decode(out.image.substringAfter("base64,"), android.util.Base64.DEFAULT)
-                }
-                val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: throw IllegalStateException("A imagem online veio ilegível.")
+                val bitmap = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    val bytes = android.util.Base64.decode(out.image.substringAfter("base64,"), android.util.Base64.DEFAULT)
+                    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                } ?: throw IllegalStateException("A imagem online veio ilegível.")
                 val saved = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     app.lily.ai.data.MediaSaver.savePng(context, bitmap, "lily-${System.currentTimeMillis()}", "L.I.L.Y AI · ${out.model} (online, grátis) · $prompt")
                 }

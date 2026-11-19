@@ -182,6 +182,16 @@ class NewModulesTest {
     }
 
     @Test
+    fun `pedacos do Workers AI e do OpenRouter sao lidos do mesmo jeito`() {
+        assertEquals("Oi", GatewayClient.parseSse("data: {\"response\":\"Oi\"}")?.delta)
+        assertEquals("Olá", GatewayClient.parseSse("data: {\"choices\":[{\"delta\":{\"content\":\"Olá\"}}]}")?.delta)
+        // Raciocínio do modelo (reasoning_content) não vira texto da resposta.
+        assertEquals(null, GatewayClient.parseSse("data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"pensando\"}}]}")?.delta)
+        assertEquals(20, GatewayClient.parseSse("data: {\"response\":\"\",\"usage\":{\"prompt_tokens\":100,\"completion_tokens\":20}}")?.usage?.completionTokens)
+        assertTrue(GatewayClient.parseSse("data: [DONE]") === GatewayClient.DONE)
+    }
+
+    @Test
     fun `conversa gratis responde qualquer pergunta online, sem custo, e vem primeiro`() {
         fake.freeChat = true
         val graph = app.graph

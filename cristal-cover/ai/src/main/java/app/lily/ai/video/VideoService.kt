@@ -28,7 +28,11 @@ import kotlinx.coroutines.launch
  * avatar fica em "trabalhando". Para sozinho quando não há mais nada em andamento.
  */
 class VideoService : Service() {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(
+        SupervisorJob() + Dispatchers.Default + kotlinx.coroutines.CoroutineExceptionHandler { _, t ->
+            runCatching { app.lily.ai.diagnostics.CrashReport.save(this, "vídeo", t, fatal = false) }
+        },
+    )
     private var loop: Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -45,8 +49,30 @@ class VideoService : Service() {
         if (loop?.isActive == true) return START_NOT_STICKY
         loop = scope.launch {
             var finishedBefore = graph.videos.jobs.value.filter { !it.active }.map { it.id }.toSet()
+            // No vídeo grátis o acompanhamento fica numa conexão longa: a notificação segue o andamento
+            // pelos dados da fila enquanto isso (no máximo a cada 3 s).
+            val follow = launch {
+                graph.videos.jobs.collect { jobs ->
+                    val first = jobs.firstOrNull { it.active && it.free && it.status == "running" } ?: return@collect
+                    LilyPresence.working(VideoJobs.PRESENCE, "Gerando vídeo (grátis)", first.progress)
+                    runCatching {
+                        getSystemService(NotificationManager::class.java).notify(
+                            NOTIFICATION_ID,
+                            notification(this@VideoService, "Gerando vídeo grátis", "Cerca de ${(first.progress * 100).toInt()}% (estimado)", first.progress),
+                        )
+                    }
+                    delay(3_000)
+                }
+            }
             while (true) {
-                val more = graph.videos.pollOnce(graph.settings.value.value.videoAutoSave)
+                val more = try {
+                    graph.videos.pollOnce(graph.settings.value.value.videoAutoSave)
+                } catch (c: kotlinx.coroutines.CancellationException) {
+                    throw c
+                } catch (t: Throwable) {
+                    runCatching { app.lily.ai.diagnostics.CrashReport.save(this@VideoService, "vídeo", t, fatal = false) }
+                    false
+                }
                 val jobs = graph.videos.jobs.value
                 val active = jobs.filter { it.active }
                 // Avisos de término (sucesso ou falha) e a presença da avatar.
@@ -71,6 +97,7 @@ class VideoService : Service() {
                 }
                 delay(POLL_MS)
             }
+            follow.cancel()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }

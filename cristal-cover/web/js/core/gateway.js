@@ -21,7 +21,8 @@ export function parseSse(line) {
     return null;
   }
   const error = obj.error ? obj.error.message || (typeof obj.error === 'string' ? obj.error : JSON.stringify(obj.error)) : null;
-  const delta = obj.choices?.[0]?.delta?.content ?? null;
+  // OpenRouter/OpenAI: choices[0].delta.content. Workers AI (conversa grátis): "response".
+  const delta = obj.choices?.[0]?.delta?.content ?? (typeof obj.response === 'string' ? obj.response : null);
   const usage = obj.usage
     ? { promptTokens: obj.usage.prompt_tokens || 0, completionTokens: obj.usage.completion_tokens || 0, costUsd: typeof obj.usage.cost === 'number' ? obj.usage.cost : null }
     : null;
