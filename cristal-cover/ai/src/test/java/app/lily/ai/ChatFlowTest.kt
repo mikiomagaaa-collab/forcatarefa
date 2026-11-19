@@ -128,6 +128,44 @@ class ChatFlowTest {
     private fun answered(s: ChatSession, count: Int) = waitUntil { s.messages.count { it.role == Role.ASSISTANT } >= count && s.streaming == null }
 
     @Test
+    fun `pergunta seguida sobre ele leva a conversa junto e a voz volta a ouvir depois de responder`() {
+        install(Catalog.qwen3Small)
+        val fake = FakeEngine(pieces = listOf("O Neymar é ", "um jogador de futebol brasileiro."), stepMs = 20)
+        graph.engines = fake
+        graph.settings.update { it.copy(speakVoiceAnswers = false, voiceFollowUp = true) }
+        val s = session()
+        s.send("Quem é o Neymar?", viaVoice = true)
+        answered(s, 1)
+        waitUntil { s.followUps == 1 }
+
+        // A segunda pergunta ("ele") vai com a primeira e a resposta, e com a instrução de continuar o assunto.
+        s.send("Quantos anos ele tem?", viaVoice = true)
+        answered(s, 2)
+        waitUntil { s.followUps == 2 }
+        val history = fake.histories.last()
+        assertEquals(listOf(true, false), history.map { it.fromUser })
+        assertEquals("Quem é o Neymar?", history[0].text)
+        assertTrue(history[1].text.contains("Neymar"))
+        assertEquals("Quantos anos ele tem?", fake.prompts.last())
+        assertTrue(fake.systems.last()!!.contains("\"ele\""))
+
+        // Digitada: responde com o contexto, mas não liga o microfone.
+        s.send("E onde ele joga?")
+        answered(s, 3)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300))
+        assertEquals(2, s.followUps)
+        assertEquals(4, fake.histories.last().size)
+
+        // Conversa contínua desligada: responde e não volta a ouvir.
+        graph.settings.update { it.copy(voiceFollowUp = false) }
+        s.send("Ele já jogou na Europa?", viaVoice = true)
+        answered(s, 4)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300))
+        assertEquals(2, s.followUps)
+        graph.settings.update { it.copy(voiceFollowUp = true, speakVoiceAnswers = true) }
+    }
+
+    @Test
     fun `pergunta e resposta em pedacos ficam gravadas no historico`() {
         install(Catalog.qwen3Small)
         val fake = FakeEngine()

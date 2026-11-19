@@ -77,8 +77,11 @@ object SpeechInput {
         }
     }
 
+    /** O aviso de silêncio (a conversa contínua não mostra quando a pessoa não continua). */
+    const val NOTHING_HEARD = "Não ouvi nada. Tente de novo."
+
     fun errorText(code: Int): String = when (code) {
-        SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Não ouvi nada. Tente de novo."
+        SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> NOTHING_HEARD
         SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Permita o microfone para ditar."
         SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "O reconhecimento precisa do pacote de português no aparelho (ou de internet)."
         SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE, SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED -> "O português não está instalado no reconhecedor do aparelho."

@@ -33,6 +33,12 @@ data class AiSettings(
     val voiceRate: Float = 1f,
     /** Ler as respostas em voz alta automaticamente quando a pergunta foi por voz. */
     val speakVoiceAnswers: Boolean = true,
+    /**
+     * Conversa contínua por voz: depois de responder (e de ler a resposta) uma pergunta falada, a
+     * L.I.L.Y volta a ouvir uma vez para a próxima pergunta. Só dentro de uma conversa de voz que a
+     * pessoa começou; para sozinha no silêncio.
+     */
+    val voiceFollowUp: Boolean = true,
     /** Baixar pacotes de tradução e modelos só no Wi-Fi. */
     val wifiOnly: Boolean = true,
     val onboarded: Boolean = false,

@@ -68,15 +68,27 @@ fun CoverScreen(nav: Nav) {
     }
     val engine by graph.engines.status.collectAsStateWithLifecycle()
     var listening by remember { mutableStateOf(false) }
+    var followUp by remember { mutableStateOf(false) }
     var typing by remember { mutableStateOf(false) }
     val voice = rememberVoiceInput()
+
+    // Conversa contínua: depois da resposta (e da leitura), ouve de novo para a próxima pergunta.
+    FollowUpEffect(session) {
+        if (!listening && !typing && !session.busy && permissions.has(MainActivity.MICROPHONE)) {
+            followUp = true
+            listening = true
+        }
+    }
 
     ListenEffect(
         voice,
         listening,
         onFinal = { text -> if (text.isNotBlank()) session.send(text, viaVoice = true) },
-        onError = { session.notice = it },
-        onEnd = { listening = false },
+        onError = { if (!(followUp && it == app.lily.ai.engine.SpeechInput.NOTHING_HEARD)) session.notice = it },
+        onEnd = {
+            listening = false
+            followUp = false
+        },
     )
     LaunchedEffect(session.notice) {
         if (session.notice != null) {
@@ -121,7 +133,7 @@ fun CoverScreen(nav: Nav) {
                     Spacer(Modifier.height(6.dp))
                     Text(
                         when {
-                            listening -> voice.partial.ifBlank { "Ouvindo…" }
+                            listening -> voice.partial.ifBlank { if (followUp) "Pode continuar: estou ouvindo…" else "Ouvindo…" }
                             session.notice != null -> session.notice.orEmpty()
                             else -> "Toque no orbe e fale"
                         },

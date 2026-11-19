@@ -422,7 +422,7 @@ Se mesmo assim ela não aparecer, o Cristal avisa "L.I.L.Y AI não abriu nesta t
   Motorola oferecer essa opção) abre a L.I.L.Y por voz.
 
 O microfone só liga quando você chama a L.I.L.Y (segurar a ilha, tocar no microfone ou no assistente) e
-para sozinho no fim da fala.
+para sozinho no fim da fala. **Conversa contínua:** depois de responder uma pergunta falada (e de ler a resposta), a L.I.L.Y ouve mais uma vez para você continuar o assunto, por exemplo "Quem é o Neymar?" e, em seguida, "Quantos anos ele tem?". O painel mostra "Pode continuar: estou ouvindo…"; se você não falar, o microfone desliga sozinho. Para desligar: Configurações > Voz > **Conversa contínua**.
 
 ## 9.4 Novidades do Cristal 1.8.0 e da L.I.L.Y AI 1.2.0 (e 1.2.1)
 

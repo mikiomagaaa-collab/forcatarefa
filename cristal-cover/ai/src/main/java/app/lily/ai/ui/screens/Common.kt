@@ -220,6 +220,22 @@ fun ListenEffect(state: VoiceInputState, active: Boolean, onFinal: (String) -> U
 
 private const val MIC = "microfone"
 
+/**
+ * Conversa contínua por voz: quando a resposta de uma pergunta falada fica pronta (e a leitura em voz
+ * alta termina), chama [onReady] para voltar a ouvir. Só reage a respostas novas (abrir a tela de novo
+ * não liga o microfone) e só com a tela em primeiro plano.
+ */
+@Composable
+fun FollowUpEffect(session: ChatSession, onReady: () -> Unit) {
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    val seen = remember(session) { androidx.compose.runtime.mutableIntStateOf(session.followUps) }
+    LaunchedEffect(session, session.followUps) {
+        if (session.followUps <= seen.intValue) return@LaunchedEffect
+        seen.intValue = session.followUps
+        if (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) onReady()
+    }
+}
+
 fun shareText(context: Context, text: String) {
     val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, text)
     context.startActivity(android.content.Intent.createChooser(send, null).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))

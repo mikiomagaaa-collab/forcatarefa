@@ -27,6 +27,8 @@ object Prompts {
         }
         append("Responda em português do Brasil, a menos que peçam outro idioma. Seja clara, gentil e direta. ")
         append("Se faltar contexto ou você não souber, diga isso com honestidade em vez de inventar. ")
+        append("Perguntas curtas que continuam a conversa (\"e ele?\", \"quantos anos ele tem?\", \"e isso serve pra quê?\") se referem ao que foi falado antes: ")
+        append("use as mensagens anteriores para entender a quem ou a que \"ele\", \"ela\", \"isso\" e \"lá\" se referem e responda direto, sem pedir para repetir. ")
         append("Você não navega na internet nem acessa a agenda ou outros apps, a não ser pelo que a pessoa enviar aqui.")
         if (memories.isNotEmpty()) {
             append("\n\nO que a pessoa pediu para você lembrar (use só quando for útil):\n")

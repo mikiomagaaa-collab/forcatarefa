@@ -66,7 +66,7 @@ políticas de OpenRouter, do fornecedor do modelo usado, fal.ai, Tavily ou Brave
 
 | Permissão | Por quê | Quando |
 | --- | --- | --- |
-| Microfone | Falar com a L.I.L.Y, ditado | Só depois que você toca no microfone ou segura a ilha |
+| Microfone | Falar com a L.I.L.Y, ditado | Só depois que você toca no microfone ou segura a ilha. Com a "Conversa contínua" (pode ser desligada), depois de responder uma pergunta **que você falou**, ouve mais uma vez para a próxima pergunta e para no silêncio |
 | Notificações | Avisos de respostas, downloads, vídeos e lembretes | Ao usar esses recursos |
 | Sobreposição (exibir sobre outros apps) | Avatar flutuante e Liquid Island | Só se você ligar |
 | Acesso às notificações (Cristal) | Mostrar notificações na ilha e na tela externa | Só se você ativar |

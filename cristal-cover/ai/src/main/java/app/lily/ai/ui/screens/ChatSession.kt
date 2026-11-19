@@ -100,6 +100,13 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
     var speakingId by mutableStateOf<String?>(null)
         private set
 
+    /**
+     * Sobe a cada resposta de voz pronta para a próxima pergunta (depois da leitura em voz alta, se
+     * ela estiver ligada). As telas de voz voltam a ouvir quando este número muda.
+     */
+    var followUps by mutableStateOf(0)
+        private set
+
     private var job: Job? = null
     @Volatile private var stopRecording = false
     private var voiceTurn = false
@@ -267,14 +274,18 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
     /** Prévia do que o roteador escolheria agora para uma mensagem de texto. */
     fun previewPlan(): RoutePlan = graph.tools.plan(TaskKind.CHAT, manualModel, needsImage = image != null, needsAudio = audio != null)
 
-    fun speak(message: ChatMessage) {
+    /** [then] roda só quando a leitura chega ao fim (não quando é interrompida). */
+    fun speak(message: ChatMessage, then: (() -> Unit)? = null) {
         if (speakingId == message.id) {
             graph.voice.stop()
             speakingId = null
             return
         }
         speakingId = message.id
-        graph.speak(Markdown.plain(message.text)) { speakingId = null }
+        graph.speak(Markdown.plain(message.text)) {
+            speakingId = null
+            then?.invoke()
+        }
     }
 
     /** Guarda na memória (com a confirmação da tela); false se parece dado sensível. */
@@ -392,8 +403,12 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
         messages += answer
         streaming = null
         graph.conversations.save(conversation, messages.toList())
-        if (voiceTurn && answer.status == MsgStatus.DONE && graph.settings.value.value.speakVoiceAnswers) speak(answer)
+        val settings = graph.settings.value.value
+        val wasVoice = voiceTurn
         voiceTurn = false
+        if (!wasVoice || answer.status != MsgStatus.DONE) return
+        val next: (() -> Unit)? = if (settings.voiceFollowUp) ({ graph.scope.launch(Dispatchers.Main) { followUps++ } }) else null
+        if (settings.speakVoiceAnswers) speak(answer, then = next) else next?.invoke()
     }
 
     private suspend fun ensureConversation(first: ChatMessage): String {

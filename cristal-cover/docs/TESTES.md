@@ -424,3 +424,16 @@ Segurança:
 - [ ] Sem a chave de acesso (ou com uma errada), qualquer rota do gateway responde 401
 - [ ] A chave de acesso fica fora de capturas de tela e do relatório do Diagnóstico
 - [ ] PIN e biometria do Android continuam funcionando normalmente
+
+## 24. L.I.L.Y AI 1.3.1: conversa contínua e perguntas seguidas
+
+- [ ] Painel de voz (segurar a ilha): perguntar "Quem é o Neymar?"; depois da resposta (e da leitura), o painel mostra "Pode continuar: estou ouvindo…" sem tocar em nada
+- [ ] Responder "Quantos anos ele tem?": a resposta fala do Neymar (entendeu o "ele")
+- [ ] Ficar em silêncio depois de uma resposta: o microfone desliga sozinho, sem aviso de erro
+- [ ] A L.I.L.Y não se ouve: o microfone só abre depois que a leitura em voz alta termina
+- [ ] Tocar em "Parar a leitura" no meio: ela não volta a ouvir sozinha
+- [ ] Pergunta digitada: responde, mas não liga o microfone
+- [ ] Configurações > Voz > Conversa contínua desligada: depois da resposta, o microfone fica desligado
+- [ ] ⚠️ Tela externa: o mesmo, tocando no orbe para a primeira pergunta
+- [ ] Fechar o painel ou sair do app no meio da resposta: o microfone não liga com a tela fechada
+- [ ] Reabrir o painel em menos de 5 minutos: a conversa continua, mas o microfone só liga com o toque (ou com a ilha)

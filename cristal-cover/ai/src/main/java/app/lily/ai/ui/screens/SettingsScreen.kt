@@ -164,6 +164,9 @@ fun SettingsScreen(nav: Nav) {
                 SettingRow("Responder em voz alta", "Quando a pergunta foi falada", Icons.Rounded.RecordVoiceOver, trailing = {
                     Toggle(settings.speakVoiceAnswers, { on -> graph.settings.update { it.copy(speakVoiceAnswers = on) } })
                 })
+                SettingRow("Conversa contínua", "Depois de responder por voz, ouve de novo para a próxima pergunta (para no silêncio)", Icons.Rounded.Mic, trailing = {
+                    Toggle(settings.voiceFollowUp, { on -> graph.settings.update { it.copy(voiceFollowUp = on) } })
+                })
                 Text(String.format(Locale.forLanguageTag("pt-BR"), "Velocidade da leitura: %.1f×", settings.voiceRate), style = Type.footnote, color = c.secondary, modifier = Modifier.padding(start = 4.dp, top = 6.dp))
                 Slider(
                     value = settings.voiceRate,

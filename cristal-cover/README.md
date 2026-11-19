@@ -74,7 +74,7 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 O que **foi verificado** durante o desenvolvimento:
 
 - compila do zero (debug e release com R8) com as versões estáveis atuais das ferramentas;
-- 313 testes automáticos em JVM passam (124 no Cristal, 45 no teclado, 16 no módulo compartilhado, 120 na
+- 314 testes automáticos em JVM passam (124 no Cristal, 45 no teclado, 16 no módulo compartilhado, 121 na
   L.I.L.Y AI e 8 na Gallery), mais 24 do gateway, 9 da L.I.L.Y Web e o teste de ponta a ponta da Web
   num Chromium. No launcher: lógica da grade, detecção da tela externa,
   regras de compatibilidade, segurança dos comandos de shell, backup, papéis de parede por área,
@@ -191,7 +191,7 @@ depois que você o configura e liga "Permitir processamento externo", e cada res
 | Áudio | Ditado pelo reconhecedor do Android (no aparelho quando o idioma está instalado), transcrição e resumo de áudios com o Gemma 4 E2B, leitura em voz alta (vozes do Android), identificação de idioma (ML Kit) |
 | Ferramentas de texto | Corrigir, reescrever (5 tons), resumir, expandir, traduzir (ML Kit ou o modelo no perfil Qualidade), explicar, organizar, escrever e sugerir resposta, com o jeito informal preservado |
 | Memória | Só o que você manda guardar ("Guardar na memória" numa mensagem ou na tela Memória); recusa senhas, documentos, cartões e códigos; ligar e desligar cada uma ou todas; histórico de conversas não vira memória |
-| L.I.L.Y por voz | Um painel em lente no topo da tela, logo abaixo da Liquid Island, por cima de qualquer app: abre ouvindo, mostra a pergunta, a resposta chegando e o modelo; dá para falar de novo (acompanhamento), digitar, ouvir a resposta e continuar no app. Abre pela ilha, pelo widget e pela Central do Cristal e também como **assistente digital do Android** (Apps padrão). Fechado no meio, a resposta continua: um Live Update mostra "respondendo" na ilha e um aviso traz a resposta |
+| L.I.L.Y por voz | Um painel em lente no topo da tela, logo abaixo da Liquid Island, por cima de qualquer app: abre ouvindo, mostra a pergunta, a resposta chegando e o modelo; dá para falar de novo (acompanhamento), digitar, ouvir a resposta e continuar no app. Abre pela ilha, pelo widget e pela Central do Cristal e também como **assistente digital do Android** (Apps padrão). Fechado no meio, a resposta continua: um Live Update mostra "respondendo" na ilha e um aviso traz a resposta. **Conversa contínua (1.3.1):** depois de responder uma pergunta falada (e de ler a resposta), ouve mais uma vez para a próxima, e perguntas seguidas como "quantos anos ele tem?" usam o assunto anterior; para no silêncio e pode ser desligada em Configurações > Voz |
 | Integrações | Teclado (ponte de assinatura), Cristal (voz pela ilha, widget, busca da gaveta e Central de Controle; lembretes pela confirmação do Info Brief, nada é criado sem o toque), Gallery (fotos chegam com permissão só delas), Liquid Island (Live Updates oficiais da voz, dos downloads e da geração, com o orbe da L.I.L.Y) |
 | Tela externa | Versão de voz: tocar no orbe, falar e ouvir; ao abrir o aparelho, a mesma conversa continua na tela interna, até com a resposta em andamento |
 | Aparência | Orbe em AGSL, fundo aurora, vidro, temas Liquid Glass, AMOLED, Claro, Roxo e Personalizado |

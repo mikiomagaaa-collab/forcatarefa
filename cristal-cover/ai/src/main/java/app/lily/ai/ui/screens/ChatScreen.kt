@@ -134,12 +134,23 @@ fun ChatContent(nav: Nav, session: ChatSession, compact: Boolean = false) {
     val pickAudio = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri?.let { session.attachAudio(it) } }
     val pickDocument = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { session.attachDocument(it) } }
 
+    var followUp by remember { mutableStateOf(false) }
+    // Conversa contínua: depois de responder uma pergunta falada (e ler a resposta), ouve de novo.
+    FollowUpEffect(session) {
+        if (!listening && !session.busy && session.draft.isBlank() && permissions.has(MainActivity.MICROPHONE)) {
+            followUp = true
+            listening = true
+        }
+    }
     ListenEffect(
         voice,
         listening,
         onFinal = { text -> if (text.isNotBlank()) session.send(text, viaVoice = true) },
-        onError = { session.notice = it },
-        onEnd = { listening = false },
+        onError = { if (!(followUp && it == app.lily.ai.engine.SpeechInput.NOTHING_HEARD)) session.notice = it },
+        onEnd = {
+            listening = false
+            followUp = false
+        },
     )
     LaunchedEffect(voice.partial) { if (listening && voice.partial.isNotEmpty()) session.draft = voice.partial }
     LaunchedEffect(session.notice) {
