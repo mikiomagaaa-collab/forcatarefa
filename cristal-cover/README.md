@@ -16,6 +16,7 @@ online, pasta `gateway/`) e a **L.I.L.Y Web**, a versão para o computador em HT
 - Checklist de testes no aparelho: [docs/TESTES.md](docs/TESTES.md)
 - Serviço online (hospedagem, chaves e custos): [docs/GATEWAY.md](docs/GATEWAY.md)
 - Planejamento e compatibilidade com outros celulares: [docs/ROADMAP.md](docs/ROADMAP.md)
+- L.I.L.Y para iPhone (app nativo em SwiftUI, pasta `ios/`): [docs/IPHONE.md](docs/IPHONE.md)
 - Termos de uso, privacidade e créditos: [legal/](legal/); licença: [LICENSE](LICENSE) (Apache 2.0) e
   [NOTICE](NOTICE); [segurança](SEGURANCA.md); [como contribuir](CONTRIBUINDO.md)
 
@@ -66,6 +67,7 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 | L.I.L.Y Gateway: serviço online na sua conta Cloudflare, sem chaves no APK, chave de acesso própria, limite de gasto por dia | Feito; falta você publicar com as suas chaves ([docs/GATEWAY.md](docs/GATEWAY.md)) |
 | L.I.L.Y Web: a L.I.L.Y no computador (conversa, Codex, vídeo, ferramentas, avatar, memória, modelos locais no navegador com WebGPU) | Feito; publicada junto com o gateway |
 | Termos de uso, privacidade (LGPD), créditos, licença Apache 2.0, política de segurança e guia de contribuição | Feito; falta o seu nome e contato e, de preferência, uma revisão jurídica |
+| L.I.L.Y para iPhone: app nativo em SwiftUI (conversa com o grátis primeiro e pergunta nova a qualquer hora, voz, avatar, imagens e vídeos grátis, Keychain, termos), compilado e testado num Mac do GitHub; .ipa sem assinatura para instalar com o Apple ID | Primeira versão (sem modelos no aparelho; precisa do gateway) — [docs/IPHONE.md](docs/IPHONE.md) |
 | Compatibilidade com outros celulares (Motorola, Samsung, Xiaomi e outros) | Planejado com dados medidos ([docs/ROADMAP.md](docs/ROADMAP.md)) |
 | Biblioteca de apps, páginas próprias da tela externa | Planejado |
 
