@@ -258,8 +258,7 @@ fun LockScreen(
         }
         val clockHeight = (baseClockHeight * liveScale).coerceIn(72.dp, maxHeight * 0.64f)
         val bigClock = !settings.lockClockCard || subject != null
-        val clockColor = if (settings.lockClockColor == 0) Color.White else Color(settings.lockClockColor)
-        val clockGlass = if (settings.lockClockGlass) ClockGlass(backdrop, settings.lockClockGlassOpacity, tint = clockColor) else null
+        val look = settings.lockClockLook(backdrop)
         val slideModifier = Modifier.graphicsLayer {
             val p = slide.value
             translationY = p * size.height * 0.5f
@@ -296,14 +295,15 @@ fun LockScreen(
                     .clockDepth(placement, { tilt.value }, settings.wallpaperSpatial, widthPx, heightPx),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                LockDateLine(now, locale, state, Modifier.height(dateLine))
+                LockDateLine(now, locale, state, Modifier.height(dateLine), color = look.companion(Color.White))
                 AdaptiveClock(
                     time = formatTime(now, is24h),
                     font = settings.lockClockFont,
                     layout = settings.lockClockLayout,
                     adaptive = settings.lockClockAdaptive,
-                    glass = clockGlass,
-                    brush = clockBrush(settings.lockClockColor),
+                    glass = look.glass,
+                    fill = look.fill,
+                    brush = look.brush,
                     fixedSize = (if (compact) 96f else 128f).times(liveScale).sp,
                     modifier = Modifier
                         .fillMaxWidth()

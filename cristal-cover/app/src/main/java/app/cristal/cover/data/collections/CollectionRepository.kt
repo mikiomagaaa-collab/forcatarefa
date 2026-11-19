@@ -67,6 +67,7 @@ object AppearanceKeys {
         "lock_widgets", "lock_media",
         "liquid_", "material_", // tema do Design System e materiais
         "icon_tint", "icon_style",
+        "widget_style", // aparência dos widgets: estilo, transparência, desfoque, cor, cantos, densidade
     )
     private val exact = setOf("glass_intensity", "glass_quality", "theme_mode")
 

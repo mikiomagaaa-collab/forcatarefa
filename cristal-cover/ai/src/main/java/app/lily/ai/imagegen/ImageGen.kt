@@ -104,7 +104,14 @@ class ImageGenService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val graph = (application as LilyAiApp).graph
+        val graph = (application as LilyAiApp).graphOrNull ?: run {
+            // O núcleo não iniciou: cumpre o pedido do Android (primeiro plano) e encerra.
+            ensureChannel()
+            startForeground(NOTIFICATION_ID, notification("Geração indisponível", "", 0f), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROCESSING)
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return START_NOT_STICKY
+        }
         if (intent?.action == ACTION_STOP) {
             graph.imageGen.stop()
             return START_NOT_STICKY

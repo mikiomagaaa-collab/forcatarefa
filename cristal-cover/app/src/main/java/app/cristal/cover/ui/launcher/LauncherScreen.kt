@@ -78,6 +78,9 @@ import app.cristal.cover.data.weather.WeatherStatus
 import app.cristal.cover.data.widgets.WidgetProviderEntry
 import app.cristal.cover.ui.components.SheetState
 import app.cristal.cover.ui.components.WallpaperLayer
+import app.cristal.cover.ui.fold.FoldLayer
+import app.cristal.cover.ui.widgets.widgetStyle
+import app.cristal.cover.ui.fold.foldFocus
 import app.cristal.cover.ui.glass.LocalGlassBackdrop
 import app.cristal.cover.ui.glass.Motion
 import app.cristal.cover.ui.glass.glassBackdropSource
@@ -105,6 +108,15 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
+    // A aparência escolhida para os widgets vale para todos eles (tela inicial, Central, Now Brief, galeria).
+    val style by viewModel.settings.collectAsStateWithLifecycle()
+    androidx.compose.runtime.CompositionLocalProvider(app.cristal.cover.ui.widgets.LocalWidgetStyle provides style.widgetStyle()) {
+        LauncherContent(viewModel, quality)
+    }
+}
+
+@Composable
+private fun LauncherContent(viewModel: LauncherViewModel, quality: GlassQuality) {
     val rawSettings by viewModel.settings.collectAsStateWithLifecycle()
     val home by viewModel.home.collectAsStateWithLifecycle()
     val rawWidgetData by viewModel.widgetData.collectAsStateWithLifecycle()
@@ -115,8 +127,8 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
         lilyReady = app.cristal.cover.data.lily.LilyLink.available(lilyContext)
         onPauseOrDispose { }
     }
-    val widgetData = remember(rawWidgetData, lilyReady) { rawWidgetData.copy(lily = lilyReady) }
     val nowBrief by viewModel.nowBrief.collectAsStateWithLifecycle()
+    val widgetData = remember(rawWidgetData, lilyReady, nowBrief) { rawWidgetData.copy(lily = lilyReady, brief = nowBrief.summary()) }
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val quick by viewModel.quick.collectAsStateWithLifecycle()
     val controlLayout by viewModel.controlLayout.collectAsStateWithLifecycle()
@@ -138,18 +150,11 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
     val wallpaper = wallpaperImages[settings.wallpaperSlot]
     LaunchedEffect(onCover) { viewModel.setProfile(HomeProfile.of(onCover)) }
 
-    // Flip Transition: a tela "chega" com uma mola ao trocar de tela física, e recolhe conforme a
-    // dobradiça fecha (quando o aparelho informa o ângulo).
-    val arrival = remember { Animatable(1f) }
-    LaunchedEffect(displayIdNow) {
-        if (rawSettings.flipTransition) {
-            arrival.snapTo(0f)
-            arrival.animateTo(1f, Motion.pop)
-        }
-    }
-    val hinge = cover.hingeAngle
-    val foldTarget = if (rawSettings.flipTransition && !onCover && hinge != null) ((150f - hinge) / 90f).coerceIn(0f, 1f) else 0f
-    val foldAmount by animateFloatAsState(foldTarget, Motion.gentle, label = "dobra")
+    // Transição de dobra (estilo iPhone Duo, com a identidade do Liquid Flip): ao trocar de tela
+    // física, a cena chega desfocada e entra em foco a partir das bordas, com a faixa da dobra por
+    // último; ao fechar, o inverso, seguindo a dobradiça. Ver ui/fold.
+    val foldProgress = app.cristal.cover.ui.fold.rememberFoldProgress(rawSettings.flipTransition, onCover, displayIdNow, cover.hingeAngle)
+    val foldGeometry = app.cristal.cover.ui.fold.rememberFoldGeometry(onCover)
     val safe = rememberSafeLayout(settings.useCutoutArea)
     // Papel de parede espacial: só com o vidro completo (no modo leve, economiza bateria).
     val homeTilt = rememberDeviceTilt(settings.wallpaperSpatial && quality != GlassQuality.LIGHT)
@@ -435,6 +440,10 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
         onLilyVoice = {
             viewModel.openLily(onCover, { app.cristal.cover.data.lily.LilyLink.voice(context, displayId) }, "Instale a L.I.L.Y AI para falar com ela.")
         },
+        onLilyPrompt = { prompt ->
+            viewModel.openLily(onCover, { app.cristal.cover.data.lily.LilyLink.ask(context, prompt, displayId) }, "Instale a L.I.L.Y AI para perguntar a ela.")
+        },
+        onBriefOpen = { scope.launch { pagerState.animateScrollToPage(0) } },
     )
 
     // --- Voltar -----------------------------------------------------------------------------------
@@ -469,10 +478,9 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                 .graphicsLayer {
                     val amount = max(max(drawer.progress.value, panel.progress.value), max(folderAmount, dialogAmount * 0.7f))
                         .coerceIn(0f, 1f)
-                    val scale = (1f - 0.035f * amount) * (1f - 0.14f * foldAmount) * (0.9f + 0.1f * arrival.value)
+                    val scale = 1f - 0.035f * amount
                     scaleX = scale
                     scaleY = scale
-                    alpha = ((1f - 0.9f * foldAmount) * (0.2f + 0.8f * arrival.value)).coerceIn(0f, 1f)
                     renderEffect = if (quality != GlassQuality.LIGHT && amount > 0.01f) {
                         BlurEffect(blurMaxPx * amount, blurMaxPx * amount, TileMode.Clamp)
                     } else {
@@ -543,7 +551,9 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                 offsetX = settings.wallpaperOffsetX,
                 offsetY = settings.wallpaperOffsetY,
                 saturation = settings.wallpaperSaturation,
-                modifier = Modifier.glassBackdropSource(sceneBackdrop),
+                modifier = Modifier
+                    .foldFocus(foldProgress, foldGeometry, FoldLayer.WALLPAPER, if (quality == GlassQuality.LIGHT) 12.dp else 28.dp)
+                    .glassBackdropSource(sceneBackdrop),
                 tilt = { homeTilt.value },
                 spatial = settings.wallpaperSpatial,
                 parallax = {
@@ -555,11 +565,17 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                     }
                 },
             )
-            CompositionLocalProvider(LocalGlassBackdrop provides sceneBackdrop) {
+            CompositionLocalProvider(
+                LocalGlassBackdrop provides sceneBackdrop,
+                app.cristal.cover.ui.widgets.LocalWidgetScreen provides if (onCover) app.cristal.cover.ui.widgets.WidgetScreen.COVER else app.cristal.cover.ui.widgets.WidgetScreen.INNER,
+            ) {
               Box(
-                  Modifier.fillMaxSize().graphicsLayer {
-                      alpha = 1f - 0.92f * max(drawer.progress.value, panel.progress.value).coerceIn(0f, 1f)
-                  },
+                  Modifier
+                      .fillMaxSize()
+                      .graphicsLayer {
+                          alpha = 1f - 0.92f * max(drawer.progress.value, panel.progress.value).coerceIn(0f, 1f)
+                      }
+                      .foldFocus(foldProgress, foldGeometry, FoldLayer.CONTENT, if (quality == GlassQuality.LIGHT) 12.dp else 28.dp),
               ) {
                 HomeContent(
                     settings = settings,
@@ -765,6 +781,7 @@ fun LauncherScreen(viewModel: LauncherViewModel, quality: GlassQuality) {
                     },
                     onDismiss = { widgetPicker = false },
                     providers = providers,
+                    previewData = widgetData,
                     onPickProvider = { entry ->
                         widgetPicker = false
                         pickAppWidget(entry)

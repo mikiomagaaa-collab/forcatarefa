@@ -77,6 +77,14 @@ data class NowBriefData(
     val timers: List<NotificationItem> = emptyList(),
 )
 
+/** O resumo que o widget do Info Brief mostra: os lembretes por hora e quantos há de cada coisa. */
+fun NowBriefData.summary(): app.cristal.cover.ui.widgets.BriefSummary = app.cristal.cover.ui.widgets.BriefSummary(
+    items = reminders.sortedWith(compareBy(nullsLast()) { it.at }).map { app.cristal.cover.ui.widgets.BriefItem(it.title, it.at, reminder = true) },
+    suggestions = suggestions.size,
+    timers = timers.size,
+    lives = lives.size,
+)
+
 @Stable
 class NowBriefActions(
     val onCompleteReminder: (Reminder) -> Unit = {},

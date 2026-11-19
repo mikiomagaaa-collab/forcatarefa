@@ -7,73 +7,147 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.Looper
-import android.os.Process
+import android.util.Log
 import app.lily.ai.BuildConfig
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.system.exitProcess
 
 /**
- * O último erro que fechou a L.I.L.Y AI, guardado no aparelho para a pessoa ver e copiar sem
- * computador. Com o app na tela, o relatório abre na hora em [CrashActivity], que roda num processo
- * separado e não depende do resto do app; ele também entra no relatório do "Teste do aparelho".
- * Nada é enviado para fora do aparelho.
+ * Os erros que fecharam a L.I.L.Y AI, guardados no aparelho (os últimos [KEEP]) para a pessoa ver,
+ * copiar e exportar sem computador. A captura liga no começo do processo (antes dos providers e do
+ * resto do app). Com o app na tela, o relatório abre na hora em [DiagnosticActivity], que roda num
+ * processo separado e não depende do resto do app; ele também abre pelo ícone "L.I.L.Y
+ * Diagnóstico". Nada é enviado para fora do aparelho sozinho.
  */
 object CrashReport {
-    private const val FILE = "ultimo-erro.txt"
     private const val MAX_CHARS = 24_000
+    private const val KEEP = 10
 
-    /** Processo da tela do relatório (ver o manifesto). */
+    /** Processo da tela de diagnóstico (ver o manifesto). */
     const val PROCESS_SUFFIX = ":relatorio"
 
     @Volatile
     private var started = 0
 
+    @Volatile
+    private var handler: Thread.UncaughtExceptionHandler? = null
+
+    /** O app de agora (o tratador grava nele). */
+    @Volatile
+    private var target: Application? = null
+
     /** Liga a captura: guarda o erro e, com o app na tela, mostra o relatório. Depois o Android fecha o app como sempre. */
     fun install(app: Application) {
+        target = app
         app.registerActivityLifecycleCallbacks(Counter)
         val previous = Thread.getDefaultUncaughtExceptionHandler()
-        Thread.setDefaultUncaughtExceptionHandler { thread, error ->
-            runCatching { save(app, thread.name, error) }
+        if (previous != null && previous === handler) return
+        handler = Thread.UncaughtExceptionHandler { thread, error ->
+            val app = target ?: return@UncaughtExceptionHandler previous?.uncaughtException(thread, error) ?: Unit
+            runCatching { Log.e(DiagLog.TAG, "Erro não tratado na thread ${thread.name}", error) }
+            runCatching { save(app, thread.name, error) }.onFailure { runCatching { Log.e(DiagLog.TAG, "Não deu para guardar o erro", it) } }
+            runCatching { DiagLog.line("✗ ERRO FATAL (${module(error)}): ${error.javaClass.name}: ${error.message}", Log.ERROR) }
             // Na tela (ou abrindo pelo ícone, ainda na thread principal): mostra o relatório já.
-            if (started > 0 || thread === Looper.getMainLooper().thread) runCatching { app.startActivity(intent(app)) }
-            if (previous != null) {
-                previous.uncaughtException(thread, error)
-            } else {
-                Process.killProcess(Process.myPid())
-                exitProcess(10)
-            }
+            if (started > 0 || thread === Looper.getMainLooper().thread) runCatching { app.startActivity(intent(app, crashed = true)) }
+            // No Android sempre há o tratador do sistema (ele fecha o app). Sem ele (testes na JVM),
+            // só a thread morre.
+            previous?.uncaughtException(thread, error)
         }
+        Thread.setDefaultUncaughtExceptionHandler(handler)
     }
 
-    fun intent(context: Context): Intent = Intent(context, CrashActivity::class.java)
+    fun intent(context: Context, crashed: Boolean = false): Intent = Intent(context, DiagnosticActivity::class.java)
+        .putExtra(DiagnosticActivity.EXTRA_CRASHED, crashed)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
 
-    /** Monta o relatório: versão, aparelho, hora, processo e a pilha completa (com as causas). */
-    fun format(thread: String, error: Throwable, process: String = Application.getProcessName(), now: Instant = Instant.now()): String {
+    /** Monta o relatório: versão, aparelho, hora, processo, módulo provável e a pilha completa (com as causas). */
+    fun format(
+        thread: String,
+        error: Throwable,
+        process: String = Application.getProcessName(),
+        now: Instant = Instant.now(),
+        fatal: Boolean = true,
+    ): String {
         val time = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss", Locale.forLanguageTag("pt-BR")).format(now.atZone(ZoneId.systemDefault()))
         val head = buildString {
-            appendLine("L.I.L.Y AI ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) fechou por um erro")
+            appendLine("L.I.L.Y AI ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) " + if (fatal) "fechou por um erro" else "teve um erro (o app seguiu)")
             appendLine("Aparelho: ${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
             appendLine("Quando: $time · processo $process · thread $thread")
+            appendLine("Módulo provável: ${module(error)}")
             appendLine()
         }
         val stack = error.stackTraceToString()
         return head + if (stack.length > MAX_CHARS) stack.take(MAX_CHARS) + "\n…(cortado)" else stack
     }
 
-    fun save(context: Context, thread: String, error: Throwable) {
-        File(context.filesDir, FILE).writeText(format(thread, error))
+    /** Guarda um erro no histórico (o mais novo primeiro; os mais antigos saem). */
+    fun save(context: Context, thread: String, error: Throwable, fatal: Boolean = true) {
+        val dir = dir(context).apply { mkdirs() }
+        File(dir, "erro-${System.currentTimeMillis()}.txt").writeText(format(thread, error, fatal = fatal))
+        all(dir).drop(KEEP).forEach { it.delete() }
     }
 
     /** O último relatório guardado, se houver. */
-    fun last(context: Context): String? = File(context.filesDir, FILE).takeIf { it.isFile }?.readText()?.takeIf { it.isNotBlank() }
+    fun last(context: Context): String? = history(context).firstOrNull()
+
+    /** Todos os relatórios guardados, do mais novo para o mais antigo. */
+    fun history(context: Context): List<String> = all(dir(context)).mapNotNull { runCatching { it.readText() }.getOrNull()?.takeIf(String::isNotBlank) }
 
     fun clear(context: Context) {
-        File(context.filesDir, FILE).delete()
+        dir(context).listFiles()?.forEach { it.delete() }
+        File(context.filesDir, "ultimo-erro.txt").delete()
+    }
+
+    private fun dir(context: Context) = File(DiagLog.dir(context), "erros")
+
+    private fun all(dir: File): List<File> = (dir.listFiles { f -> f.name.startsWith("erro-") } ?: emptyArray())
+        .sortedByDescending { it.name.removePrefix("erro-").removeSuffix(".txt").toLongOrNull() ?: 0L }
+
+    /**
+     * Onde o erro nasceu: a biblioteca ou parte do app no ponto mais fundo da pilha e, se for
+     * diferente, a parte do app que a chamou.
+     */
+    fun module(error: Throwable): String {
+        var root = error
+        while (root.cause != null && root.cause !== root) root = root.cause!!
+        val frames = root.stackTrace.map { it.className }
+        val first = frames.firstNotNullOfOrNull(::moduleOf)
+        val caller = frames.firstOrNull { it.startsWith("app.lily.ai.") }?.let(::moduleOf)
+        return when {
+            first == null -> "Sistema Android (${frames.firstOrNull() ?: root.javaClass.name})"
+            caller == null || caller == first -> first
+            else -> "$first · chamado por: $caller"
+        }
+    }
+
+    private fun moduleOf(cls: String): String? = when {
+        cls.startsWith("app.lily.ai.engine.EngineHost") || cls.startsWith("app.lily.ai.engine.Llm") -> "Motor de linguagem (LiteRT-LM)"
+        cls.startsWith("app.lily.ai.engine.Vision") || cls.startsWith("app.lily.ai.engine.Translator") || cls.startsWith("app.lily.ai.engine.MlKit") -> "Visão e tradução (ML Kit)"
+        cls.startsWith("app.lily.ai.engine.SuperRes") || cls.startsWith("app.lily.ai.engine.Enhance") -> "Ampliação de imagem (LiteRT)"
+        cls.startsWith("app.lily.ai.engine.Audio") || cls.startsWith("app.lily.ai.engine.Voice") || cls.startsWith("app.lily.ai.engine.SpeechInput") -> "Voz"
+        cls.startsWith("app.lily.ai.engine.Documents") -> "Documentos"
+        cls.startsWith("app.lily.ai.engine.") -> "Motores"
+        cls.startsWith("app.lily.ai.models.") -> "Model Hub e downloads"
+        cls.startsWith("app.lily.ai.data.") -> "Dados salvos (conversas, memória, configurações)"
+        cls.startsWith("app.lily.ai.assist.") -> "Voz pela ilha (painel da L.I.L.Y)"
+        cls.startsWith("app.lily.ai.bridge.") -> "Ponte com o teclado e a Gallery"
+        cls.startsWith("app.lily.ai.imagegen.") -> "Geração de imagem"
+        cls.startsWith("app.lily.ai.tools.") -> "Ferramentas"
+        cls.startsWith("app.lily.ai.core.") -> "Núcleo (roteador e aparelho)"
+        cls.startsWith("app.lily.ai.diagnostics.") -> "Diagnóstico"
+        cls.startsWith("app.lily.ai.ui.") -> "Interface"
+        cls.startsWith("app.lily.ai.") -> "Inicialização do app"
+        cls.startsWith("com.google.mlkit") || cls.startsWith("com.google.android.gms.internal.mlkit") -> "ML Kit (Google)"
+        cls.startsWith("com.google.ai.edge.litertlm") -> "LiteRT-LM (Google)"
+        cls.startsWith("com.google.ai.edge.litert") -> "LiteRT (Google)"
+        cls.startsWith("com.google.firebase.components") -> "ML Kit (componentes)"
+        cls.startsWith("androidx.compose") -> "Interface (Jetpack Compose)"
+        cls.startsWith("kotlinx.serialization") -> "Leitura de dados salvos"
+        cls.startsWith("kotlinx.coroutines") -> null
+        else -> null
     }
 
     private object Counter : Application.ActivityLifecycleCallbacks {

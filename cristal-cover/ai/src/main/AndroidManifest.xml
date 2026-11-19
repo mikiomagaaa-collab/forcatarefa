@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Só para baixar modelos do Hugging Face e pacotes de idioma: a IA roda no aparelho. -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -128,15 +129,39 @@
             </intent-filter>
         </activity-alias>
 
-        <!-- Relatório de erro: processo próprio e só as views do Android (ver CrashReport). -->
+        <!--
+            L.I.L.Y Diagnóstico: ícone próprio e processo separado, sem o núcleo nem o Compose.
+            Abre mesmo quando a L.I.L.Y não abre (relatório, histórico de erros, modo seguro).
+        -->
         <activity
-            android:name=".diagnostics.CrashActivity"
-            android:excludeFromRecents="true"
-            android:exported="false"
+            android:name=".diagnostics.DiagnosticActivity"
+            android:excludeFromRecents="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_diagnostics"
+            android:label="@string/diagnostics_label"
             android:launchMode="singleTask"
             android:process=":relatorio"
+            android:roundIcon="@mipmap/ic_diagnostics"
             android:taskAffinity="app.lily.ai.relatorio"
-            android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="app.lily.ai.action.DIAGNOSTICS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            O ML Kit não inicia mais na partida do app (o provider dele sai do manifesto): ele inicia
+            no primeiro uso (engine/MlKit.kt), e uma falha dele só desliga as ferramentas que o usam.
+        -->
+        <provider
+            android:name="com.google.mlkit.common.internal.MlKitInitProvider"
+            android:authorities="${applicationId}.mlkitinitprovider"
+            tools:node="remove" />
 
         <service
             android:name=".models.DownloadService"

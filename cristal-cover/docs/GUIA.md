@@ -424,12 +424,76 @@ Se mesmo assim ela não aparecer, o Cristal avisa "L.I.L.Y AI não abriu nesta t
 O microfone só liga quando você chama a L.I.L.Y (segurar a ilha, tocar no microfone ou no assistente) e
 para sozinho no fim da fala.
 
+## 9.4 Novidades do Cristal 1.8.0 e da L.I.L.Y AI 1.2.0
+
+### L.I.L.Y Diagnóstico (novo ícone)
+
+Depois de instalar a L.I.L.Y AI 1.2.0, aparece um segundo ícone na gaveta: **L.I.L.Y Diagnóstico**. Ele roda
+num processo separado, então abre **mesmo quando a L.I.L.Y não abre**. Mostra, em português:
+
+- **Situação**: se a última abertura terminou bem, se o modo seguro está ligado e quantas aberturas falharam;
+- **Módulos**: quais partes da L.I.L.Y subiram e quais caíram num substituto (e por quê);
+- **Como o app terminou**: o histórico que o próprio Android guarda (erro Java, erro nativo com a pilha da
+  lápide, "não respondeu" com a pilha da linha principal, encerrado por falta de memória ou pelo usuário);
+- **Erros guardados**: os últimos 10 relatórios, com a pilha completa e o módulo provável;
+- **Registro**: cada etapa da partida, com o tempo de cada uma.
+
+Botões: **Copiar relatório**, **Compartilhar** (WhatsApp, e-mail…), **Salvar em Downloads**, **Abrir a
+L.I.L.Y**, **Abrir em modo seguro** e **Apagar histórico**. Nada sai do aparelho sem você tocar em
+Compartilhar.
+
+**Modo seguro:** se a L.I.L.Y falhar ao abrir duas vezes seguidas, a próxima abertura já vem em modo
+seguro (sem o orbe animado e sem carregar modelos sozinha), com um aviso no alto e o botão **Ver
+diagnóstico**. Saia dele pelo L.I.L.Y Diagnóstico > **Sair do modo seguro**. Se uma parte opcional (motor
+de IA, memória, histórico, geração de imagem) não subir, a L.I.L.Y abre assim mesmo e avisa "Abriu sem
+algumas partes".
+
+### Transição de dobra
+
+Com **Flip Transition** ligado (Configurações > Aparência, vem ligado), ao abrir e fechar o Razr com o
+Cristal na tela, a tela acompanha a dobradiça: a região perto da dobra fica
+desfocada e mais escura e vai ficando nítida por último, o papel de parede assenta antes dos ícones e
+widgets, e uma linha de luz em espectro aparece na dobra e some ao terminar. Parou no meio (modo flex)? Em
+menos de meio segundo tudo volta a ficar nítido. Com **remover animações** ligado no Android, não há efeito.
+
+O que o Android permite e o que não permite:
+
+- **No Cristal (tela inicial interna e externa):** a transição completa, ao vivo, sobre a própria interface.
+- **Por cima de outros apps:** só o **fechamento** (Configurações > Aparência > **Flip Transition**, com a
+  acessibilidade ligada), usando uma captura da tela. A **abertura** por cima de outros apps e a animação
+  do próprio sistema (desbloqueio, troca de tela da Motorola) não podem ser alteradas por um app comum.
+- Na qualidade **Leve**, o desfoque é menor para economizar bateria.
+
+### Widgets
+
+Todos os widgets foram redesenhados. Cada tamanho reorganiza o conteúdo (não só aumenta): faixa (4×1),
+pequeno (2×2), médio (4×2), grande (4×3, 4×4, 2×4) e extra grande. Para mudar o tamanho, segure o widget >
+**Redimensionar**. A galeria (segurar um espaço vazio > Widgets) mostra cada widget de verdade, com os seus
+dados de agora.
+
+Em **Configurações > Visual > Widgets**: aparência (**Liquid Glass**, **Claro**, **Escuro**, **Colorido**,
+**Monocromático**), transparência, desfoque do vidro, cor de destaque, cantos e densidade, com prévia. A
+aparência fica guardada nas coleções da Wallpaper Library.
+
+O widget **Info Brief** mostra o próximo lembrete ou compromisso do Now Brief; tocar nele abre o painel.
+O widget **L.I.L.Y** mostra uma sugestão a partir da agenda e dos lembretes; tocar na sugestão já pergunta
+à L.I.L.Y.
+
+### Relógio colorido
+
+No editor do bloqueio (segurar o bloqueio e autenticar; escolha **Interna** ou **Externa** no alto), a seção
+**Preenchimento**:
+**Original** (o vidro de antes, sem mudança), **Sólido**, **Gradiente**, **Translúcido** e **Liquid Glass
+colorido**; intensidade; segunda cor; **Horas e minutos com cores próprias**; **Data na cor do relógio**. A
+prévia muda na hora. Vale para a tela interna e para a externa (cada uma com a sua escolha) e fica guardado
+nas coleções.
+
 ## 10. Problemas comuns
 
 **A L.I.L.Y AI abre e fecha.** Na tela externa, é a Motorola bloqueando um app não liberado: veja o começo
-da parte 9.3. Se for um erro do próprio app (desde a 1.1.1), aparece a tela **A L.I.L.Y AI fechou por um
-erro**: toque em **Copiar relatório** e mande o texto. O relatório fica só no aparelho e também vai junto no
-**Teste do aparelho** (Configurações da L.I.L.Y). Na 1.1.0, o texto das fotos (OCR), os rótulos, a
+da parte 9.3. Na tela interna, abra o ícone **L.I.L.Y Diagnóstico** (parte 9.4) e toque em **Copiar
+relatório** ou **Compartilhar**: o relatório diz em qual etapa a abertura parou e como o Android encerrou o
+app. Tente também **Abrir em modo seguro**. Na 1.1.0, o texto das fotos (OCR), os rótulos, a
 detecção de idioma, a tradução (também a do teclado) e o recorte não funcionavam no APK final; a 1.1.1
 corrige isso.
 

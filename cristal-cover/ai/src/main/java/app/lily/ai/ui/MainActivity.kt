@@ -73,10 +73,20 @@ class MainActivity : ComponentActivity() {
         permissionLauncher.launch(permission)
     }
 
+    private val ready = Runnable { app.lily.ai.diagnostics.DiagLog.uiReady("principal") }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        val graph = (application as LilyAiApp).graph
+        val graph = (application as LilyAiApp).graphOrNull
+        if (graph == null) {
+            // O núcleo não iniciou: em vez de fechar, mostra o diagnóstico com o motivo.
+            startActivity(app.lily.ai.diagnostics.CrashReport.intent(this))
+            finish()
+            return
+        }
+        app.lily.ai.diagnostics.DiagLog.uiStarting("principal")
+        app.lily.ai.ui.theme.OrbShaderEnabled = !graph.safeMode
         if (savedInstanceState == null) handle(intent)
         setContent {
             val settings by graph.settings.value.collectAsStateWithLifecycle()
@@ -86,6 +96,17 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // De pé por 2 s: a partida deu certo (zera as falhas seguidas do diagnóstico).
+        window.decorView.postDelayed(ready, 2_000)
+    }
+
+    override fun onPause() {
+        window.decorView.removeCallbacks(ready)
+        super.onPause()
     }
 
     override fun onDestroy() {
@@ -161,6 +182,7 @@ fun LilyApp(nav: Nav) {
         } else {
             FullApp(nav)
         }
+        app.lily.ai.ui.screens.ModuleNotice(compact)
     }
 }
 

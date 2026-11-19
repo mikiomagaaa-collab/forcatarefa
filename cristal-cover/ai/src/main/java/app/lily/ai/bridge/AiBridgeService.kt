@@ -48,7 +48,8 @@ class AiBridgeService : Service() {
                     ?: return error(reply, id, "Pedido desconhecido.", AiBridge.CODE_FAILED)
                 val text = data.getString(AiBridge.KEY_TEXT).orEmpty().take(MAX_TEXT)
                 if (text.isBlank() && action != "GENERATE_TEXT") return error(reply, id, "Não há texto para a IA.", AiBridge.CODE_FAILED)
-                val graph = (application as LilyAiApp).graph
+                val graph = (application as LilyAiApp).graphOrNull
+                    ?: return error(reply, id, "A L.I.L.Y AI não iniciou direito. Abra o app L.I.L.Y Diagnóstico para ver o motivo.", AiBridge.CODE_FAILED)
                 val style = WritingStyle.entries.firstOrNull { it.name == data.getString(AiBridge.KEY_STYLE) } ?: WritingStyle.NATURAL
                 val tone = Tone.entries.firstOrNull { it.name == data.getString(AiBridge.KEY_TONE) } ?: Tone.NEUTRAL
                 val (plan, flow) = graph.tools.textTool(

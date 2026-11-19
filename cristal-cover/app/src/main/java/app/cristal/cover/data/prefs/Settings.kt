@@ -219,6 +219,24 @@ data class Settings(
     val lockClockZ: Float = 0.25f,
     /** Cor do relógio em ARGB (0 = branco com degradê, o padrão). */
     val lockClockColor: Int = 0,
+    /** Preenchimento dos números (Original = como antes) e as opções do relógio colorido. */
+    // Aparência dos widgets (todos juntos, para parecerem da mesma família).
+    val widgetLook: WidgetLook = WidgetLook.LIQUID,
+    val widgetTransparency: Float = 0.45f,
+    val widgetBlur: Float = 0.55f,
+    /** Cor de destaque dos widgets em ARGB (0 = a do tema). */
+    val widgetAccent: Int = 0,
+    val widgetCorner: Float = 1f,
+    val widgetDensity: WidgetDensity = WidgetDensity.BALANCED,
+    val lockClockFill: ClockFill = ClockFill.ORIGINAL,
+    /** Segunda cor (gradiente, minutos separados); 0 = derivada da primeira. */
+    val lockClockColor2: Int = 0,
+    /** Intensidade do preenchimento (0,2 a 1). */
+    val lockClockFillOpacity: Float = 0.92f,
+    /** Horas e minutos com cores próprias (a segunda cor nos minutos). */
+    val lockClockSplit: Boolean = false,
+    /** Aplica a cor do relógio, mais clara, na data e nos widgets do bloqueio. */
+    val lockClockHarmony: Boolean = true,
     val lockMediaPosition: LockPlacement = LockPlacement.BELOW_CLOCK,
     val lockWidgets: List<LockWidget> = emptyList(),
     val lockWidgetsPosition: LockPlacement = LockPlacement.BOTTOM,
@@ -251,6 +269,11 @@ data class Settings(
     val coverClockY: Float = 0f,
     val coverClockZ: Float = 0.25f,
     val coverClockColor: Int = 0,
+    val coverClockFill: ClockFill = ClockFill.ORIGINAL,
+    val coverClockColor2: Int = 0,
+    val coverClockFillOpacity: Float = 0.92f,
+    val coverClockSplit: Boolean = false,
+    val coverClockHarmony: Boolean = true,
     val coverClockPosition: CoverClockPosition = CoverClockPosition.TOP,
     val coverLockMaxNotifications: Int = 3,
 

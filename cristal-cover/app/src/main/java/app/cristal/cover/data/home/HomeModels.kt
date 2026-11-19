@@ -33,8 +33,11 @@ enum class WidgetKind(val spanX: Int, val spanY: Int) {
     /** Fotos escolhidas pela pessoa (uma ou várias, em sequência). */
     PHOTO(2, 2),
 
-    /** A L.I.L.Y: perguntar por texto ou por voz. */
+    /** A L.I.L.Y: perguntar por texto ou por voz, com sugestões do momento. */
     LILY(4, 1),
+
+    /** Info Brief: o próximo lembrete ou compromisso e o que está pendente, em resumo. */
+    BRIEF(4, 2),
 
     /** Widget de outro app; o id no host fica guardado no item. */
     APP_WIDGET(4, 2);

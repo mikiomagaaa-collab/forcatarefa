@@ -48,6 +48,10 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 | L.I.L.Y Gallery: biblioteca do aparelho, álbuns, visualizador, editor, lixeira oficial, importação pelo seletor do Android (inclui o Google Fotos) e ações da L.I.L.Y | Feito (1.0.0) |
 | L.I.L.Y no Cristal: segurar a Liquid Island chama a L.I.L.Y por voz (uma lente logo abaixo da ilha); respostas, downloads de modelos e geração de imagem aparecem na ilha como Live Updates com o orbe; widget L.I.L.Y; "Perguntar à L.I.L.Y" na busca da gaveta; módulo L.I.L.Y na Central de Controle | Feito (Cristal 1.7.0 e L.I.L.Y AI 1.1.0) |
 | Correções: ML Kit de volta no APK final da IA, relatório de erro no aparelho, L.I.L.Y liberada na tela externa antes de abrir, ponte do teclado com prazo (nunca fica esperando para sempre) | Feito (L.I.L.Y AI 1.1.1, Cristal 1.7.1, teclado 1.3.1) |
+| L.I.L.Y AI que abre sempre: núcleo em módulos (os opcionais caem num substituto em vez de derrubar o app), interface antes dos modelos, modo seguro depois de duas aberturas com falha e o app **L.I.L.Y Diagnóstico** (ícone próprio, processo separado) com o registro da partida, os erros guardados e o histórico de saídas do Android (falhas Java, nativas e ANR) para copiar, compartilhar ou salvar | Feito (L.I.L.Y AI 1.2.0); ainda não testado no Razr |
+| Transição de dobra inspirada no iPhone Duo: desfoque regional que segue o ângulo da dobradiça, gradiente de nitidez a partir da dobra, luminosidade, papel de parede e componentes em ritmos próprios, linha de luz na dobra; respeita "remover animações" | Feito no launcher (Cristal 1.8.0); por cima de outros apps só o fechamento (limite do Android) |
+| Widgets redesenhados no estilo Liquid Glass: relógio, relógio de ponteiros, data, agenda, clima, bateria, música, foto, L.I.L.Y, Info Brief, atalhos e busca, cada um reorganizado em faixa, pequeno, médio, grande e extra grande; composições próprias da tela externa; galeria com prévias reais; página Configurações > Widgets (Liquid Glass, claro, escuro, colorido, monocromático, transparência, desfoque, destaque, cantos e densidade), guardada nas coleções | Feito (Cristal 1.8.0) |
+| Relógio do bloqueio com preenchimento interno: sólido, gradiente, translúcido ou Liquid Glass colorido, segunda cor, horas e minutos com cores próprias, intensidade e data na cor do relógio, com prévia ao vivo, nas telas interna e externa e nas coleções | Feito (Cristal 1.8.0) |
 | Biblioteca de apps, páginas próprias da tela externa | Planejado |
 
 ## Estado real do projeto
@@ -55,7 +59,7 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 O que **foi verificado** durante o desenvolvimento:
 
 - compila do zero (debug e release com R8) com as versões estáveis atuais das ferramentas;
-- 247 testes automáticos em JVM passam (100 no Cristal, 45 no teclado, 16 no módulo compartilhado, 78 na
+- 282 testes automáticos em JVM passam (124 no Cristal, 45 no teclado, 16 no módulo compartilhado, 89 na
   L.I.L.Y AI e 8 na Gallery). No launcher: lógica da grade, detecção da tela externa,
   regras de compatibilidade, segurança dos comandos de shell, backup, papéis de parede por área,
   encaixe e edição da Central de Controle, **compilação real do shader AGSL** e **16 telas montadas e
@@ -88,6 +92,17 @@ O que **foi verificado** durante o desenvolvimento:
   o código encolhido do release, refeito com o mesmo R8 e as mesmas regras, abre no Robolectric: tela
   inicial, tela externa, painel de voz, ponte do teclado e o ML Kit iniciando com os componentes. As
   atividades também passaram a ser abertas de verdade nos testes (antes só as telas eram montadas);
+- na L.I.L.Y AI 1.2.0: a partida com módulos opcionais quebrados (motor, memória e geração de imagem
+  falhando de propósito) abre a tela principal; a falha de um módulo obrigatório leva ao Diagnóstico em vez
+  de fechar; um erro numa linha de fundo fica gravado com a pilha e o módulo provável; duas partidas com
+  falha ligam o modo seguro e uma saída pedida pelo usuário não conta; o histórico de saídas lê lápides de
+  erros nativos e a pilha principal de um ANR; o Diagnóstico copia e compartilha o relatório. O release
+  encolhido pelo R8 foi aberto de novo no Robolectric (tela principal sem modelos, assistente, ponte e ML Kit);
+- no Cristal 1.8.0: o modelo da transição de dobra (abrindo, fechando, reabrindo no meio, parada no meio,
+  tela externa, movimento reduzido), a nitidez medida nos pixels desenhados pela GPU (borda nítida e dobra
+  desfocada no meio da transição, tudo nítido no fim), os tamanhos e as cinco aparências dos widgets, a
+  galeria com prévias reais, as cores do relógio medidas nos pixels (horas e minutos em cores próprias) e a
+  aparência dos widgets e do relógio guardada nas coleções;
 - lint sem erros.
 
 O que **não foi verificado**: os apps **nunca rodaram em um Razr de verdade**. Na L.I.L.Y AI, os

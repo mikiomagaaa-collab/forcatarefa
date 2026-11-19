@@ -86,6 +86,11 @@ class LockEditorActivity : ComponentActivity() {
                 p[PrefKeys.LOCK_CLOCK_FONT] = draft.inner.font.name
                 p[PrefKeys.LOCK_CLOCK_COLOR] = draft.inner.color
                 p[PrefKeys.LOCK_CLOCK_GLASS] = draft.inner.glass
+                p[PrefKeys.LOCK_CLOCK_FILL] = draft.inner.fill.name
+                p[PrefKeys.LOCK_CLOCK_COLOR2] = draft.inner.color2
+                p[PrefKeys.LOCK_CLOCK_FILL_OPACITY] = draft.inner.fillOpacity
+                p[PrefKeys.LOCK_CLOCK_SPLIT] = draft.inner.split
+                p[PrefKeys.LOCK_CLOCK_HARMONY] = draft.inner.harmony
                 p[PrefKeys.COVER_CLOCK_X] = draft.cover.x
                 p[PrefKeys.COVER_CLOCK_Y] = draft.cover.y
                 p[PrefKeys.COVER_CLOCK_Z] = draft.cover.z
@@ -93,6 +98,11 @@ class LockEditorActivity : ComponentActivity() {
                 p[PrefKeys.COVER_CLOCK_FONT] = draft.cover.font.name
                 p[PrefKeys.COVER_CLOCK_COLOR] = draft.cover.color
                 p[PrefKeys.COVER_CLOCK_GLASS] = draft.cover.glass
+                p[PrefKeys.COVER_CLOCK_FILL] = draft.cover.fill.name
+                p[PrefKeys.COVER_CLOCK_COLOR2] = draft.cover.color2
+                p[PrefKeys.COVER_CLOCK_FILL_OPACITY] = draft.cover.fillOpacity
+                p[PrefKeys.COVER_CLOCK_SPLIT] = draft.cover.split
+                p[PrefKeys.COVER_CLOCK_HARMONY] = draft.cover.harmony
             }
             finish()
         }

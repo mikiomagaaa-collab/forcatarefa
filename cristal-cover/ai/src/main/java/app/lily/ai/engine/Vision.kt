@@ -32,6 +32,7 @@ data class Label(val text: String, val confidence: Float)
 /** Os recursos de visão do ML Kit, todos no aparelho. */
 object Vision {
     suspend fun ocr(bitmap: Bitmap): String {
+        MlKit.ensure()
         val client = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
         return try {
             client.process(InputImage.fromBitmap(bitmap, 0)).await().text.trim()
@@ -41,6 +42,7 @@ object Vision {
     }
 
     suspend fun labels(bitmap: Bitmap): List<Label> {
+        MlKit.ensure()
         val client = ImageLabeling.getClient(ImageLabelerOptions.Builder().setConfidenceThreshold(0.55f).build())
         return try {
             client.process(InputImage.fromBitmap(bitmap, 0)).await()
@@ -53,6 +55,7 @@ object Vision {
 
     /** O objeto principal com fundo transparente (null se não achou um). */
     suspend fun removeBackground(bitmap: Bitmap): Bitmap? {
+        MlKit.ensure()
         val client = SubjectSegmentation.getClient(SubjectSegmenterOptions.Builder().enableForegroundBitmap().build())
         return try {
             client.process(InputImage.fromBitmap(bitmap, 0)).await().foregroundBitmap
@@ -63,6 +66,7 @@ object Vision {
 
     /** Código do idioma (BCP-47) ou "und" se não deu para saber. */
     suspend fun language(text: String): String {
+        MlKit.ensure()
         val client = LanguageIdentification.getClient()
         return try {
             client.identifyLanguage(text).await()
@@ -104,15 +108,19 @@ object Translator {
 
     /** Baixa o pacote de um idioma (com "só Wi-Fi", espera o Wi-Fi). */
     suspend fun download(language: String, wifiOnly: Boolean) {
+        MlKit.ensure()
         val conditions = DownloadConditions.Builder().apply { if (wifiOnly) requireWifi() }.build()
         RemoteModelManager.getInstance().download(TranslateRemoteModel.Builder(language).build(), conditions).await()
     }
 
     /** Pacotes de idioma já baixados (para o Model Hub listar e apagar). */
-    suspend fun downloaded(): Set<String> =
-        RemoteModelManager.getInstance().getDownloadedModels(TranslateRemoteModel::class.java).await().map { it.language }.toSet()
+    suspend fun downloaded(): Set<String> {
+        MlKit.ensure()
+        return RemoteModelManager.getInstance().getDownloadedModels(TranslateRemoteModel::class.java).await().map { it.language }.toSet()
+    }
 
     suspend fun delete(language: String) {
+        MlKit.ensure()
         RemoteModelManager.getInstance().deleteDownloadedModel(TranslateRemoteModel.Builder(language).build()).await()
     }
 }

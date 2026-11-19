@@ -212,11 +212,7 @@ fun CoverLockScreen(
                 showRest = showRest,
                 clockHeight = clockHeight,
                 fixedScale = liveScale,
-                clockGlass = if (settings.coverClockGlass) {
-                    ClockGlass(backdrop, settings.lockClockGlassOpacity, tint = if (settings.coverClockColor == 0) Color.White else Color(settings.coverClockColor))
-                } else {
-                    null
-                },
+                look = settings.coverClockLook(backdrop),
                 depthModifier = Modifier.clockDepth(placement, { tilt.value }, settings.wallpaperSpatial, widthPx, heightPx),
                 onClockBounds = editing?.onClockBounds,
                 resize = if (onClockScale != null && showRest) {
@@ -281,7 +277,7 @@ private fun CoverClockColumn(
     showRest: Boolean,
     clockHeight: Dp?,
     fixedScale: Float,
-    clockGlass: ClockGlass?,
+    look: ClockLook,
     resize: ResizeControl?,
     expandedKey: String?,
     onToggle: (String) -> Unit,
@@ -308,7 +304,7 @@ private fun CoverClockColumn(
         if (position != CoverClockPosition.TOP) Spacer(Modifier.weight(1f))
 
         val time = formatTime(now, is24h)
-        val glassInk = if (clockColor != 0) clockBrush(clockColor) else Brush.verticalGradient(listOf(ink, ink.copy(alpha = 0.62f)))
+        val glassInk = if (look.accent != null) look.brush else if (clockColor != 0) clockBrush(clockColor) else Brush.verticalGradient(listOf(ink, ink.copy(alpha = 0.62f)))
         val bounds = if (onClockBounds != null) Modifier.onGloballyPositioned { onClockBounds(it.boundsInRoot()) } else Modifier
         if (clockHeight != null) {
             Box(Modifier.fillMaxWidth().height(clockHeight).then(depthModifier).then(bounds)) {
@@ -318,13 +314,14 @@ private fun CoverClockColumn(
                     layout = settings.coverClockLayout,
                     adaptive = true,
                     brush = glassInk,
-                    glass = clockGlass,
+                    glass = look.glass,
+                    fill = look.fill,
                     modifier = Modifier.fillMaxSize().then(clockAlpha),
                     verticalAlignment = if (settings.coverClockPosition == CoverClockPosition.TOP) Alignment.Top else Alignment.CenterVertically,
                 )
                 if (resize != null) ClockResizeHandle(resize.baseHeight, resize.onDrag, resize.onEnd)
             }
-            LockDateLine(now, locale, state, Modifier.align(Alignment.CenterHorizontally).then(depthModifier).padding(top = 4.dp).then(clockAlpha), color = ink)
+            LockDateLine(now, locale, state, Modifier.align(Alignment.CenterHorizontally).then(depthModifier).padding(top = 4.dp).then(clockAlpha), color = look.companion(ink))
         } else {
             Text(
                 time,

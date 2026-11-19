@@ -6,6 +6,10 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.wrapContentSize
+import app.cristal.cover.ui.widgets.WidgetActions
+import app.cristal.cover.ui.widgets.WidgetCard
+import app.cristal.cover.ui.widgets.WidgetData
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -424,7 +428,8 @@ private fun widgetInfo(kind: WidgetKind): Triple<ImageVector, String, String> = 
     WidgetKind.SHORTCUTS -> Triple(Icons.Rounded.TouchApp, "Atalhos", "Lanterna, câmera, busca e ajustes")
     WidgetKind.SEARCH -> Triple(Icons.Rounded.Search, "Busca", "Abre a gaveta de apps")
     WidgetKind.PHOTO -> Triple(Icons.Rounded.Photo, "Foto", "Uma ou várias fotos suas, em sequência")
-    WidgetKind.LILY -> Triple(Icons.Rounded.AutoAwesome, "L.I.L.Y", "Pergunte por texto ou por voz à IA do aparelho")
+    WidgetKind.LILY -> Triple(Icons.Rounded.AutoAwesome, "L.I.L.Y", "Sugestões do momento, texto e voz")
+    WidgetKind.BRIEF -> Triple(Icons.Rounded.Event, "Info Brief", "Próximo lembrete e o que está pendente")
     WidgetKind.APP_WIDGET -> Triple(Icons.Rounded.Widgets, "Widget de app", "De outro aplicativo")
 }
 
@@ -434,12 +439,14 @@ fun WidgetPicker(
     onDismiss: () -> Unit,
     providers: List<WidgetProviderEntry> = emptyList(),
     onPickProvider: (WidgetProviderEntry) -> Unit = {},
+    /** Os dados de agora, para as prévias mostrarem os widgets de verdade. */
+    previewData: WidgetData = WidgetData(),
 ) {
     GlassDialog(onDismiss = onDismiss) {
         DialogTitle("Adicionar widget")
         for (kind in WidgetKind.entries.filter { it.builtIn }) {
-            val (icon, name, description) = widgetInfo(kind)
-            PickerRow(icon, name, "$description · ${kind.spanX}×${kind.spanY}") { onPick(kind) }
+            val (_, name, description) = widgetInfo(kind)
+            WidgetPreviewRow(kind, name, "$description · ${kind.spanX}×${kind.spanY}", previewData) { onPick(kind) }
         }
         if (providers.isNotEmpty()) {
             Text(
@@ -453,6 +460,48 @@ fun WidgetPicker(
                 PickerRow(Icons.Rounded.Widgets, entry.label, "${entry.appLabel} · ${entry.spanX}×${entry.spanY}") { onPickProvider(entry) }
             }
         }
+    }
+}
+
+/**
+ * Uma linha da galeria com a prévia real do widget: o próprio widget, no tamanho de verdade e com
+ * os dados de agora, reduzido para caber. O toque escolhe (a prévia não reage a toques).
+ */
+@Composable
+private fun WidgetPreviewRow(kind: WidgetKind, title: String, subtitle: String, data: WidgetData, onClick: () -> Unit) {
+    val haptic = rememberHaptic()
+    val cell = 84.dp
+    val gap = 8.dp
+    val real = androidx.compose.ui.unit.DpSize(cell * kind.spanX + gap * (kind.spanX - 1), cell * kind.spanY + gap * (kind.spanY - 1))
+    val scale = 0.46f
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                haptic()
+                onClick()
+            }
+            .padding(vertical = 8.dp),
+    ) {
+        Box(Modifier.size(real.width * scale, real.height * scale)) {
+            Box(
+                Modifier
+                    // O widget mede o tamanho real a partir do canto (sem centralizar) e é reduzido daí.
+                    .wrapContentSize(Alignment.TopStart, unbounded = true)
+                    .size(real.width, real.height)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+                    },
+            ) {
+                WidgetCard(kind, data, WidgetActions(), Modifier.fillMaxSize())
+            }
+            // A prévia não recebe toques: quem escolhe é a linha inteira.
+            Box(Modifier.matchParentSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { haptic(); onClick() })
+        }
+        Text(title, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+        Text(subtitle, fontSize = 12.sp, color = LocalGlassSpec.current.secondaryContentColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

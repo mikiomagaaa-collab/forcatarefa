@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.cristal.cover.data.prefs.ClockFill
 import app.cristal.cover.data.prefs.ClockFont
 import app.cristal.cover.data.prefs.ClockLayout
 import app.cristal.cover.ui.glass.GlassBackdrop
@@ -55,7 +56,46 @@ data class ClockFit(val stacked: Boolean, val scale: Float, val stretch: Float)
  * algarismos, com uma película branca de [opacity] e uma borda brilhante.
  */
 @Immutable
-data class ClockGlass(val backdrop: GlassBackdrop, val opacity: Float = 0.32f, val blurDp: Float = 16f, val tint: Color = Color.White)
+data class ClockGlass(
+    val backdrop: GlassBackdrop,
+    val opacity: Float = 0.32f,
+    val blurDp: Float = 16f,
+    val tint: Color = Color.White,
+    /** Cor de baixo da película (vidro colorido em gradiente); igual a [tint] por padrão. */
+    val tint2: Color = tint,
+)
+
+/**
+ * Relógio colorido: os algarismos cheios de cor (sólido, gradiente ou translúcido), respeitando o
+ * desenho da fonte. Com [split], horas e minutos têm cores próprias (a segunda nos minutos), seja
+ * empilhado ou numa linha só (o corte fica no meio dos dois-pontos).
+ */
+@Immutable
+data class ClockFillSpec(val mode: ClockFill, val color: Color, val color2: Color, val opacity: Float, val split: Boolean) {
+    /** Opacidade efetiva do miolo (o translúcido deixa o fundo aparecer). */
+    val fillAlpha: Float get() = if (mode == ClockFill.TRANSLUCENT) (opacity * 0.62f).coerceIn(0.12f, 0.8f) else opacity.coerceIn(0.2f, 1f)
+
+    /** O pincel de uma linha do relógio ([index] de [lines]). */
+    fun brushFor(layout: TextLayoutResult, index: Int, lines: Int): Brush {
+        val a = fillAlpha
+        val c1 = color.copy(alpha = a)
+        val c2 = color2.copy(alpha = a)
+        if (split) {
+            if (lines >= 2) return lineBrush(if (index == 0) c1 else c2)
+            val text = layout.layoutInput.text.text
+            val colon = text.indexOf(':')
+            val width = layout.size.width.toFloat()
+            if (colon > 0 && width > 0f) {
+                val cut = (layout.getBoundingBox(colon).center.x / width).coerceIn(0.05f, 0.95f)
+                return Brush.horizontalGradient(0f to c1, cut to c1, cut to c2, 1f to c2)
+            }
+        }
+        return if (mode == ClockFill.GRADIENT) Brush.verticalGradient(listOf(c1, c2)) else lineBrush(c1)
+    }
+
+    /** Cor quase chapada, com um leve escurecer embaixo (profundidade sem perder a cor). */
+    private fun lineBrush(c: Color): Brush = Brush.verticalGradient(listOf(c, c.copy(alpha = c.alpha * 0.9f)))
+}
 
 object ClockFitting {
     /** Fonte de referência usada para medir (em sp). */
@@ -111,6 +151,8 @@ fun AdaptiveClock(
     /** Onde o relógio fica na caixa quando sobra altura. */
     verticalAlignment: Alignment.Vertical = Alignment.Top,
     glass: ClockGlass? = null,
+    /** Relógio colorido (quando não é de vidro). */
+    fill: ClockFillSpec? = null,
 ) {
     val measurer = rememberTextMeasurer()
     val context = LocalContext.current
@@ -178,7 +220,8 @@ fun AdaptiveClock(
             Modifier
                 .fillMaxSize()
                 .onGloballyPositioned { if (backdrop != null) origin = backdrop.positionOf(it) }
-                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                // A camada separada só é necessária para a máscara do vidro (DstIn); sem vidro, desenho direto.
+                .graphicsLayer { compositingStrategy = if (glass != null) CompositingStrategy.Offscreen else CompositingStrategy.Auto }
                 .drawBehind {
                     if (glass != null && backdrop != null) {
                         val blur = glass.blurDp.dp.toPx()
@@ -199,19 +242,38 @@ fun AdaptiveClock(
                             drawText(
                                 layoutResult,
                                 brush = Brush.verticalGradient(
-                                    listOf(glass.tint.copy(alpha = glass.opacity + 0.12f), glass.tint.copy(alpha = glass.opacity * 0.55f)),
+                                    listOf(glass.tint.copy(alpha = glass.opacity + 0.12f), glass.tint2.copy(alpha = glass.opacity * 0.55f)),
                                 ),
+                                // Sempre explícito: o TextPaint é o mesmo da sombra (que desenha quase transparente).
+                                alpha = 1f,
                             )
                             drawText(
                                 layoutResult,
                                 brush = Brush.verticalGradient(listOf(glass.tint.copy(alpha = 0.95f), glass.tint.copy(alpha = 0.30f))),
+                                alpha = 1f,
                                 drawStyle = Stroke(width = 1.3.dp.toPx()),
                             )
+                        }
+                    } else if (fill != null) {
+                        var index = 0
+                        val count = plan.lines.size
+                        eachLine(plan, horizontalAlignment, verticalAlignment) { layoutResult ->
+                            drawText(layoutResult, brush = fill.brushFor(layoutResult, index, count), alpha = 1f)
+                            if (fill.mode == ClockFill.TRANSLUCENT) {
+                                // Contorno de luz: o número continua legível com o fundo aparecendo.
+                                drawText(
+                                    layoutResult,
+                                    brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.9f), fill.color.copy(alpha = 0.55f))),
+                                    alpha = 1f,
+                                    drawStyle = Stroke(width = 1.4.dp.toPx()),
+                                )
+                            }
+                            index++
                         }
                     } else {
                         eachLine(plan, horizontalAlignment, verticalAlignment) { layoutResult ->
                             if (paintBrush != null) {
-                                drawText(layoutResult, brush = paintBrush)
+                                drawText(layoutResult, brush = paintBrush, alpha = 1f)
                             } else {
                                 drawText(layoutResult, color = color)
                             }

@@ -186,15 +186,24 @@ class EngineHost(private val context: Context, private val store: ModelStore) : 
             maxNumImages = if (spec.has(Modality.IMAGE)) 1 else null,
             cacheDir = File(context.cacheDir, "litertlm").apply { mkdirs() }.absolutePath,
         )
-        val engine = Engine(config)
+        app.lily.ai.diagnostics.DiagLog.line("▶ Carregando ${spec.id} na ${accel.label} (${file.length() / 1_048_576} MB)")
+        val engine = try {
+            Engine(config)
+        } catch (t: Throwable) {
+            _status.value = EngineStatus.Idle
+            app.lily.ai.diagnostics.DiagLog.line("✗ Modelo ${spec.id} na ${accel.label}: ${t.javaClass.name}: ${t.message}", Log.ERROR)
+            throw t
+        }
         try {
             engine.initialize()
         } catch (t: Throwable) {
             runCatching { engine.close() }
             _status.value = EngineStatus.Idle
+            app.lily.ai.diagnostics.DiagLog.line("✗ Modelo ${spec.id} na ${accel.label}: ${t.javaClass.name}: ${t.message}", Log.ERROR)
             throw t
         }
         val ms = SystemClock.elapsedRealtime() - started
+        app.lily.ai.diagnostics.DiagLog.line("✓ Modelo ${spec.id} na ${accel.label} em $ms ms")
         _status.value = EngineStatus.Ready(spec, accel, ms)
         runCatching { onLoaded?.invoke(spec, accel, ms) }
         return LoadedLlm(spec, accel, engine, ms)
@@ -268,4 +277,27 @@ class StreamText {
             return out.trimStart()
         }
     }
+}
+
+/**
+ * O motor quando o LiteRT-LM não iniciou nesta partida: o app abre do mesmo jeito e as conversas
+ * explicam o motivo em vez de fechar o app.
+ */
+class UnavailableEngine(private val reason: String) : LlmEngine {
+    override val status: StateFlow<EngineStatus> = kotlinx.coroutines.flow.MutableStateFlow(EngineStatus.Idle)
+    override var idleMillis: Long = 120_000L
+    override var onLoaded: ((ModelSpec, Accel, Long) -> Unit)? = null
+
+    override fun generate(
+        choice: EngineChoice.Llm,
+        system: String?,
+        history: List<Turn>,
+        prompt: String,
+        attachments: Attachments,
+        temperature: Double,
+    ): Flow<String> = kotlinx.coroutines.flow.flow { throw EngineRefused("O motor de linguagem não iniciou nesta abertura ($reason). Veja o L.I.L.Y Diagnóstico.") }
+
+    override fun unload() = Unit
+
+    override suspend fun unloadNow() = Unit
 }

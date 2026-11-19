@@ -164,6 +164,19 @@ enum class ClockFont(val label: String, val condensed: Boolean = false, val maxS
 /** Forma do relógio: automática (escolhe pelo espaço livre), numa linha ou com as horas sobre os minutos. */
 enum class ClockLayout(val label: String) { AUTO("Automático"), LINE("Uma linha"), STACKED("Empilhado") }
 
+/**
+ * Preenchimento dos números do relógio do bloqueio. ORIGINAL é o de sempre (vidro, com o fundo
+ * aparecendo dentro dos números, ou branco, conforme "Relógio de vidro"); os outros enchem os
+ * algarismos de cor, respeitando o desenho da fonte.
+ */
+enum class ClockFill(val label: String, val detail: String) {
+    ORIGINAL("Original", "Como antes: vidro ou branco"),
+    SOLID("Sólido", "Cor cheia dentro dos números"),
+    GRADIENT("Gradiente", "Duas cores, de cima para baixo"),
+    TRANSLUCENT("Translúcido", "Cor com transparência e contorno de luz"),
+    LIQUID("Vidro colorido", "Liquid Glass tingido com a cor"),
+}
+
 /** Onde ficam os widgets (e o player de música) na tela de bloqueio interna. */
 enum class LockPlacement(val label: String) {
     ABOVE_CLOCK("Acima do relógio"),
@@ -173,3 +186,19 @@ enum class LockPlacement(val label: String) {
 
 /** Widgets pequenos da tela de bloqueio (como os do iPhone). */
 enum class LockWidget(val label: String) { BATTERY("Bateria"), WEATHER("Clima"), AGENDA("Agenda"), ALARM("Alarme") }
+
+/** A aparência dos widgets (uma para todos, para eles parecerem da mesma família). */
+enum class WidgetLook(val label: String, val detail: String) {
+    LIQUID("Liquid Glass", "Vidro que mostra o papel de parede"),
+    LIGHT("Claro", "Vidro fosco branco, texto escuro"),
+    DARK("Escuro", "Grafite translúcido, texto claro"),
+    COLORFUL("Colorido", "Cada widget com a sua cor, da mesma família"),
+    MONO("Monocromático", "Só tons de cinza, sem cor"),
+}
+
+/** Quanto espaço os widgets usam por dentro. */
+enum class WidgetDensity(val label: String, val scale: Float) {
+    AIRY("Arejada", 1.12f),
+    BALANCED("Equilibrada", 1f),
+    COMPACT("Compacta", 0.88f),
+}

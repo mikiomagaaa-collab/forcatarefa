@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.NotificationsActive
@@ -100,6 +101,7 @@ enum class SettingsPage(val title: String) {
     WALLPAPER("Wallpaper Studio"),
     COLLECTIONS("Coleções"),
     HOME("Tela inicial e ícones"),
+    WIDGETS("Widgets"),
     GESTURES("Gestos"),
     LOCK("Tela de bloqueio"),
     ISLAND("Liquid Island"),
@@ -150,6 +152,7 @@ fun SettingsRoot(viewModel: SettingsViewModel, initialPage: SettingsPage, onExit
         SettingsPage.WALLPAPER -> WallpaperStudioPage(viewModel, settings, wallpaper, back) { page = SettingsPage.COLLECTIONS }
         SettingsPage.COLLECTIONS -> CollectionsPage(viewModel, back)
         SettingsPage.HOME -> HomePage(viewModel, settings, wallpaper, back)
+        SettingsPage.WIDGETS -> WidgetsPage(viewModel, settings, wallpaper, back)
         SettingsPage.GESTURES -> GesturesPage(viewModel, settings, wallpaper, permissions, back)
         SettingsPage.LOCK -> LockPage(viewModel, settings, wallpaper, permissions, back) { page = SettingsPage.PERMISSIONS }
         SettingsPage.COVER -> CoverPage(viewModel, settings, wallpaper, permissions, cover, back)
@@ -189,6 +192,7 @@ private fun MainPage(
                 NavRow(Icons.Rounded.Palette, "Aparência", "Tema, vidro, desempenho e taxa de atualização") { open(SettingsPage.APPEARANCE) }
                 NavRow(Icons.Rounded.Wallpaper, "Wallpaper Studio", "Um papel de parede para cada tela e para cada bloqueio") { open(SettingsPage.WALLPAPER) }
                 NavRow(Icons.Rounded.GridView, "Tela inicial e ícones", "Grade, dock, forma, tamanho e pacotes de ícones") { open(SettingsPage.HOME) }
+                NavRow(Icons.Rounded.Widgets, "Widgets", "Estilo, transparência, desfoque, cor, cantos e densidade") { open(SettingsPage.WIDGETS) }
             }
         }
         item {
@@ -293,8 +297,8 @@ private fun AppearancePage(vm: SettingsViewModel, settings: Settings, wallpaper:
                 )
                 SwitchRow(
                     title = "Flip Transition",
-                    subtitle = "Ao fechar o aparelho, a tela de qualquer app encolhe em direção à dobra com a faixa de luz da ilha; " +
-                        "a tela inicial chega com uma mola. Precisa do serviço de acessibilidade para valer fora do launcher.",
+                    subtitle = "Ao abrir e fechar, a tela inicial acompanha a dobradiça: desfoca a partir da dobra e fica nítida por " +
+                        "último ali. Ao fechar, vale também por cima de qualquer app (precisa do serviço de acessibilidade).",
                     checked = settings.flipTransition,
                     onChange = { vm.set(PrefKeys.FLIP_TRANSITION, it) },
                 )

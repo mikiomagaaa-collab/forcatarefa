@@ -70,6 +70,10 @@ fun Modifier.glass(colors: LilyColors, shape: Shape = RoundedCornerShape(24.dp),
     .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = if (colors.dark) 0.06f else 0.35f), Color.Transparent)))
     .border(1.dp, colors.border, shape)
 
+/** Desligado no modo seguro: o orbe usa o gradiente simples, sem shader de GPU. */
+@Volatile
+var OrbShaderEnabled = true
+
 private const val ORB_SHADER = """
 uniform float2 uSize;
 uniform float uTime;
@@ -105,7 +109,7 @@ half4 main(float2 p) {
 @Composable
 fun LilyOrb(size: Dp, modifier: Modifier = Modifier, energy: Float = 0f, level: Float = 0f) {
     val colors = Lily.colors
-    val shader = remember { runCatching { RuntimeShader(ORB_SHADER) }.getOrNull() }
+    val shader = remember { if (OrbShaderEnabled) runCatching { RuntimeShader(ORB_SHADER) }.getOrNull() else null }
     val brush = remember(shader) { shader?.let { ShaderBrush(it) } }
     val transition = rememberInfiniteTransition(label = "orbe")
     val time by transition.animateFloat(0f, 600f, infiniteRepeatable(tween(600_000, easing = LinearEasing)), label = "tempo")

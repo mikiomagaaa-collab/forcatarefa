@@ -80,6 +80,7 @@ import app.cristal.cover.ui.design.LiquidButton
 import app.cristal.cover.ui.design.LiquidButtonStyle
 import app.cristal.cover.ui.design.LiquidChip
 import app.cristal.cover.ui.design.LiquidColorPicker
+import app.cristal.cover.data.prefs.ClockFill
 import app.cristal.cover.ui.design.LiquidListGroup
 import app.cristal.cover.ui.design.LiquidListRow
 import app.cristal.cover.ui.design.LiquidQuickColors
@@ -104,6 +105,12 @@ data class ClockDraft(
     val font: ClockFont,
     val color: Int,
     val glass: Boolean,
+    /** Relógio colorido: preenchimento, segunda cor, intensidade, horas/minutos separados e harmonia. */
+    val fill: ClockFill = ClockFill.ORIGINAL,
+    val color2: Int = 0,
+    val fillOpacity: Float = 0.92f,
+    val split: Boolean = false,
+    val harmony: Boolean = true,
 ) {
     fun moved(dx: Float, dy: Float): ClockDraft = copy(
         x = (x + dx).coerceIn(-ClockBounds.X, ClockBounds.X),
@@ -122,14 +129,24 @@ data class EditorDraft(val inner: ClockDraft, val cover: ClockDraft) {
     fun applyTo(s: Settings): Settings = s.copy(
         lockClockX = inner.x, lockClockY = inner.y, lockClockZ = inner.z, lockClockScale = inner.scale,
         lockClockFont = inner.font, lockClockColor = inner.color, lockClockGlass = inner.glass,
+        lockClockFill = inner.fill, lockClockColor2 = inner.color2, lockClockFillOpacity = inner.fillOpacity,
+        lockClockSplit = inner.split, lockClockHarmony = inner.harmony,
         coverClockX = cover.x, coverClockY = cover.y, coverClockZ = cover.z, coverClockScale = cover.scale,
         coverClockFont = cover.font, coverClockColor = cover.color, coverClockGlass = cover.glass,
+        coverClockFill = cover.fill, coverClockColor2 = cover.color2, coverClockFillOpacity = cover.fillOpacity,
+        coverClockSplit = cover.split, coverClockHarmony = cover.harmony,
     )
 
     companion object {
         fun from(s: Settings) = EditorDraft(
-            inner = ClockDraft(s.lockClockX, s.lockClockY, s.lockClockZ, s.lockClockScale, s.lockClockFont, s.lockClockColor, s.lockClockGlass),
-            cover = ClockDraft(s.coverClockX, s.coverClockY, s.coverClockZ, s.coverClockScale, s.coverClockFont, s.coverClockColor, s.coverClockGlass),
+            inner = ClockDraft(
+                s.lockClockX, s.lockClockY, s.lockClockZ, s.lockClockScale, s.lockClockFont, s.lockClockColor, s.lockClockGlass,
+                s.lockClockFill, s.lockClockColor2, s.lockClockFillOpacity, s.lockClockSplit, s.lockClockHarmony,
+            ),
+            cover = ClockDraft(
+                s.coverClockX, s.coverClockY, s.coverClockZ, s.coverClockScale, s.coverClockFont, s.coverClockColor, s.coverClockGlass,
+                s.coverClockFill, s.coverClockColor2, s.coverClockFillOpacity, s.coverClockSplit, s.coverClockHarmony,
+            ),
         )
     }
 }
@@ -325,9 +342,11 @@ fun LockEditorScreen(
                         }
                     }
                 }
+                LiquidSectionHeader("Preenchimento")
+                ClockFillEditor(current, update = { update(it) })
                 LiquidSectionHeader("Estilo")
                 LiquidListGroup {
-                    LiquidListRow("Relógio de vidro", divider = false) {
+                    LiquidListRow(if (current.fill == ClockFill.ORIGINAL) "Relógio de vidro" else "Relógio de vidro (no Original)", divider = false) {
                         LiquidToggle(current.glass, { update(current.copy(glass = it)) })
                     }
                     LiquidListRow("Papel de parede desta tela", icon = Icons.Rounded.Wallpaper, iconBackground = Color(0xFFC04BD8), chevron = true, onClick = { actions.onOpenWallpaper(onCover) })
@@ -503,7 +522,7 @@ private fun NudgeButton(icon: ImageVector, description: String, onNudge: () -> U
 }
 
 @Composable
-private fun ColorRow(selected: Int, onSelect: (Int) -> Unit, onSpectrum: () -> Unit, spectrumOpen: Boolean) {
+internal fun ColorRow(selected: Int, onSelect: (Int) -> Unit, onSpectrum: () -> Unit, spectrumOpen: Boolean) {
     val haptic = rememberHaptic()
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
         val quick = listOf(0) + LiquidQuickColors.drop(1).take(5).map { it.toArgb() }

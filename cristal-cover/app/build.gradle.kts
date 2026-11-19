@@ -26,8 +26,8 @@ android {
         minSdk = 33
         targetSdk = 36
         // Cada build do GitHub Actions recebe um número maior, então sempre instala por cima.
-        versionCode = 171 + ciRunNumber
-        versionName = "1.7.1"
+        versionCode = 180 + ciRunNumber
+        versionName = "1.8.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
     }
@@ -103,6 +103,8 @@ android {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    // Posição, orientação e postura da dobra (Jetpack WindowManager), para a transição de dobra.
+    implementation(libs.androidx.window)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

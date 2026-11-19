@@ -119,7 +119,22 @@ data class WidgetData(
     val clockFont: ClockFont = ClockFont.SYSTEM,
     /** A L.I.L.Y AI está instalada e com a ponte liberada. */
     val lily: Boolean = false,
+    /** O resumo do Info Brief (lembretes, sugestões e o que está acontecendo). */
+    val brief: BriefSummary = BriefSummary(),
 )
+
+/** O que o widget do Info Brief mostra: os próximos itens e quantos há de cada coisa. */
+@Immutable
+data class BriefSummary(
+    val items: List<BriefItem> = emptyList(),
+    val suggestions: Int = 0,
+    val timers: Int = 0,
+    val lives: Int = 0,
+)
+
+/** Um item do Info Brief: lembrete ou compromisso, com a hora (null = sem hora). */
+@Immutable
+data class BriefItem(val title: String, val at: Long?, val reminder: Boolean)
 
 /** Ações disparadas pelos widgets; a tela que os hospeda decide o que fazer. */
 @Stable
@@ -141,6 +156,10 @@ class WidgetActions(
     /** Widget da L.I.L.Y: abrir a conversa (toque) e falar (microfone). */
     val onLilyAsk: () -> Unit = {},
     val onLilyVoice: () -> Unit = {},
+    /** Uma sugestão tocada no widget da L.I.L.Y (abre a conversa já perguntando). */
+    val onLilyPrompt: (String) -> Unit = {},
+    /** Abrir o Info Brief completo. */
+    val onBriefOpen: () -> Unit = {},
 )
 
 /** Locale atual, lido de forma que a tela se atualize se o idioma do sistema mudar. */
@@ -176,14 +195,17 @@ fun formatDate(millis: Long): String {
     return DateTimeFormatter.ofPattern(pattern, locale).format(time)
 }
 
-/** Desenha o widget do tipo pedido dentro de um card de vidro que ocupa todo o espaço dado. */
+/**
+ * Desenha o widget do tipo pedido na superfície da família (vidro com a aparência escolhida nas
+ * configurações). O conteúdo se reorganiza para o tamanho real que recebe.
+ */
 @Composable
 fun WidgetCard(
     kind: WidgetKind,
     data: WidgetData,
     actions: WidgetActions,
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 26.dp,
+    cornerRadius: Dp? = null,
     onLongClick: (() -> Unit)? = null,
     gestureModifier: Modifier = Modifier,
     /** Dados próprios do widget (no de foto, os arquivos das fotos). */
@@ -192,179 +214,44 @@ fun WidgetCard(
     val onClick: () -> Unit = when (kind) {
         WidgetKind.CLOCK -> actions.onClockClick
         WidgetKind.WEATHER -> actions.onWeatherClick
-        WidgetKind.MUSIC -> actions.onMediaOpen
+        WidgetKind.MUSIC -> if (data.media == null && !data.notificationAccess) actions.onRequestNotificationAccess else actions.onMediaOpen
         WidgetKind.BATTERY -> actions.onBatteryClick
         WidgetKind.AGENDA -> if (data.agenda.hasPermission) actions.onAgendaClick else actions.onRequestCalendar
         WidgetKind.ANALOG_CLOCK -> actions.onClockClick
         WidgetKind.DATE -> actions.onAgendaClick
         WidgetKind.SEARCH -> actions.onSearch
         WidgetKind.LILY -> actions.onLilyAsk
+        WidgetKind.BRIEF -> actions.onBriefOpen
         WidgetKind.SHORTCUTS, WidgetKind.APP_WIDGET, WidgetKind.PHOTO -> ({})
     }
-    GlassSurface(
+    WidgetSurface(
+        kind = kind,
         modifier = modifier,
         cornerRadius = cornerRadius,
         onClick = onClick,
         onLongClick = onLongClick,
-        innerModifier = gestureModifier,
-        clipContent = true,
+        gestureModifier = gestureModifier,
+        themeAccent = app.cristal.cover.ui.design.Liquid.colors.accent,
     ) {
         when (kind) {
-            WidgetKind.CLOCK -> ClockContent(data)
-            WidgetKind.WEATHER -> WeatherContent(data)
-            WidgetKind.MUSIC -> MusicContent(data, actions)
-            WidgetKind.BATTERY -> BatteryContent(data.battery)
-            WidgetKind.AGENDA -> AgendaContent(data.agenda)
-            WidgetKind.ANALOG_CLOCK -> AnalogClockContent()
-            WidgetKind.DATE -> DateContent()
-            WidgetKind.SHORTCUTS -> ShortcutsContent(data, actions)
-            WidgetKind.SEARCH -> SearchContent()
-            WidgetKind.PHOTO -> PhotoContent(extra)
-            WidgetKind.LILY -> LilyContent(data, actions)
+            WidgetKind.CLOCK -> ClockDesign(data)
+            WidgetKind.WEATHER -> WeatherDesign(data)
+            WidgetKind.MUSIC -> MusicDesign(data, actions)
+            WidgetKind.BATTERY -> BatteryDesign(data.battery)
+            WidgetKind.AGENDA -> AgendaDesign(data)
+            WidgetKind.ANALOG_CLOCK -> AnalogDesign()
+            WidgetKind.DATE -> DateDesign(data)
+            WidgetKind.SHORTCUTS -> ShortcutsDesign(data, actions)
+            WidgetKind.SEARCH -> SearchDesign(data, actions)
+            WidgetKind.PHOTO -> PhotoDesign(extra)
+            WidgetKind.LILY -> LilyDesign(data, actions)
+            WidgetKind.BRIEF -> BriefDesign(data)
             WidgetKind.APP_WIDGET -> Unit
         }
     }
 }
 
-// --- L.I.L.Y ----------------------------------------------------------------------------------------
-
-/** O orbe, o convite para perguntar e o microfone (o toque no resto abre a conversa). */
-@Composable
-private fun LilyContent(data: WidgetData, actions: WidgetActions) {
-    Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-        app.cristal.cover.ui.lily.LilyGlyph(30.dp)
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text("L.I.L.Y", color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-            Text(
-                if (data.lily) "Pergunte qualquer coisa" else "Instale a L.I.L.Y AI",
-                color = Color.White,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-            )
-        }
-        if (data.lily) {
-            Box(
-                Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Brush.linearGradient(app.cristal.cover.ui.lily.LilyColors.take(2)))
-                    .pointerInput(Unit) { detectTapGestures { actions.onLilyVoice() } }
-                    .semantics { contentDescription = "Falar com a L.I.L.Y" },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Rounded.Mic, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-            }
-        }
-    }
-}
-
-// --- Foto -----------------------------------------------------------------------------------------
-
-/**
- * Uma ou várias fotos, ocupando o widget inteiro. Com várias, troca sozinho a cada 20 segundos
- * (com transição suave) e um toque passa para a próxima.
- */
-@Composable
-private fun PhotoContent(extra: String?) {
-    val context = LocalContext.current
-    val files = remember(extra) { PhotoWidgetStore.decode(extra) }
-    var index by remember(extra) { androidx.compose.runtime.mutableIntStateOf(0) }
-    LaunchedEffect(files) {
-        if (files.size > 1) {
-            while (true) {
-                kotlinx.coroutines.delay(20_000)
-                index = (index + 1) % files.size
-            }
-        }
-    }
-    val name = files.getOrNull(index)
-    val photo by androidx.compose.runtime.produceState<ImageBitmap?>(null, name) {
-        value = name?.let { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PhotoWidgetStore.load(context, it, 900) } }
-    }
-    Box(
-        Modifier
-            .fillMaxSize()
-            .then(
-                if (files.size > 1) {
-                    Modifier.pointerInput(files) { detectTapGestures { index = (index + 1) % files.size } }
-                } else {
-                    Modifier
-                },
-            ),
-    ) {
-        androidx.compose.animation.Crossfade(photo, label = "foto") { image ->
-            if (image != null) {
-                Image(image, contentDescription = "Foto", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-            } else {
-                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.25f)), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.Photo, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(36.dp))
-                }
-            }
-        }
-        if (files.size > 1) {
-            Row(
-                Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                files.indices.take(8).forEach { i ->
-                    Box(Modifier.size(if (i == index) 7.dp else 5.dp).clip(CircleShape).background(Color.White.copy(alpha = if (i == index) 0.95f else 0.5f)))
-                }
-            }
-        }
-    }
-}
-
-// --- Relógio --------------------------------------------------------------------------------------
-
-@Composable
-private fun ClockContent(data: WidgetData) {
-    val now = rememberMinuteTicker().value
-    val is24h = DateFormat.is24HourFormat(LocalContext.current)
-    val spec = LocalGlassSpec.current
-    val locale = currentLocale()
-    BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 10.dp)) {
-        val compact = maxWidth < 220.dp
-        val timeSize = (maxHeight.value * if (compact) 0.42f else 0.56f).coerceIn(26f, 92f)
-        if (compact) {
-            Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(formatTime(now, is24h), style = data.clockFont.clockStyle(), fontSize = timeSize.sp, maxLines = 1, softWrap = false)
-                Text(
-                    formatDate(now),
-                    fontSize = 12.sp,
-                    color = spec.secondaryContentColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        } else {
-            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                Text(formatTime(now, is24h), style = data.clockFont.clockStyle(), fontSize = timeSize.sp, maxLines = 1, softWrap = false)
-                Spacer(Modifier.width(16.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        formatDate(now).replaceFirstChar { it.titlecase(locale) },
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    val weather = data.weather.data
-                    val extra = buildString {
-                        append("${data.battery.percent}%")
-                        if (data.battery.charging) append(" ⚡")
-                        if (weather != null) append("  ·  ${formatTemp(weather.tempC, data.tempUnit)}")
-                    }
-                    Text(extra, fontSize = 13.sp, color = spec.secondaryContentColor, maxLines = 1)
-                }
-            }
-        }
-    }
-}
-
-// --- Clima ----------------------------------------------------------------------------------------
+// --- Textos do clima e da agenda (também usados no bloqueio e nas configurações) -------------
 
 fun formatTemp(celsius: Double, unit: TempUnit): String {
     val value = if (unit == TempUnit.FAHRENHEIT) celsius * 9.0 / 5.0 + 32.0 else celsius
@@ -403,292 +290,6 @@ fun weatherIcon(code: Int, isDay: Boolean): ImageVector = when (code) {
     else -> Icons.Rounded.Cloud
 }
 
-@Composable
-private fun WeatherContent(data: WidgetData) {
-    val spec = LocalGlassSpec.current
-    val weather = data.weather.data
-    Box(Modifier.fillMaxSize().padding(14.dp)) {
-        if (weather == null) {
-            val message = when (data.weather.status) {
-                WeatherStatus.LOADING -> "Carregando clima…"
-                WeatherStatus.ERROR -> "Sem conexão. Toque para tentar de novo."
-                else -> "Toque para escolher a cidade"
-            }
-            EmptyWidget(Icons.Rounded.WbCloudy, message)
-            return@Box
-        }
-        BoxWithConstraints(Modifier.fillMaxSize()) {
-            val wide = maxWidth > 250.dp
-            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            weatherIcon(weather.code, weather.isDay),
-                            contentDescription = null,
-                            modifier = Modifier.size(30.dp),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            formatTemp(weather.tempC, data.tempUnit),
-                            style = ClockTextStyle,
-                            fontSize = 40.sp,
-                            maxLines = 1,
-                        )
-                    }
-                    Text(
-                        weatherLabel(weather.code),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    val today = weather.days.firstOrNull()
-                    val range = if (today != null) {
-                        "↑${formatTemp(today.maxC, data.tempUnit)} ↓${formatTemp(today.minC, data.tempUnit)}"
-                    } else {
-                        "Sensação ${formatTemp(weather.feelsLikeC, data.tempUnit)}"
-                    }
-                    Text(range, fontSize = 12.sp, color = spec.secondaryContentColor, maxLines = 1)
-                    Text(
-                        weather.place.ifBlank { "Local atual" },
-                        fontSize = 11.sp,
-                        color = spec.secondaryContentColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                if (wide) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        for (day in weather.days.drop(1).take(3)) ForecastDay(day.date, day.code, day.maxC, day.minC, data.tempUnit)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ForecastDay(date: String, code: Int, maxC: Double, minC: Double, unit: TempUnit) {
-    val spec = LocalGlassSpec.current
-    val locale = currentLocale()
-    val label = remember(date, locale) {
-        runCatching { LocalDate.parse(date).dayOfWeek.getDisplayName(JavaTextStyle.SHORT, locale).take(3) }.getOrDefault("")
-    }
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, fontSize = 11.sp, color = spec.secondaryContentColor, maxLines = 1)
-        Icon(weatherIcon(code, true), contentDescription = null, modifier = Modifier.padding(vertical = 4.dp).size(20.dp))
-        Text(formatTemp(maxC, unit), fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-        Text(formatTemp(minC, unit), fontSize = 11.sp, color = spec.secondaryContentColor, maxLines = 1)
-    }
-}
-
-// --- Música ---------------------------------------------------------------------------------------
-
-@Composable
-private fun MusicContent(data: WidgetData, actions: WidgetActions) {
-    val spec = LocalGlassSpec.current
-    val media = data.media
-    Box(Modifier.fillMaxSize().padding(12.dp)) {
-        if (media == null) {
-            if (data.notificationAccess) {
-                EmptyWidget(Icons.Rounded.MusicNote, "Nada tocando agora")
-            } else {
-                EmptyWidget(
-                    Icons.Rounded.MusicNote,
-                    "Ative o acesso às notificações para controlar a música",
-                    onClick = actions.onRequestNotificationAccess,
-                )
-            }
-            return@Box
-        }
-        Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .aspectRatio(1f, matchHeightConstraintsFirst = true)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(spec.contentColor.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                val art = media.art
-                if (art != null) {
-                    Image(bitmap = art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                } else {
-                    Icon(Icons.Rounded.MusicNote, contentDescription = null, modifier = Modifier.size(28.dp))
-                }
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                Text(
-                    media.title.ifBlank { "Reproduzindo" },
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (media.artist.isNotBlank()) {
-                    Text(
-                        media.artist,
-                        fontSize = 12.sp,
-                        color = spec.secondaryContentColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Spacer(Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    MediaButton(Icons.Rounded.SkipPrevious, "Anterior", media.canSkipPrevious, 36.dp, actions.onMediaPrevious)
-                    MediaButton(
-                        if (media.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                        if (media.isPlaying) "Pausar" else "Tocar",
-                        true,
-                        44.dp,
-                        actions.onMediaPlayPause,
-                    )
-                    MediaButton(Icons.Rounded.SkipNext, "Próxima", media.canSkipNext, 36.dp, actions.onMediaNext)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun MediaButton(icon: ImageVector, description: String, enabled: Boolean, size: Dp, onClick: () -> Unit) {
-    val haptic = rememberHaptic()
-    val color = LocalContentColor.current
-    Box(
-        modifier = Modifier
-            .size(size)
-            .clip(CircleShape)
-            .background(color.copy(alpha = if (enabled) 0.14f else 0.05f))
-            .clickable(
-                enabled = enabled,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) {
-                haptic()
-                onClick()
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            icon,
-            contentDescription = description,
-            tint = color.copy(alpha = if (enabled) 1f else 0.35f),
-            modifier = Modifier.size(size * 0.56f),
-        )
-    }
-}
-
-// --- Bateria --------------------------------------------------------------------------------------
-
-@Composable
-private fun BatteryContent(battery: BatteryState) {
-    val spec = LocalGlassSpec.current
-    val ringColor = when {
-        battery.charging || battery.full -> Color(0xFF34C759)
-        battery.percent <= 15 -> Color(0xFFFF453A)
-        battery.powerSave -> Color(0xFFFFD60A)
-        else -> spec.contentColor
-    }
-    val track = spec.contentColor.copy(alpha = 0.16f)
-    val status = when {
-        battery.full -> "Carregada"
-        battery.charging -> "Carregando"
-        battery.powerSave -> "Economia"
-        else -> "Bateria"
-    }
-    BoxWithConstraints(Modifier.fillMaxSize().padding(12.dp)) {
-        if (maxWidth < 240.dp) {
-            // Célula estreita (2×2): anel com a porcentagem no centro e o estado embaixo.
-            Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) {
-                    BatteryRing(battery.percent, ringColor, track)
-                    Text("${battery.percent}%", style = ClockTextStyle, fontSize = 22.sp, maxLines = 1)
-                }
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                    if (battery.charging) {
-                        Icon(Icons.Rounded.Bolt, contentDescription = null, tint = ringColor, modifier = Modifier.size(14.dp))
-                    }
-                    Text(status, fontSize = 12.sp, color = spec.secondaryContentColor, maxLines = 1)
-                }
-            }
-        } else {
-            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.fillMaxHeight().aspectRatio(1f, matchHeightConstraintsFirst = true), contentAlignment = Alignment.Center) {
-                    BatteryRing(battery.percent, ringColor, track)
-                    if (battery.charging) {
-                        Icon(Icons.Rounded.Bolt, contentDescription = null, tint = ringColor, modifier = Modifier.size(22.dp))
-                    }
-                }
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text("${battery.percent}%", style = ClockTextStyle, fontSize = 28.sp, maxLines = 1)
-                    Text(status, fontSize = 12.sp, color = spec.secondaryContentColor, maxLines = 1)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BatteryRing(percent: Int, color: Color, track: Color) {
-    Canvas(Modifier.fillMaxSize().padding(3.dp)) {
-        val stroke = size.minDimension * 0.11f
-        val inset = stroke / 2f
-        val arcSize = Size(size.width - stroke, size.height - stroke)
-        drawArc(track, -90f, 360f, false, Offset(inset, inset), arcSize, style = Stroke(stroke))
-        drawArc(color, -90f, 360f * percent / 100f, false, Offset(inset, inset), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
-    }
-}
-
-// --- Agenda ---------------------------------------------------------------------------------------
-
-@Composable
-private fun AgendaContent(agenda: AgendaState) {
-    val spec = LocalGlassSpec.current
-    Box(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp)) {
-        when {
-            !agenda.hasPermission -> EmptyWidget(Icons.Rounded.Event, "Toque para permitir o acesso à agenda")
-            agenda.events.isEmpty() -> EmptyWidget(Icons.Rounded.Event, "Nenhum compromisso nos próximos 7 dias")
-            else -> BoxWithConstraints(Modifier.fillMaxSize()) {
-                val rows = ((maxHeight.value - 4f) / 34f).toInt().coerceIn(1, 4)
-                Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
-                    for (event in agenda.events.take(rows)) {
-                        Row(Modifier.fillMaxWidth().height(34.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                Modifier
-                                    .width(4.dp)
-                                    .height(22.dp)
-                                    .clip(CircleShape)
-                                    .background(if (event.color != 0) Color(event.color).copy(alpha = 1f) else spec.contentColor),
-                            )
-                            Spacer(Modifier.width(10.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    event.title,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(
-                                    eventWhen(event),
-                                    fontSize = 11.sp,
-                                    color = spec.secondaryContentColor,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/** "Hoje 14:00", "Amanhã, dia todo", "seg. 09:30". */
 fun eventWhen(event: AgendaEvent, nowMillis: Long = System.currentTimeMillis()): String {
     val zone = ZoneId.systemDefault()
     // Eventos de dia inteiro são gravados em UTC; lê-los no fuso local mudaria o dia.
@@ -702,31 +303,4 @@ fun eventWhen(event: AgendaEvent, nowMillis: Long = System.currentTimeMillis()):
     val time = if (event.allDay) "dia todo" else DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()).format(start)
     val place = if (event.location.isBlank()) "" else " · ${event.location}"
     return if (event.allDay) "$day, $time$place" else "$day $time$place"
-}
-
-// --- Comum ----------------------------------------------------------------------------------------
-
-@Composable
-private fun EmptyWidget(icon: ImageVector, message: String, onClick: (() -> Unit)? = null) {
-    val spec = LocalGlassSpec.current
-    Row(
-        modifier = Modifier
-            .fillMaxSize()
-            .then(
-                if (onClick != null) {
-                    Modifier.clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onClick,
-                    )
-                } else {
-                    Modifier
-                },
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, contentDescription = null, tint = spec.secondaryContentColor, modifier = Modifier.size(26.dp))
-        Spacer(Modifier.width(10.dp))
-        Text(message, fontSize = 13.sp, color = spec.secondaryContentColor, maxLines = 3, overflow = TextOverflow.Ellipsis)
-    }
 }

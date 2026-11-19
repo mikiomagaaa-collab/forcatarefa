@@ -103,6 +103,17 @@ object PrefKeys {
     val LOCK_CLOCK_Y = floatPreferencesKey("lock_clock_y")
     val LOCK_CLOCK_Z = floatPreferencesKey("lock_clock_z")
     val LOCK_CLOCK_COLOR = intPreferencesKey("lock_clock_color")
+    val WIDGET_STYLE_LOOK = stringPreferencesKey("widget_style_look")
+    val WIDGET_STYLE_TRANSPARENCY = floatPreferencesKey("widget_style_transparency")
+    val WIDGET_STYLE_BLUR = floatPreferencesKey("widget_style_blur")
+    val WIDGET_STYLE_ACCENT = intPreferencesKey("widget_style_accent")
+    val WIDGET_STYLE_CORNER = floatPreferencesKey("widget_style_corner")
+    val WIDGET_STYLE_DENSITY = stringPreferencesKey("widget_style_density")
+    val LOCK_CLOCK_FILL = stringPreferencesKey("lock_clock_fill")
+    val LOCK_CLOCK_COLOR2 = intPreferencesKey("lock_clock_color2")
+    val LOCK_CLOCK_FILL_OPACITY = floatPreferencesKey("lock_clock_fill_opacity")
+    val LOCK_CLOCK_SPLIT = booleanPreferencesKey("lock_clock_split")
+    val LOCK_CLOCK_HARMONY = booleanPreferencesKey("lock_clock_harmony")
     val LOCK_MEDIA_POSITION = stringPreferencesKey("lock_media_position")
     val LOCK_WIDGETS = stringPreferencesKey("lock_widgets")
     val LOCK_WIDGETS_POSITION = stringPreferencesKey("lock_widgets_position")
@@ -125,6 +136,11 @@ object PrefKeys {
     val COVER_CLOCK_Y = floatPreferencesKey("cover_clock_y")
     val COVER_CLOCK_Z = floatPreferencesKey("cover_clock_z")
     val COVER_CLOCK_COLOR = intPreferencesKey("cover_clock_color")
+    val COVER_CLOCK_FILL = stringPreferencesKey("cover_clock_fill")
+    val COVER_CLOCK_COLOR2 = intPreferencesKey("cover_clock_color2")
+    val COVER_CLOCK_FILL_OPACITY = floatPreferencesKey("cover_clock_fill_opacity")
+    val COVER_CLOCK_SPLIT = booleanPreferencesKey("cover_clock_split")
+    val COVER_CLOCK_HARMONY = booleanPreferencesKey("cover_clock_harmony")
     val COVER_CLOCK_POSITION = stringPreferencesKey("cover_clock_position")
     val COVER_LOCK_MAX_NOTIFICATIONS = intPreferencesKey("cover_lock_max_notifications")
     val FLIP_TRANSITION = booleanPreferencesKey("flip_transition")
@@ -225,6 +241,17 @@ internal fun Preferences.toSettings(): Settings {
         lockClockY = (this[PrefKeys.LOCK_CLOCK_Y] ?: d.lockClockY).coerceIn(ClockBounds.Y_MIN, ClockBounds.Y_MAX),
         lockClockZ = (this[PrefKeys.LOCK_CLOCK_Z] ?: d.lockClockZ).coerceIn(0f, 1f),
         lockClockColor = this[PrefKeys.LOCK_CLOCK_COLOR] ?: d.lockClockColor,
+        widgetLook = enumOr(PrefKeys.WIDGET_STYLE_LOOK, d.widgetLook),
+        widgetTransparency = (this[PrefKeys.WIDGET_STYLE_TRANSPARENCY] ?: d.widgetTransparency).coerceIn(0f, 1f),
+        widgetBlur = (this[PrefKeys.WIDGET_STYLE_BLUR] ?: d.widgetBlur).coerceIn(0f, 1f),
+        widgetAccent = this[PrefKeys.WIDGET_STYLE_ACCENT] ?: d.widgetAccent,
+        widgetCorner = (this[PrefKeys.WIDGET_STYLE_CORNER] ?: d.widgetCorner).coerceIn(0.6f, 1.4f),
+        widgetDensity = enumOr(PrefKeys.WIDGET_STYLE_DENSITY, d.widgetDensity),
+        lockClockFill = enumOr(PrefKeys.LOCK_CLOCK_FILL, d.lockClockFill),
+        lockClockColor2 = this[PrefKeys.LOCK_CLOCK_COLOR2] ?: d.lockClockColor2,
+        lockClockFillOpacity = (this[PrefKeys.LOCK_CLOCK_FILL_OPACITY] ?: d.lockClockFillOpacity).coerceIn(0.2f, 1f),
+        lockClockSplit = this[PrefKeys.LOCK_CLOCK_SPLIT] ?: d.lockClockSplit,
+        lockClockHarmony = this[PrefKeys.LOCK_CLOCK_HARMONY] ?: d.lockClockHarmony,
         lockMediaPosition = enumOr(PrefKeys.LOCK_MEDIA_POSITION, d.lockMediaPosition),
         lockWidgets = this[PrefKeys.LOCK_WIDGETS]?.split(',')?.mapNotNull { n -> LockWidget.entries.firstOrNull { it.name == n } }?.distinct()
             ?: d.lockWidgets,
@@ -248,6 +275,11 @@ internal fun Preferences.toSettings(): Settings {
         coverClockY = (this[PrefKeys.COVER_CLOCK_Y] ?: d.coverClockY).coerceIn(ClockBounds.Y_MIN, ClockBounds.Y_MAX),
         coverClockZ = (this[PrefKeys.COVER_CLOCK_Z] ?: d.coverClockZ).coerceIn(0f, 1f),
         coverClockColor = this[PrefKeys.COVER_CLOCK_COLOR] ?: d.coverClockColor,
+        coverClockFill = enumOr(PrefKeys.COVER_CLOCK_FILL, d.coverClockFill),
+        coverClockColor2 = this[PrefKeys.COVER_CLOCK_COLOR2] ?: d.coverClockColor2,
+        coverClockFillOpacity = (this[PrefKeys.COVER_CLOCK_FILL_OPACITY] ?: d.coverClockFillOpacity).coerceIn(0.2f, 1f),
+        coverClockSplit = this[PrefKeys.COVER_CLOCK_SPLIT] ?: d.coverClockSplit,
+        coverClockHarmony = this[PrefKeys.COVER_CLOCK_HARMONY] ?: d.coverClockHarmony,
         coverClockPosition = enumOr(PrefKeys.COVER_CLOCK_POSITION, d.coverClockPosition),
         coverLockMaxNotifications = (this[PrefKeys.COVER_LOCK_MAX_NOTIFICATIONS] ?: d.coverLockMaxNotifications).coerceIn(0, 4),
         flipTransition = this[PrefKeys.FLIP_TRANSITION] ?: d.flipTransition,

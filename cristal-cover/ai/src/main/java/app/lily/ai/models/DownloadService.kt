@@ -33,12 +33,18 @@ class DownloadService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val graph = (application as LilyAiApp).graph
+        ensureChannel()
+        val graph = (application as LilyAiApp).graphOrNull ?: run {
+            // O núcleo não iniciou: cumpre o pedido do Android (primeiro plano) e encerra sem baixar.
+            startForeground(NOTIFICATION_ID, build("Downloads indisponíveis", null, null), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return START_NOT_STICKY
+        }
         when (intent?.action) {
             ACTION_PAUSE -> intent.getStringExtra(EXTRA_ID)?.let(graph.downloads::pause)
             ACTION_CANCEL -> intent.getStringExtra(EXTRA_ID)?.let(Catalog::byId)?.let(graph.downloads::cancel)
         }
-        ensureChannel()
         startForeground(NOTIFICATION_ID, build("Preparando downloads", null, null), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         if (worker?.isActive != true) worker = scope.launch { runQueue() }
         return START_NOT_STICKY

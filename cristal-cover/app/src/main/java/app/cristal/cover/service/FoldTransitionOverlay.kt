@@ -23,6 +23,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -36,19 +38,24 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import app.cristal.cover.core.Logx
 import app.cristal.cover.core.safely
+import app.cristal.cover.ui.fold.FoldGeometry
+import app.cristal.cover.ui.fold.FoldLayer
+import app.cristal.cover.ui.fold.foldFocus
 import java.util.concurrent.Executor
 
 /**
  * Transição de fechamento sobre qualquer app. Quando o sensor da dobradiça mostra o aparelho
- * fechando, a tela interna vira um cartão (uma captura de um instante, só na memória) que encolhe
- * em direção à dobra, inclina em profundidade e escurece, com a faixa de luz da Liquid Island na
- * linha da dobradiça. Some se a pessoa parar no meio (modo flex), reabrir ou terminar de fechar.
+ * fechando, a tela interna vira uma captura de um instante (só na memória) que entra na dobra com o
+ * mesmo efeito do launcher (ui/fold): desfoque por região, luz caindo e a faixa de luz da Liquid
+ * Island na linha da dobradiça. Sobre outros apps só dá para usar a captura: o Android não deixa um
+ * app transformar a tela ao vivo de outro app (isso seria da System UI). Some se a pessoa parar no meio (modo flex), reabrir ou terminar de fechar.
  * Sem captura, duas cortinas de vidro escuro fecham em direção à dobra.
  */
 internal class FoldTransitionOverlay(private val service: AccessibilityService) {
@@ -216,10 +223,18 @@ internal class FoldTransitionOverlay(private val service: AccessibilityService) 
 
 private val Spectrum = listOf(Color(0xFFFF7A2E), Color(0xFFFA408C), Color(0xFF9E52FF), Color(0xFF338CFF), Color(0xFF40EBF2))
 
-/** O cartão que encolhe para a dobra, com a faixa de luz na dobradiça. */
+/**
+ * A tela entrando na dobra: a captura ganha o mesmo efeito da transição do launcher (desfoque por
+ * região a partir da dobra, luz caindo e um leve esticamento em direção à dobradiça, com a linha de
+ * luz em espectro), com uma escala suave em vez de encolher de uma vez. Sem captura, duas cortinas
+ * de vidro escuro fecham em direção à dobra.
+ */
 @Composable
 internal fun FoldContent(shot: ImageBitmap?, target: () -> Float) {
     val p by animateFloatAsState(target(), spring(dampingRatio = 1f, stiffness = 700f), label = "fechar")
+    val focus = remember { derivedStateOf { 1f - p } }
+    val config = LocalConfiguration.current
+    val geometry = if (config.screenHeightDp >= config.screenWidthDp) FoldGeometry.InnerPortrait else FoldGeometry(horizontal = false, position = 0.5f)
     Box(Modifier.fillMaxSize()) {
         if (shot != null) {
             Box(Modifier.fillMaxSize().background(Color.Black))
@@ -230,45 +245,42 @@ internal fun FoldContent(shot: ImageBitmap?, target: () -> Float) {
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
-                        val s = 1f - 0.32f * p
+                        val s = 1f - 0.06f * p
                         scaleX = s
-                        scaleY = s * (1f - 0.08f * p)
-                        rotationX = 6f * p
-                        cameraDistance = 12f * density
+                        scaleY = s
                         transformOrigin = TransformOrigin(0.5f, 0.5f)
-                        shape = RoundedCornerShape((44f * p).dp)
+                        shape = RoundedCornerShape((30f * p).dp)
                         clip = true
-                        alpha = 1f - 0.45f * p
-                    },
+                    }
+                    .foldFocus(focus, geometry, FoldLayer.SNAPSHOT, 30.dp),
             )
-        }
-        Canvas(Modifier.fillMaxSize()) {
-            val mid = size.height / 2f
-            if (shot == null) {
+        } else {
+            Canvas(Modifier.fillMaxSize()) {
+                val mid = size.height / 2f
                 // Sem captura: cortinas escuras fecham em direção à dobra.
                 val h = mid * p
                 val r = CornerRadius(36.dp.toPx() * p)
                 drawRoundRect(Color(0xF00B0A10), topLeft = Offset(0f, -r.y), size = Size(size.width, h + r.y), cornerRadius = r)
                 drawRoundRect(Color(0xF00B0A10), topLeft = Offset(0f, size.height - h), size = Size(size.width, h + r.y), cornerRadius = r)
+                // A faixa de luz na dobradiça: cresce e fica mais intensa conforme fecha.
+                val glow = 70.dp.toPx() * (0.4f + 0.6f * p)
+                drawRect(
+                    Brush.verticalGradient(
+                        listOf(Color.Transparent, Spectrum[3].copy(alpha = 0.32f * p), Color.Transparent),
+                        startY = mid - glow,
+                        endY = mid + glow,
+                    ),
+                    topLeft = Offset(0f, mid - glow),
+                    size = Size(size.width, glow * 2),
+                )
+                val line = 2.dp.toPx() * (0.5f + p)
+                val inset = size.width * (0.22f - 0.16f * p)
+                drawRect(
+                    Brush.horizontalGradient(Spectrum.map { it.copy(alpha = 0.95f * p) }, startX = inset, endX = size.width - inset),
+                    topLeft = Offset(inset, mid - line / 2),
+                    size = Size(size.width - inset * 2, line),
+                )
             }
-            // A faixa de luz na dobradiça: cresce e fica mais intensa conforme fecha.
-            val glow = 70.dp.toPx() * (0.4f + 0.6f * p)
-            drawRect(
-                Brush.verticalGradient(
-                    listOf(Color.Transparent, Spectrum[3].copy(alpha = 0.32f * p), Color.Transparent),
-                    startY = mid - glow,
-                    endY = mid + glow,
-                ),
-                topLeft = Offset(0f, mid - glow),
-                size = Size(size.width, glow * 2),
-            )
-            val line = 2.dp.toPx() * (0.5f + p)
-            val inset = size.width * (0.22f - 0.16f * p)
-            drawRect(
-                Brush.horizontalGradient(Spectrum.map { it.copy(alpha = 0.95f * p) }, startX = inset, endX = size.width - inset),
-                topLeft = Offset(inset, mid - line / 2),
-                size = Size(size.width - inset * 2, line),
-            )
         }
     }
 }

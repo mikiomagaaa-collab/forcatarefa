@@ -308,3 +308,47 @@ estão implementados com as APIs oficiais e precisam ser confirmados no Razr.
 - [ ] O relatório do Teste do aparelho traz o último erro no fim (quando houver)
 - [ ] No teclado (1.3.1), se a L.I.L.Y AI não subir, o painel avisa "A L.I.L.Y AI não respondeu" em até 10 s, em vez de ficar carregando
 - [ ] Depois de uma resposta do teclado, fechar a L.I.L.Y AI (ou o Android encerrá-la) não troca o resultado por um erro
+
+## 22. Cristal 1.8.0 e L.I.L.Y AI 1.2.0
+
+L.I.L.Y AI (prioridade):
+
+- [ ] A L.I.L.Y AI abre pelo ícone na tela interna, sem nenhum modelo instalado, e continua aberta
+- [ ] O ícone **L.I.L.Y Diagnóstico** abre e mostra Situação, Módulos, Como o app terminou, Erros guardados e Registro
+- [ ] No Diagnóstico: Copiar relatório, Compartilhar e Salvar em Downloads funcionam
+- [ ] Abrir em modo seguro: a L.I.L.Y abre com o aviso "Modo seguro"; Sair do modo seguro volta ao normal
+- [ ] Depois de uma abertura normal, o Registro mostra "✓ Interface pronta (principal)"
+- [ ] ⚠️ Se a L.I.L.Y fechar sozinha: o Diagnóstico mostra o motivo em "Como o app terminou" (mande o relatório)
+- [ ] O teclado continua respondendo pela L.I.L.Y (Traduzir, Corrigir) e a ilha continua chamando a voz
+
+Transição de dobra (tela inicial do Cristal):
+
+- [ ] Abrir o Razr devagar com o Cristal na tela externa: a tela interna acende desfocada perto da dobra e fica nítida até ~165°
+- [ ] Fechar devagar: o desfoque começa perto da dobra e cresce até a tela apagar; reabrir no meio volta a ficar nítido
+- [ ] Parar no meio (modo flex): em menos de meio segundo tudo fica nítido
+- [ ] O papel de parede assenta antes dos ícones e widgets; a linha de luz aparece na dobra e some
+- [ ] Com "Remover animações" ligado no Android: sem efeito nenhum
+- [ ] Na tela externa, começar a abrir: a tela se desfaz em direção à dobradiça antes de apagar
+- [ ] ⚠️ Por cima de outro app, só o fechamento tem efeito (com a acessibilidade e o Flip Transition ligados)
+- [ ] Rolagem da tela inicial continua fluida (sem efeito quando a tela está assentada)
+
+Widgets:
+
+- [ ] Galeria de widgets: cada item mostra o widget de verdade, inteiro, com os dados de agora
+- [ ] Cada widget em faixa, pequeno, médio e grande (Redimensionar) reorganiza o conteúdo sem cortar texto
+- [ ] Configurações > Widgets: Liquid Glass, Claro, Escuro, Colorido e Monocromático mudam todos os widgets na hora
+- [ ] Transparência, desfoque, destaque, cantos e densidade mudam a prévia e a tela inicial
+- [ ] Na tela externa: relógio, clima, atalhos e L.I.L.Y legíveis e tocáveis
+- [ ] Música: tocar/pausar, anterior e próxima controlam o player ativo
+- [ ] Info Brief: mostra o próximo lembrete; tocar abre o Now Brief
+- [ ] L.I.L.Y: tocar na sugestão pergunta à L.I.L.Y; o microfone abre a voz
+- [ ] Sem permissão de agenda ou sem cidade do clima: o widget pede a permissão ou a cidade (sem dados de mentira)
+- [ ] Salvar uma coleção e aplicar outra: a aparência dos widgets acompanha a coleção
+
+Relógio colorido:
+
+- [ ] Editor do bloqueio > Preenchimento: Sólido, Gradiente, Translúcido e Liquid Glass mudam a prévia na hora
+- [ ] "Horas e minutos com cores próprias" pinta as horas com a primeira cor e os minutos com a segunda
+- [ ] "Data na cor do relógio" acompanha a cor escolhida
+- [ ] Original continua igual ao relógio de vidro de antes
+- [ ] Tela interna e tela externa guardam escolhas separadas; a coleção guarda as duas

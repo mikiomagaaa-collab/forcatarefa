@@ -43,7 +43,13 @@ class AssistActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        val graph = (application as LilyAiApp).graph
+        val graph = (application as LilyAiApp).graphOrNull
+        if (graph == null) {
+            startActivity(app.lily.ai.diagnostics.CrashReport.intent(this))
+            finish()
+            return
+        }
+        app.lily.ai.ui.theme.OrbShaderEnabled = !graph.safeMode
         val session = graph.assist.session()
         if (savedInstanceState == null && intent?.getBooleanExtra(EXTRA_SILENT, false) != true) listenTrigger++
         setContent {
@@ -75,12 +81,12 @@ class AssistActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        (application as LilyAiApp).graph.assist.attach()
+        (application as LilyAiApp).graphOrNull?.assist?.attach()
     }
 
     override fun onStop() {
         super.onStop()
-        if (!isChangingConfigurations) (application as LilyAiApp).graph.assist.detach()
+        if (!isChangingConfigurations) (application as LilyAiApp).graphOrNull?.assist?.detach()
     }
 
     companion object {
