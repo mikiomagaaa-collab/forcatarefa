@@ -1,0 +1,14 @@
+{
+  "name": "lily-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "description": "L.I.L.Y Gateway: serviço online da L.I.L.Y AI (Cloudflare Worker). Guarda as chaves dos provedores fora do APK.",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "build:web": "node scripts/build-web.mjs",
+    "deploy": "node scripts/build-web.mjs && npx wrangler@4 deploy"
+  },
+  "engines": { "node": ">=20" }
+}

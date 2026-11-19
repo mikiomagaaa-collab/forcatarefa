@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    canRetrieveWindowContent="false": o serviço não consegue ler o conteúdo das telas.
+    Só recebe o evento "mudou a janela em primeiro plano" e executa ações globais.
+    canTakeScreenshot="true": uma captura na memória, só no instante em que a Central de Controle
+    desce sobre um app (para o vidro) ou o aparelho começa a fechar (para a transição). Nada é
+    gravado nem sai do aparelho.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault"
+    android:canRetrieveWindowContent="false"
+    android:canTakeScreenshot="true"
+    android:description="@string/accessibility_description"
+    android:isAccessibilityTool="false"
+    android:notificationTimeout="100"
+    android:settingsActivity="app.cristal.cover.ui.settings.SettingsActivity"
+    android:summary="@string/accessibility_summary" />

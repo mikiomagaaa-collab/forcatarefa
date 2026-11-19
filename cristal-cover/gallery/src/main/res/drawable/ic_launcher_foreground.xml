@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Duas fotos de vidro empilhadas, com montanha, sol e o brilho da L.I.L.Y. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <group android:pivotX="54" android:pivotY="54" android:rotation="-10">
+        <path android:pathData="M36,34h36a6,6 0,0 1,6 6v28a6,6 0,0 1,-6 6h-36a6,6 0,0 1,-6 -6v-28a6,6 0,0 1,6 -6z" android:fillColor="#40FFFFFF" />
+    </group>
+    <path android:pathData="M37,37h34a6,6 0,0 1,6 6v26a6,6 0,0 1,-6 6h-34a6,6 0,0 1,-6 -6v-26a6,6 0,0 1,6 -6z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="31" android:startY="37" android:endX="77" android:endY="75"
+                android:startColor="#FFB79CFF" android:endColor="#FF64D2FF" />
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#E6FFFFFF" android:pathData="M31,66 L44,52 L53,61 L59,55 L77,70 L77,69 a6,6 0,0 1,-6 6 h-34 a6,6 0,0 1,-6 -6z" />
+    <path android:fillColor="#FFFFF4D6" android:pathData="M64,47m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M74,28 C74.5,31.5 76,33 79.5,33.5 C76,34 74.5,35.5 74,39 C73.5,35.5 72,34 68.5,33.5 C72,33 73.5,31.5 74,28Z" />
+</vector>

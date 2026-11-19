@@ -1,0 +1,152 @@
+# Publica o L.I.L.Y Gateway na sua conta Cloudflare, só quando você pede: editando o arquivo
+# cristal-cover/gateway/PUBLICAR.md (dá para fazer pelo navegador do celular, em qualquer ramo) ou,
+# se este arquivo estiver no ramo principal, pelo botão "Run workflow". Os segredos ficam nos
+# "Secrets" do repositório e são copiados para o Worker; nada fica no código nem no APK.
+# Passo a passo: cristal-cover/docs/GATEWAY.md.
+name: L.I.L.Y Gateway - publicar
+
+on:
+  push:
+    paths: ['cristal-cover/gateway/PUBLICAR.md']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Testar e publicar o gateway
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: cristal-cover/gateway
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Testes do gateway
+        run: node --test test/*.test.js
+
+      - name: Montar a L.I.L.Y Web e os documentos
+        run: node scripts/build-web.mjs
+
+      - name: Testes da L.I.L.Y Web
+        working-directory: cristal-cover/web
+        run: node --test test/*.test.js
+
+      # A conta e o subdomínio workers.dev: o ID da conta vem do segredo ou, se só houver uma conta, do
+      # próprio token; sem subdomínio workers.dev (conta nova), cria um (a primeira publicação exige).
+      - name: Preparar a conta Cloudflare
+        id: cf
+        env:
+          SECRET_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || exit 0
+          api=https://api.cloudflare.com/client/v4
+          auth="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          id="$SECRET_ACCOUNT_ID"
+          if [ -z "$id" ]; then
+            contas=$(curl -sS -H "$auth" "$api/accounts?per_page=10" || echo '{}')
+            n=$(echo "$contas" | jq '.result | length // 0' 2>/dev/null || echo 0)
+            if [ "$n" = "1" ]; then
+              id=$(echo "$contas" | jq -r '.result[0].id')
+              echo "Conta encontrada pelo token: $(echo "$contas" | jq -r '.result[0].name' || true)"
+            else
+              echo "O token vê $n contas (ou não conseguiu ler): crie o segredo CLOUDFLARE_ACCOUNT_ID."
+              echo "$contas" | jq -c '.errors // empty' || true
+              exit 0
+            fi
+          fi
+          echo "CLOUDFLARE_ACCOUNT_ID=$id" >> "$GITHUB_ENV"
+          sub=$(curl -sS -H "$auth" "$api/accounts/$id/workers/subdomain" 2>/dev/null | jq -r '.result.subdomain // empty' 2>/dev/null || true)
+          if [ -z "$sub" ]; then
+            base=$(echo "$GITHUB_REPOSITORY_OWNER" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9\n' '-' | sed 's/^-*//; s/-*$//' | cut -c1-30)
+            for nome in "lily-$base" "lily-$base-$RANDOM" "lily-$RANDOM$RANDOM"; do
+              r=$(curl -sS -X PUT -H "$auth" -H 'content-type: application/json' --data "{\"subdomain\":\"$nome\"}" "$api/accounts/$id/workers/subdomain" || echo '{}')
+              if [ "$(echo "$r" | jq -r '.success' 2>/dev/null || true)" = "true" ]; then sub="$nome"; echo "Subdomínio workers.dev criado: $sub.workers.dev"; break; fi
+              echo "Não consegui criar $nome: $(echo "$r" | jq -c '.errors // empty' 2>/dev/null || echo "$r" | head -c 300)"
+            done
+          else
+            echo "Subdomínio workers.dev: $sub.workers.dev"
+          fi
+          if [ -n "$sub" ]; then echo "subdomain=$sub" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Conferir os segredos
+        id: conta
+        env:
+          LILY_ACCESS_KEY: ${{ secrets.LILY_ACCESS_KEY }}
+        run: |
+          falta=""
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || falta="$falta CLOUDFLARE_API_TOKEN"
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || falta="$falta CLOUDFLARE_ACCOUNT_ID"
+          [ -n "$LILY_ACCESS_KEY" ] || falta="$falta LILY_ACCESS_KEY"
+          if [ -n "$falta" ]; then
+            {
+              echo "### Gateway não publicado: faltam segredos"
+              echo ""
+              echo "Crie em Settings > Secrets and variables > Actions:**${falta}**."
+              echo "Depois edite cristal-cover/gateway/PUBLICAR.md de novo. Passo a passo: cristal-cover/docs/GATEWAY.md."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Faltam os segredos:${falta} (nada foi publicado; os testes passaram)."
+            echo "pronto=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "pronto=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publicar o Worker
+        if: steps.conta.outputs.pronto == 'true'
+        run: |
+          set -o pipefail
+          npx --yes wrangler@4 deploy 2>&1 | tee deploy.log
+
+      - name: Mostrar o endereço
+        if: steps.conta.outputs.pronto == 'true'
+        env:
+          SUB: ${{ steps.cf.outputs.subdomain }}
+        run: |
+          url=$(grep -oE 'https://[A-Za-z0-9.-]+\.workers\.dev' deploy.log | head -1)
+          [ -n "$url" ] || url="${SUB:+https://lily-gateway.$SUB.workers.dev}"
+          echo "GATEWAY_URL=$url" >> "$GITHUB_ENV"
+          {
+            echo "### L.I.L.Y Gateway publicado"
+            echo ""
+            echo "Endereço: ${url:-veja o log do passo anterior}"
+            echo ""
+            echo "No app: Configurações > Serviço online > cole o endereço e a sua LILY_ACCESS_KEY. No computador, abra o endereço no navegador."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Copiar os segredos para o Worker
+        if: steps.conta.outputs.pronto == 'true'
+        env:
+          LILY_ACCESS_KEY: ${{ secrets.LILY_ACCESS_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          FAL_KEY: ${{ secrets.FAL_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
+          GITHUB_TOKEN_CODEX: ${{ secrets.LILY_GITHUB_TOKEN }}
+          GITHUB_REPOS: ${{ secrets.LILY_GITHUB_REPOS }}
+        run: |
+          put() { if [ -n "$2" ]; then printf '%s' "$2" | npx --yes wrangler@4 secret put "$1" > /dev/null && echo "segredo $1 atualizado"; fi; }
+          put LILY_ACCESS_KEY "$LILY_ACCESS_KEY"
+          put OPENROUTER_API_KEY "$OPENROUTER_API_KEY"
+          put FAL_KEY "$FAL_KEY"
+          put HF_TOKEN "$HF_TOKEN"
+          put TAVILY_API_KEY "$TAVILY_API_KEY"
+          put BRAVE_API_KEY "$BRAVE_API_KEY"
+          put GITHUB_TOKEN "$GITHUB_TOKEN_CODEX"
+          put GITHUB_REPOS "$GITHUB_REPOS"
+          echo "Os segredos vazios foram ignorados; o gateway mostra no app o que falta."
+
+      # Pedidos de verdade ao gateway publicado: no ar, chave aceita, uma pergunta e uma imagem grátis.
+      - name: Conferir o gateway publicado
+        if: steps.conta.outputs.pronto == 'true'
+        env:
+          LILY_ACCESS_KEY: ${{ secrets.LILY_ACCESS_KEY }}
+        run: node scripts/smoke.mjs

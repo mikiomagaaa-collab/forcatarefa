@@ -1,0 +1,106 @@
+package app.lily.keyboard.brief
+
+import app.lily.shared.bridge.CristalBrief
+import app.lily.shared.brief.BriefCandidate
+import app.lily.shared.brief.BriefIntents
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Handler
+import android.os.Looper
+import android.provider.CalendarContract
+import android.util.Log
+import androidx.compose.ui.geometry.Offset
+import java.time.ZoneId
+
+/**
+ * A ponte com o Cristal, no próprio aparelho: um broadcast explícito para o pacote do Cristal,
+ * protegido por permissão de assinatura (só apps com a mesma chave). Vai só o compromisso
+ * entendido, nunca o texto digitado. Sem o Cristal, a sugestão abre a agenda do aparelho.
+ */
+open class BriefBridge(private val context: Context) {
+    private val main = Handler(Looper.getMainLooper())
+
+    open fun installed(): Boolean = runCatching {
+        context.packageManager.getPackageInfo(CristalBrief.PACKAGE, 0)
+        true
+    }.getOrDefault(false)
+
+    /** O Cristal está instalado e o teclado tem a permissão da ponte (mesma assinatura). */
+    open fun available(): Boolean =
+        installed() && context.checkSelfPermission(CristalBrief.PERMISSION) == PackageManager.PERMISSION_GRANTED
+
+    /** Manda a sugestão; [onResult] recebe um dos códigos de [CristalBrief], na thread principal. */
+    open fun suggest(c: BriefCandidate, id: Long, origin: Offset?, displayId: Int, onResult: (Int) -> Unit) {
+        if (!available()) {
+            onResult(CristalBrief.RESULT_NONE)
+            return
+        }
+        val intent = fill(Intent(CristalBrief.ACTION_SUGGEST), c, id).putExtra(CristalBrief.EXTRA_DISPLAY, displayId)
+        if (origin != null) intent.putExtra(CristalBrief.EXTRA_ORIGIN_X, origin.x).putExtra(CristalBrief.EXTRA_ORIGIN_Y, origin.y)
+        var answered = false
+        val timeout = Runnable {
+            if (!answered) {
+                answered = true
+                onResult(CristalBrief.RESULT_NONE)
+            }
+        }
+        main.postDelayed(timeout, TIMEOUT_MS)
+        try {
+            context.sendOrderedBroadcast(
+                intent,
+                null,
+                object : BroadcastReceiver() {
+                    override fun onReceive(ctx: Context, result: Intent) {
+                        if (answered) return
+                        answered = true
+                        main.removeCallbacks(timeout)
+                        onResult(resultCode)
+                    }
+                },
+                main,
+                CristalBrief.RESULT_NONE,
+                null,
+                null,
+            )
+        } catch (t: Throwable) {
+            Log.w(TAG, "Não foi possível falar com o Cristal", t)
+            if (!answered) {
+                answered = true
+                main.removeCallbacks(timeout)
+                onResult(CristalBrief.RESULT_NONE)
+            }
+        }
+    }
+
+    /** "Criar lembrete" tocado no teclado: o Cristal abre a confirmação na tela em uso. */
+    open fun accept(c: BriefCandidate, id: Long, displayId: Int) {
+        runCatching {
+            context.sendBroadcast(fill(Intent(CristalBrief.ACTION_ACCEPT), c, id).putExtra(CristalBrief.EXTRA_DISPLAY, displayId))
+        }.onFailure { Log.w(TAG, "Não foi possível falar com o Cristal", it) }
+    }
+
+    /** Sem o Cristal: a tela de novo evento da agenda, já preenchida (a pessoa confirma lá). */
+    open fun calendarIntent(c: BriefCandidate): Intent {
+        val intent = Intent(Intent.ACTION_INSERT, CalendarContract.Events.CONTENT_URI)
+            .putExtra(CalendarContract.Events.TITLE, c.title)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        c.at?.let {
+            val begin = it.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, begin)
+                .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, begin + 3_600_000L)
+        }
+        c.place?.let { intent.putExtra(CalendarContract.Events.EVENT_LOCATION, it) }
+        if (c.weekly) intent.putExtra(CalendarContract.Events.RRULE, "FREQ=WEEKLY")
+        return intent
+    }
+
+    private fun fill(intent: Intent, c: BriefCandidate, id: Long): Intent = BriefIntents.fill(intent, c, id)
+
+    private companion object {
+        const val TAG = "LilyInfoBrief"
+        const val TIMEOUT_MS = 1_500L
+    }
+}

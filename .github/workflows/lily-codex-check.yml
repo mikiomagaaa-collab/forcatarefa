@@ -1,0 +1,133 @@
+# Testes pedidos pelo L.I.L.Y Codex (pelo L.I.L.Y Gateway) num ramo lily-codex/...
+#
+# O Codex grava a correção num ramo próprio (nunca no principal) e pede os testes gravando o arquivo
+# .lily-codex/check.json no mesmo ramo: este workflow roda nesse push (o GitHub só deixa disparar à
+# mão um workflow que esteja no ramo principal, e este pode estar só no ramo do projeto). Compilar não
+# basta: os testes do projeto precisam passar. As entradas são validadas aqui de novo (não confia em
+# quem pediu). Para o Codex testar um repositório, este arquivo precisa estar no ramo de origem.
+name: L.I.L.Y Codex - testes
+
+on:
+  push:
+    branches: ['lily-codex/**']
+    paths: ['.lily-codex/check.json']
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'gradle, npm ou pytest'
+        default: 'gradle'
+        type: string
+      tasks:
+        description: 'Tarefas (ex.: :app:testDebugUnitTest)'
+        default: 'test'
+        type: string
+      workdir:
+        description: 'Pasta do projeto dentro do repositório'
+        default: '.'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lily-codex-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Testes do Codex
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Conferir o ramo
+        run: |
+          case "$GITHUB_REF_NAME" in
+            lily-codex/*) ;;
+            *) echo "O Codex só testa ramos lily-codex/ (recebido: $GITHUB_REF_NAME)"; exit 1 ;;
+          esac
+
+      - name: Baixar o código do ramo
+        uses: actions/checkout@v4
+
+      - name: Ler e conferir o pedido
+        env:
+          IN_RUNNER: ${{ inputs.runner }}
+          IN_TASKS: ${{ inputs.tasks }}
+          IN_WORKDIR: ${{ inputs.workdir }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, sys
+          if os.environ['GITHUB_EVENT_NAME'] == 'push':
+              with open('.lily-codex/check.json', encoding='utf-8') as f:
+                  req = json.load(f)
+          else:
+              req = {'runner': os.environ.get('IN_RUNNER'), 'tasks': os.environ.get('IN_TASKS'), 'workdir': os.environ.get('IN_WORKDIR')}
+          runner, tasks, workdir = (str(req.get(k) or d) for k, d in (('runner', 'gradle'), ('tasks', 'test'), ('workdir', '.')))
+          if runner not in ('gradle', 'npm', 'pytest'): sys.exit('Executor inválido')
+          if not re.fullmatch(r'[A-Za-z0-9:_. -]{1,300}', tasks): sys.exit('Tarefas inválidas')
+          if not re.fullmatch(r'[A-Za-z0-9_./-]{1,100}', workdir) or '..' in workdir: sys.exit('Pasta inválida')
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as env:
+              env.write(f'RUNNER={runner}\nTASKS={tasks}\nWORKDIR={workdir}\n')
+          print(f'Executor: {runner} · tarefas: {tasks} · pasta: {workdir}')
+          PY
+
+      - name: Instalar o Java 21
+        if: env.RUNNER == 'gradle'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Preparar o Gradle
+        if: env.RUNNER == 'gradle'
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Plataforma Android (se o projeto for Android)
+        if: env.RUNNER == 'gradle'
+        working-directory: ${{ env.WORKDIR }}
+        run: |
+          if grep -rqs "com.android" build.gradle* settings.gradle* 2>/dev/null; then
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;36.0.0" > /dev/null
+          fi
+
+      - name: Instalar o Node
+        if: env.RUNNER == 'npm'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar o Python
+        if: env.RUNNER == 'pytest'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Rodar os testes
+        working-directory: ${{ env.WORKDIR }}
+        env:
+          LC_ALL: C.UTF-8
+          LANG: C.UTF-8
+        run: |
+          read -r -a ARGS <<< "$TASKS"
+          case "$RUNNER" in
+            gradle) chmod +x ./gradlew && ./gradlew --no-daemon --continue "${ARGS[@]}" ;;
+            npm) npm ci && npm "${ARGS[@]}" ;;
+            pytest) pip install -q -r requirements.txt 2>/dev/null || true; pip install -q pytest && python -m pytest -q "${ARGS[@]}" ;;
+          esac
+
+      - name: Resumo das falhas
+        if: failure() && env.RUNNER == 'gradle'
+        working-directory: ${{ env.WORKDIR }}
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          n = 0
+          for x in glob.glob('**/build/test-results/**/*.xml', recursive=True):
+              for tc in ET.parse(x).getroot().iter('testcase'):
+                  for f in list(tc.iter('failure')) + list(tc.iter('error')):
+                      n += 1
+                      if n <= 15:
+                          print(f"FALHOU {tc.get('classname')}.{tc.get('name')}: {(f.get('message') or '')[:300]}")
+          print(f"{n} teste(s) falharam")
+          PY

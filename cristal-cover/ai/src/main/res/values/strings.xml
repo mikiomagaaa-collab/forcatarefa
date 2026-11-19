@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">L.I.L.Y AI</string>
+    <string name="share_label">Perguntar à L.I.L.Y</string>
+    <string name="diagnostics_label">L.I.L.Y Diagnóstico</string>
+    <string name="use_ai_label">Usar a L.I.L.Y AI</string>
+    <string name="use_ai_description">Permite que os apps do Liquid Flip (teclado e galeria) peçam tarefas de texto à L.I.L.Y AI, que roda no aparelho.</string>
+    <string name="brief_permission_label">Info Brief do L.I.L.Y</string>
+    <string name="brief_permission_description">Permite mandar ao Cristal os compromissos reconhecidos (título e horário), para a confirmação do lembrete.</string>
+</resources>

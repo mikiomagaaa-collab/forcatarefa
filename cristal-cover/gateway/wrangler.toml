@@ -1,0 +1,43 @@
+# L.I.L.Y Gateway (Cloudflare Worker). Passo a passo em ../docs/GATEWAY.md.
+name = "lily-gateway"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+# A L.I.L.Y Web (cristal-cover/web) e os documentos legais: o mesmo endereço do gateway abre o site.
+# A pasta public/ é montada por "npm run build:web" (o workflow de publicação faz isso).
+[assets]
+directory = "./public"
+
+# Imagens grátis: o Workers AI da própria conta Cloudflare (10.000 "neurons" grátis por dia, sem chave).
+[ai]
+binding = "AI"
+
+# Limite de gasto diário (US$). O KV abaixo guarda o gasto do dia; sem ele o limite não é garantido.
+[vars]
+DAILY_BUDGET_USD = "3"
+# Imagens grátis por dia (o gateway para antes de passar da parte grátis do Workers AI; precisa do KV).
+FREE_IMAGES_PER_DAY = "150"
+# Teto diário do Workers AI grátis (conversa + imagens). A Cloudflare dá 10.000; a folga evita passar.
+FREE_NEURONS_PER_DAY = "9500"
+# Conversa grátis (beta) com o gpt-oss-20b: "on" ou "off".
+FREE_CHAT = "on"
+# Pesquisa do Google: "on" deixa a L.I.L.Y Web aparecer na pesquisa; "off" tira. O serviço (/v1/) nunca aparece.
+SEARCH_INDEXING = "on"
+# Verificação do Google Search Console: cole aqui o NOME do arquivo HTML que o Google der (ex.: "google1a2b3c4d5e.html").
+GOOGLE_SITE_VERIFICATION = ""
+# CORS para abrir a L.I.L.Y Web de outro endereço (ex.: "https://meu-site.dev"). Vazio = só o próprio gateway.
+ALLOWED_ORIGINS = ""
+
+# Crie o KV com: npx wrangler kv namespace create LILY_USAGE  (e cole o id aqui)
+# [[kv_namespaces]]
+# binding = "LILY_USAGE"
+# id = "COLE_O_ID_AQUI"
+
+# Segredos (nunca neste arquivo): npx wrangler secret put NOME
+#   LILY_ACCESS_KEY      a chave que o app usa (gere uma longa e aleatória)
+#   OPENROUTER_API_KEY   modelos de programação e conversa
+#   FAL_KEY              vídeo pago (opcional; sem ela, só o vídeo grátis)
+#   HF_TOKEN             (opcional, grátis) token "read" do Hugging Face: o vídeo grátis usa a cota da sua conta
+#   TAVILY_API_KEY       pesquisa (ou BRAVE_API_KEY)
+#   GITHUB_TOKEN         token "fine-grained" só dos repositórios abaixo
+#   GITHUB_REPOS         ex.: dono/repositorio

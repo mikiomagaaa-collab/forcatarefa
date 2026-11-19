@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Só para baixar modelos do Hugging Face e pacotes de idioma: a IA roda no aparelho. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROCESSING" />
+    <!-- Microfone: só depois de um toque no botão de voz; nunca em segundo plano. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Avatar flutuante (opcional): só com a permissão "Exibir sobre outros apps" dada pela pessoa. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!--
+        Ponte com o teclado e a Gallery: só apps com a mesma assinatura do Liquid Flip.
+        Ponte de lembretes com o Cristal (Info Brief): declarada aqui também, para valer em qualquer
+        ordem de instalação.
+    -->
+    <permission
+        android:name="app.lily.ai.permission.USE_AI"
+        android:description="@string/use_ai_description"
+        android:label="@string/use_ai_label"
+        android:protectionLevel="signature" />
+    <permission
+        android:name="app.cristal.cover.permission.INFO_BRIEF"
+        android:description="@string/brief_permission_description"
+        android:label="@string/brief_permission_label"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="app.cristal.cover.permission.INFO_BRIEF" />
+
+    <queries>
+        <package android:name="app.cristal.cover" />
+        <package android:name="app.lily.gallery" />
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".LilyAiApp"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:largeHeap="true"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Lily"
+        android:enableOnBackInvokedCallback="true">
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|density|uiMode|fontScale"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- "Compartilhar com a L.I.L.Y": imagens e textos de qualquer app (e da L.I.L.Y Gallery). -->
+            <intent-filter android:label="@string/share_label">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <intent-filter android:label="@string/share_label">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="audio/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="app.lily.ai.action.IMAGE_TOOL" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            O painel de voz da L.I.L.Y: abre como assistente digital do aparelho (o Android o lista em
+            Apps padrão > Assistente digital) e pela ilha, pelo widget e pela Central do Cristal.
+        -->
+        <activity
+            android:name=".ui.AssistActivity"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|density|uiMode|fontScale"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true"
+            android:taskAffinity="app.lily.ai.assist"
+            android:theme="@style/Theme.Lily.Assist"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Entradas só para os apps do Liquid Flip (mesma assinatura): voz e "perguntar". -->
+        <activity-alias
+            android:name=".ui.VoiceEntry"
+            android:exported="true"
+            android:permission="app.lily.ai.permission.USE_AI"
+            android:targetActivity=".ui.AssistActivity">
+            <intent-filter>
+                <action android:name="app.lily.ai.action.VOICE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".ui.AskEntry"
+            android:exported="true"
+            android:permission="app.lily.ai.permission.USE_AI"
+            android:targetActivity=".ui.MainActivity">
+            <intent-filter>
+                <action android:name="app.lily.ai.action.ASK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity-alias>
+
+        <!--
+            L.I.L.Y Diagnóstico: ícone próprio e processo separado, sem o núcleo nem o Compose.
+            Abre mesmo quando a L.I.L.Y não abre (relatório, histórico de erros, modo seguro).
+        -->
+        <activity
+            android:name=".diagnostics.DiagnosticActivity"
+            android:excludeFromRecents="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_diagnostics"
+            android:label="@string/diagnostics_label"
+            android:launchMode="singleTask"
+            android:process=":relatorio"
+            android:roundIcon="@mipmap/ic_diagnostics"
+            android:taskAffinity="app.lily.ai.relatorio"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="app.lily.ai.action.DIAGNOSTICS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            O ML Kit não inicia mais na partida do app (o provider dele sai do manifesto): ele inicia
+            no primeiro uso (engine/MlKit.kt), e uma falha dele só desliga as ferramentas que o usam.
+        -->
+        <provider
+            android:name="com.google.mlkit.common.internal.MlKitInitProvider"
+            android:authorities="${applicationId}.mlkitinitprovider"
+            tools:node="remove" />
+
+        <!--
+            O WorkManager (vem com o LiteRT; a L.I.L.Y não agenda trabalhos) também não inicia mais na
+            partida: era ele que fechava o app antes de abrir. Se alguma biblioteca precisar dele, ele
+            inicia na hora pelo LilyAiApp (Configuration.Provider). As outras inicializações ficam.
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
+        <service
+            android:name=".models.DownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <service
+            android:name=".video.VideoService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <service
+            android:name=".imagegen.ImageGenService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProcessing" />
+
+        <service
+            android:name=".bridge.AiBridgeService"
+            android:exported="true"
+            android:permission="app.lily.ai.permission.USE_AI" />
+    </application>
+</manifest>

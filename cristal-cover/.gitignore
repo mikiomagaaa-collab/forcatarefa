@@ -1,0 +1,24 @@
+# Gradle
+.gradle/
+build/
+**/build/
+local.properties
+
+# Kotlin
+.kotlin/
+
+# IDE
+.idea/
+*.iml
+
+# Chaves pessoais (a chave de CI em keystore/cristal-ci.jks é pública de propósito)
+*.keystore
+release-*.jks
+keystore.properties
+
+# Saídas
+*.apk
+*.aab
+captures/
+saida/
+entrega/
