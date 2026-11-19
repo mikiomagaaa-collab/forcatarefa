@@ -8,7 +8,12 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class GatewayFeatures(
     val code: Boolean = false,
+    /** Vídeo (o grátis está sempre disponível num gateway 1.1+). */
     val video: Boolean = false,
+    /** Modelos de vídeo pagos (fal.ai) configurados. */
+    val videoPaid: Boolean = false,
+    /** Imagens grátis pelo Workers AI. */
+    val image: Boolean = false,
     val search: Boolean = false,
     val repos: Boolean = false,
 )
@@ -33,6 +38,33 @@ data class GatewayStatus(
     val searchProvider: String? = null,
     val repos: List<String> = emptyList(),
     val budget: GatewayBudget = GatewayBudget(),
+    val free: GatewayFree = GatewayFree(),
+)
+
+/** O que sai de graça neste gateway (e quanto ainda resta hoje). */
+@Immutable
+@Serializable
+data class GatewayFree(val image: FreeImages? = null, val video: FreeVideo? = null)
+
+@Immutable
+@Serializable
+data class FreeImages(val model: String = "", val perDay: Int = 0, val usedToday: Int? = null, val width: Int = 1024, val height: Int = 1024)
+
+@Immutable
+@Serializable
+data class FreeVideo(val model: String = "", val account: String = "")
+
+/** Uma imagem gerada online (data URL), grátis dentro da cota diária. */
+@Serializable
+data class OnlineImage(
+    val image: String,
+    val model: String = "",
+    val width: Int = 0,
+    val height: Int = 0,
+    val costUsd: Double = 0.0,
+    val free: Boolean = true,
+    val usedToday: Int? = null,
+    val perDay: Int = 0,
 )
 
 /**
@@ -94,6 +126,9 @@ data class VideoModel(
     val typicalSeconds: Int = 90,
     val fromUsd: Double = 0.0,
     val priceNote: String = "",
+    /** Grátis (cota diária do Hugging Face). */
+    val free: Boolean = false,
+    val provider: String = "fal",
 ) {
     val fromImage: Boolean get() = "image" in modes
     val fromText: Boolean get() = "text" in modes
@@ -116,6 +151,9 @@ data class VideoSubmitted(
     val duration: Int = 0,
     val resolution: String = "",
     val aspect: String = "",
+    val free: Boolean = false,
+    /** O acompanhamento é uma conexão longa (o vídeo grátis é cancelado se ela cair). */
+    val stream: Boolean = false,
 )
 
 @Serializable
@@ -131,6 +169,7 @@ data class VideoStatus(
     val logs: List<String> = emptyList(),
     val video: VideoFile? = null,
     val error: String? = null,
+    val free: Boolean = false,
 )
 
 @Serializable

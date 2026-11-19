@@ -20,6 +20,8 @@ import java.util.UUID
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -91,6 +93,8 @@ data class VideoJob(
     val error: String? = null,
     val finishedAt: Long? = null,
     val note: String? = null,
+    /** Grátis (cota do Hugging Face): custo zero. */
+    val free: Boolean = false,
 ) {
     val active: Boolean get() = status == "queued" || status == "running" || status == "downloading"
 
@@ -177,6 +181,7 @@ class VideoJobs(private val context: Context, private val gateway: () -> Gateway
             reference = refFile?.path,
             parent = r.parent,
             note = if (sub.simplified) "O modelo recusou alguns ajustes; foi gerado só com a descrição e a imagem." else null,
+            free = sub.free,
         )
         save(listOf(job) + _jobs.value)
         VideoService.start(context)
@@ -191,7 +196,7 @@ class VideoJobs(private val context: Context, private val gateway: () -> Gateway
                     finish(job, autoSave)
                     continue
                 }
-                val s = gateway().videoStatus(job.jobId)
+                val s = status(job) ?: continue
                 when (s.status) {
                     "queued" -> update(job.id) { it.copy(status = "queued", position = s.position, elapsed = s.elapsed) }
                     "running" -> update(job.id) { it.copy(status = "running", position = null, elapsed = s.elapsed) }
@@ -262,8 +267,30 @@ class VideoJobs(private val context: Context, private val gateway: () -> Gateway
         uri
     }
 
+    /** Acompanhamentos abertos (no vídeo grátis, fechar a conexão é o que cancela no Space). */
+    private val watching = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Job>()
+
+    /** A situação do vídeo; null se o acompanhamento foi cancelado pela pessoa. */
+    private suspend fun status(job: VideoJob): app.lily.ai.remote.VideoStatus? = kotlinx.coroutines.coroutineScope {
+        val call = async {
+            gateway().videoStatus(job.jobId) { p ->
+                update(job.id) { it.copy(status = if (p.status == "queued") "queued" else "running", position = p.position, elapsed = p.elapsed) }
+            }
+        }
+        watching[job.id] = call
+        try {
+            call.await()
+        } catch (c: kotlinx.coroutines.CancellationException) {
+            if (!isActive) throw c
+            null
+        } finally {
+            watching.remove(job.id)
+        }
+    }
+
     suspend fun cancel(id: String) {
         val job = job(id) ?: return
+        watching.remove(id)?.cancel()
         runCatching { gateway().videoCancel(job.jobId) }
         update(id) { it.copy(status = "cancelled", finishedAt = System.currentTimeMillis()) }
     }

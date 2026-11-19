@@ -118,7 +118,7 @@ fun VideoScreen(nav: Nav, start: Route.Video) {
         if (!ready) return@LaunchedEffect
         try {
             models = graph.gateway.videoModels()
-            loadError = if (models.isEmpty()) "O seu gateway ainda não tem a geração de vídeo (falta FAL_KEY)." else null
+            loadError = if (models.isEmpty()) "O seu gateway ainda não tem a geração de vídeo (publique a versão 1.1 ou mais nova do gateway)." else null
         } catch (e: GatewayException) {
             loadError = e.message
         }
@@ -251,7 +251,7 @@ fun VideoScreen(nav: Nav, start: Route.Video) {
                 Spacer(Modifier.height(6.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     models.filter { if (needsImage) it.fromImage else it.fromText }.forEach { m ->
-                        Chip(m.name, manual == m.id, { manual = if (manual == m.id) null else m.id })
+                        Chip(if (m.free) m.name else "${m.name} · pago", manual == m.id, { manual = if (manual == m.id) null else m.id })
                     }
                 }
                 model?.let { Text("${it.family} · ${it.summary}", style = Type.caption, color = c.tertiary, modifier = Modifier.padding(top = 6.dp)) }
@@ -262,9 +262,13 @@ fun VideoScreen(nav: Nav, start: Route.Video) {
                 Icon(Icons.Rounded.Cloud, null, tint = c.accent, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Processamento online (fal.ai)", style = Type.callout, color = c.content)
+                    Text(if (model?.free == true) "Grátis · Hugging Face" else "Processamento online (fal.ai)", style = Type.callout, color = c.content)
                     Text(
-                        estimate?.let { "Estimativa: ${usd(it)} · cobrado na conta do serviço" } ?: "Calculando a estimativa…",
+                        when {
+                            model?.free == true -> "Sem custo: usa a cota diária grátis de GPU do Hugging Face (poucos vídeos por dia). Mantenha a internet ligada até o fim."
+                            estimate != null -> "Estimativa: ${usd(estimate!!)} · cobrado na conta do serviço"
+                            else -> "Calculando a estimativa…"
+                        },
                         style = Type.caption,
                         color = c.secondary,
                     )
@@ -387,7 +391,7 @@ private fun VideoJobCard(
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(job.prompt, style = Type.callout, color = c.content, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text("${job.modelName} · ${job.duration} s · ${job.resolution} · ${job.aspect} · ~${usd(job.estimatedUsd)}", style = Type.caption, color = c.secondary)
+                Text("${job.modelName} · ${job.duration} s · ${job.resolution} · ${job.aspect} · ${if (job.free) "grátis" else "~" + usd(job.estimatedUsd)}", style = Type.caption, color = c.secondary)
                 val status = when (job.status) {
                     "queued" -> job.position?.let { "Na fila (posição ${it + 1})" } ?: "Na fila"
                     "running" -> "Gerando · cerca de ${(job.progress * 100).toInt()}% (estimado)"
@@ -413,7 +417,7 @@ private fun VideoJobCard(
                 Chip("Continuar", false, onContinue)
                 Chip("Transformar", false, onTransform)
             }
-            if (job.status == "queued") Chip("Cancelar", false, onCancel)
+            if (job.status == "queued" || (job.free && job.status == "running")) Chip("Cancelar", false, onCancel)
             if (!job.active) Chip("Apagar", false, onDelete)
         }
     }

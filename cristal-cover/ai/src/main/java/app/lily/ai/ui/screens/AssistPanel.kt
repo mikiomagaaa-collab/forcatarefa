@@ -102,6 +102,8 @@ fun AssistPanel(
             }
         }
     }
+    // Ouvir cala a leitura da resposta anterior (a L.I.L.Y não se ouve nem continua a outra resposta).
+    LaunchedEffect(listening) { if (listening) session.stopSpeaking() }
     ListenEffect(
         voice,
         listening,

@@ -80,6 +80,8 @@ fun CoverScreen(nav: Nav) {
         }
     }
 
+    // Ouvir cala a leitura da resposta anterior (a L.I.L.Y não se ouve nem continua a outra resposta).
+    LaunchedEffect(listening) { if (listening) session.stopSpeaking() }
     ListenEffect(
         voice,
         listening,
@@ -105,8 +107,10 @@ fun CoverScreen(nav: Nav) {
         permissions.request(MainActivity.MICROPHONE) { ok -> if (ok) listening = true else session.notice = "Permita o microfone para falar com a L.I.L.Y." }
     }
 
-    val lastUser = session.messages.lastOrNull { it.role == Role.USER }
-    val lastAnswer = session.messages.lastOrNull { it.role == Role.ASSISTANT }
+    val lastUserIndex = session.messages.indexOfLast { it.role == Role.USER }
+    val lastUser = session.messages.getOrNull(lastUserIndex)
+    // Só a resposta desta pergunta (a anterior não aparece embaixo da pergunta nova).
+    val lastAnswer = session.messages.lastOrNull { it.role == Role.ASSISTANT }?.takeIf { session.messages.indexOf(it) > lastUserIndex }
     val streaming = session.streaming
 
     Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(horizontal = 14.dp, vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {

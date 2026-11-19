@@ -6,7 +6,11 @@ do gateway e uma **chave de acesso** que você cria. O gateway:
 
 - lê ao vivo os modelos de programação e conversa no **OpenRouter** (Claude, GPT, Gemini, DeepSeek,
   Qwen e outros com uma só chave) e escolhe sempre a versão mais nova de cada família;
-- gera vídeos pela fila do **fal.ai** (LTX-2, Wan 2.5, Kling 2.5, Veo 3.1, HunyuanVideo);
+- gera **imagens grátis** pelo Workers AI da sua própria conta Cloudflare (FLUX.1 [schnell], 1024×1024,
+  cerca de 150 por dia, sem chave nenhuma);
+- gera **vídeos grátis** pelo Space oficial do LTX-Video (Lightricks) no Hugging Face, dentro da cota
+  diária grátis de GPU (poucos vídeos por dia), e, se você quiser pagar, pela fila do **fal.ai** (LTX-2,
+  Wan 2.5, Kling 2.5, Veo 3.1, HunyuanVideo);
 - pesquisa na internet para o Codex (**Tavily** ou **Brave Search**);
 - lê e grava nos repositórios autorizados do Codex e roda os testes no **GitHub Actions**;
 - serve a **L.I.L.Y Web** (o site para o computador) no mesmo endereço;
@@ -21,7 +25,8 @@ Código: `cristal-cover/gateway` (testes: `node --test test/*.test.js`).
 | Cloudflare (grátis) | Hospedar o gateway e a L.I.L.Y Web | Sim |
 | GitHub (o repositório do projeto) | Publicar com um toque (Actions) | Sim, para publicar pelo celular |
 | OpenRouter (créditos pré-pagos) | Codex e modelos online na conversa | Para o Codex e a conversa online |
-| fal.ai (pago pelo uso) | Video AI | Para vídeo |
+| Hugging Face (grátis) | Vídeo grátis com a cota da sua conta (token "read") | Opcional: sem ela, o vídeo grátis usa a cota anônima, menor |
+| fal.ai (pago pelo uso) | Vídeos pagos (mais longos e melhores) | Opcional |
 | Tavily (1.000 buscas grátis por mês) ou Brave Search | Pesquisa do Codex | Opcional |
 | Token do GitHub "fine-grained" | Codex em repositórios + testes no CI | Opcional |
 
@@ -36,6 +41,8 @@ de gerar um vídeo. Os números abaixo são só para ter uma ideia:
 | Uso | Custo aproximado |
 | --- | --- |
 | Hospedagem (Cloudflare Workers, plano grátis) | US$ 0 (até 100 mil pedidos por dia) |
+| **Imagem online (FLUX.1 [schnell], 1024×1024)** | **US$ 0**: até `FREE_IMAGES_PER_DAY` (150) por dia, dentro dos 10.000 "neurons" grátis do Workers AI |
+| **Vídeo grátis (LTX-Video, até 8 s, ~736×416)** | **US$ 0**: cota diária grátis de GPU do Hugging Face (cerca de 1 a 2 vídeos por dia por conta; cada vídeo reserva ~1 min de GPU "xlarge", que conta em dobro) |
 | Uma resposta típica de conversa (2 mil tokens de entrada, 800 de saída) com DeepSeek V4 Pro | ~US$ 0,002 |
 | A mesma resposta com Claude Opus | ~US$ 0,03 |
 | Uma tarefa do Codex (10 a 25 passos do agente + revisão) | de ~US$ 0,02 (modelos fortes baratos) a ~US$ 0,60 (raciocínio máximo) |
@@ -67,7 +74,13 @@ gateway recusa novos pedidos até o dia seguinte (horário UTC). Para o limite f
 2. No GitHub (no ramo do projeto), edite `cristal-cover/gateway/wrangler.toml` pelo lápis, tire o `#` das
    linhas do `[[kv_namespaces]]` e cole o ID no lugar de `COLE_O_ID_AQUI`.
 
-### 3.3 Chaves dos provedores
+### 3.3 Chaves dos provedores (todas opcionais)
+
+**Só grátis, sem pagar nada:** pule o OpenRouter e o fal.ai. As imagens grátis já funcionam sozinhas
+(Workers AI) e o vídeo grátis também (Hugging Face). Para mais vídeos grátis por dia, crie uma conta grátis
+no huggingface.co > *Settings* > *Access Tokens* > *Create new token* > tipo **Read**, e salve como o
+segredo `HF_TOKEN`. Ligue o KV `LILY_USAGE` (passo 3.2) para o gateway contar as imagens do dia e parar
+antes de passar da parte grátis.
 
 - **OpenRouter**: openrouter.ai > *Keys* > *Create Key*. Adicione créditos em *Credits*.
 - **fal.ai**: fal.ai > *Dashboard* > *Keys* > *Add key*. Adicione um método de pagamento.
@@ -102,7 +115,8 @@ No repositório: *Settings* > *Secrets and variables* > *Actions* > *New reposit
 | `CLOUDFLARE_ACCOUNT_ID` | o ID da conta |
 | `LILY_ACCESS_KEY` | a chave do passo 3.4 |
 | `OPENROUTER_API_KEY` | (opcional) |
-| `FAL_KEY` | (opcional) |
+| `FAL_KEY` | (opcional, pago) |
+| `HF_TOKEN` | (opcional, grátis) token "read" do Hugging Face |
 | `TAVILY_API_KEY` ou `BRAVE_API_KEY` | (opcional) |
 | `LILY_GITHUB_TOKEN` | (opcional) o token fine-grained |
 | `LILY_GITHUB_REPOS` | (opcional) ex.: `seu-usuario/seu-repositorio` |
@@ -171,11 +185,30 @@ Quem usa o seu gateway usa os seus créditos. Para uma turma ou grupo, cada pess
 próprio gateway (é de graça na Cloudflare) com as próprias chaves. Um gateway público com contas,
 cotas e pagamento está no plano (`docs/ROADMAP.md`).
 
-## 7. O que já foi conferido e o que não
+## 7. Fotos e vídeos grátis: como funcionam e os limites reais
 
-- Conferido: os 24 testes do gateway (provedores simulados com o formato das APIs públicas), o app
+- **Imagens**: o gateway chama o modelo `@cf/black-forest-labs/flux-1-schnell` pelo Workers AI da sua
+  conta Cloudflare (binding `AI` no `wrangler.toml`, já ligado). A Cloudflare dá 10.000 "neurons" grátis
+  por dia; uma imagem 1024×1024 com 4 etapas gasta ~58, então cabem ~170. O gateway para em 150 por dia
+  (`FREE_IMAGES_PER_DAY`), contando no KV `LILY_USAGE`. Sem o KV, no plano grátis da Cloudflare o próprio
+  Workers AI recusa depois do limite (sem cobrar); no plano pago, **ligue o KV** para não passar.
+- **Vídeos**: o gateway usa a API do Space público `Lightricks/ltx-video-distilled` (LTX-Video 0.9.8). O
+  Space roda em GPU compartilhada (ZeroGPU); cada vídeo reserva ~60 s de GPU no tamanho "xlarge", que
+  conta em dobro. A cota diária grátis do Hugging Face é de poucos minutos por conta, então saem 1 a 2
+  vídeos por dia com o seu `HF_TOKEN` (menos sem ele). Quando acaba, o app mostra a mensagem do Hugging
+  Face com o tempo de espera.
+- O Space cancela o vídeo se a conexão de acompanhamento cair. Por isso o app e a L.I.L.Y Web ficam
+  conectados até o fim (no app, num serviço em primeiro plano). Se a internet cair, gere de novo.
+- O Space é de terceiros (Lightricks/Hugging Face): pode ficar lento, mudar ou sair do ar. O gateway
+  confere o formato da resposta e só baixa vídeos do próprio Space.
+
+## 8. O que já foi conferido e o que não
+
+- Conferido: os 32 testes do gateway (inclui as imagens grátis e o vídeo grátis com o formato real do
+  Gradio 5.42, lido no código do próprio Gradio e do Space) (provedores simulados com o formato das APIs públicas), o app
   inteiro contra um gateway de teste local (conversa, vídeo do pedido ao arquivo, Codex com CI e
   auto-reparo) e a L.I.L.Y Web num Chromium contra o código real do gateway.
-- **Não conferido**: chamadas reais aos provedores (nenhuma chave foi usada no desenvolvimento). Os
+- **Não conferido**: chamadas reais aos provedores (nenhuma chave foi usada no desenvolvimento; o
+  endereço do Space `*.hf.space` não abre deste ambiente de desenvolvimento, só o huggingface.co). Os
   identificadores dos modelos de vídeo e os preços vêm das páginas do fal.ai (novembro de 2026); se o
   fal.ai mudar um parâmetro, o gateway tenta de novo só com a descrição e a imagem e avisa no app.

@@ -138,8 +138,13 @@ class ChatFlowTest {
         answered(s, 1)
         waitUntil { s.followUps == 1 }
 
-        // A segunda pergunta ("ele") vai com a primeira e a resposta, e com a instrução de continuar o assunto.
+        // Lendo a resposta em voz alta e chega outra pergunta: a leitura da anterior para na hora.
+        s.speak(s.messages.last())
+        assertEquals(s.messages.last().id, s.speakingId)
+
+        // A segunda pergunta ("ele") vai com a primeira e a resposta, e com a instrução de responder a ela.
         s.send("Quantos anos ele tem?", viaVoice = true)
+        assertEquals(null, s.speakingId)
         answered(s, 2)
         waitUntil { s.followUps == 2 }
         val history = fake.histories.last()
@@ -148,6 +153,7 @@ class ChatFlowTest {
         assertTrue(history[1].text.contains("Neymar"))
         assertEquals("Quantos anos ele tem?", fake.prompts.last())
         assertTrue(fake.systems.last()!!.contains("\"ele\""))
+        assertTrue(fake.systems.last()!!.contains("ÚLTIMA mensagem"))
 
         // Digitada: responde com o contexto, mas não liga o microfone.
         s.send("E onde ele joga?")
@@ -156,10 +162,17 @@ class ChatFlowTest {
         assertEquals(2, s.followUps)
         assertEquals(4, fake.histories.last().size)
 
+        // Modelo pequeno do aparelho: só as duas últimas trocas vão junto (não se perde nem repete a anterior).
+        s.send("Ele tem filhos?")
+        answered(s, 4)
+        val short = fake.histories.last()
+        assertEquals(4, short.size)
+        assertEquals("Quantos anos ele tem?", short[0].text)
+
         // Conversa contínua desligada: responde e não volta a ouvir.
         graph.settings.update { it.copy(voiceFollowUp = false) }
         s.send("Ele já jogou na Europa?", viaVoice = true)
-        answered(s, 4)
+        answered(s, 5)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300))
         assertEquals(2, s.followUps)
         graph.settings.update { it.copy(voiceFollowUp = true, speakVoiceAnswers = true) }

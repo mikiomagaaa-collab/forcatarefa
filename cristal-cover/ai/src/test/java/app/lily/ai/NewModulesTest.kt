@@ -26,6 +26,9 @@ import app.lily.ai.core.Router
 import app.lily.ai.core.RouterInput
 import app.lily.ai.core.TaskKind
 import app.lily.ai.data.Role
+import app.lily.ai.imagegen.GenState
+import app.lily.ai.imagegen.ImageGenJobs
+import app.lily.ai.imagegen.ImageStyle
 import app.lily.ai.remote.GatewayClient
 import app.lily.ai.remote.GatewayException
 import app.lily.ai.remote.GatewayStore
@@ -211,6 +214,46 @@ class NewModulesTest {
         assertEquals(4096L, File(done.file!!).length())
         // O histórico sobrevive (outra instância lê o mesmo arquivo).
         assertEquals("done", VideoJobs(app) { client }.job(job.id)!!.status)
+    }
+
+    @Test
+    fun `video gratis vem primeiro e vai do pedido ao arquivo numa conexao so, sem custo`() = runBlocking {
+        fake.freeVideo = true
+        val models = client.videoModels(refresh = true)
+        // Rápido e Equilibrado ficam no grátis; som ou o nível Máximo vão para os pagos.
+        assertEquals("ltx-free", VideoRouter.pick(models, needsImage = false, wantsAudio = false, VideoQuality.FAST)!!.model.id)
+        assertEquals("ltx-free", VideoRouter.pick(models, needsImage = true, wantsAudio = false, VideoQuality.BALANCED)!!.model.id)
+        assertTrue(VideoRouter.pick(models, needsImage = false, wantsAudio = false, VideoQuality.FAST)!!.reason.contains("grátis"))
+        assertEquals("Veo 3.1 Fast", VideoRouter.pick(models, needsImage = false, wantsAudio = false, VideoQuality.BEST)!!.model.name)
+        assertTrue(VideoRouter.pick(models, needsImage = false, wantsAudio = true, VideoQuality.FAST)!!.model.audio)
+        assertEquals("ltx-free", VideoRouter.pick(models.filter { it.free }, needsImage = false, wantsAudio = false, VideoQuality.BEST)!!.model.id)
+
+        val jobs = VideoJobs(app) { client }
+        val free = models.first { it.free }
+        val job = jobs.submit(VideoRequest(free, "uma gota de vidro caindo", VideoMode.TEXT, 4, "480p", "9:16", false, Motion.NATURAL))
+        assertTrue(jobs.job(job.id)!!.free)
+        assertEquals(0.0, jobs.job(job.id)!!.estimatedUsd, 0.0)
+        // Uma rodada só: a conexão fica aberta até o vídeo sair, e o arquivo é baixado.
+        val more = jobs.pollOnce(autoSave = false)
+        assertFalse(more)
+        val done = jobs.job(job.id)!!
+        assertEquals("done", done.status)
+        assertEquals(61, done.elapsed)
+        assertEquals(4096L, File(done.file!!).length())
+    }
+
+    @Test
+    fun `imagem online gratis sai em segundos e vai para a galeria`() {
+        val gen = ImageGenJobs(app)
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)
+        gen.startOnline(scope, client, "um farol de vidro", ImageStyle.GLASS, 7)
+        val end = System.currentTimeMillis() + 10_000
+        while (gen.state.value is GenState.Running && System.currentTimeMillis() < end) Thread.sleep(20)
+        val done = gen.state.value as GenState.Done
+        assertTrue(done.file.isFile && done.file.length() > 0)
+        assertTrue(done.source.contains("online grátis"))
+        assertEquals("Hoje: 3 de 150 imagens grátis.", done.note)
+        assertTrue(fake.imagePrompts.last().startsWith("um farol de vidro, translucent liquid glass"))
     }
 
     // --- Codex: peças ----------------------------------------------------------------------------

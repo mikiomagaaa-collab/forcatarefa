@@ -42,6 +42,12 @@ const providers = async (url, init = {}) => {
   if (u.endsWith('/api/v1/models')) return j(live);
   if (u.endsWith('/chat/completions')) return sse(replies.shift() || 'Olá! Sou a L.I.L.Y. Como posso ajudar?');
   if (u.includes('api.tavily.com')) return j({ results: [{ title: 'Kotlin docs', url: 'https://kotlinlang.org/docs/functions.html', content: 'Functions' }] });
+  if (u.includes('.hf.space/gradio_api/call/') && m === 'POST') return j({ event_id: 'ev-e2e-123456' });
+  if (u.includes('.hf.space/gradio_api/call/') && m === 'GET') {
+    const enc = new TextEncoder();
+    const done = 'event: complete\ndata: [{"video": {"path": "/tmp/out.mp4", "url": "https://lightricks-ltx-video-distilled.hf.space/gradio_api/file=/tmp/out.mp4", "size": 2048}, "subtitles": null}, 7]\n\n';
+    return new Response(new ReadableStream({ async start(c) { c.enqueue(enc.encode('event: heartbeat\ndata: null\n\n')); await new Promise((r) => setTimeout(r, 1500)); c.enqueue(enc.encode(done)); c.close(); } }), { headers: { 'content-type': 'text/event-stream' } });
+  }
   if (u.startsWith('https://queue.fal.run/') && m === 'POST') return j({ request_id: 'req-e2e-123456' });
   if (u.includes('/requests/req-e2e-123456/status')) return j({ status: ++videoPolls < 2 ? 'IN_PROGRESS' : 'COMPLETED' });
   if (u.includes('/requests/req-e2e-123456')) return j({ video: { url: 'https://v3.fal.media/files/exemplo.mp4' } });
@@ -53,7 +59,19 @@ const providers = async (url, init = {}) => {
   if (u.endsWith('api.github.com/repos/dono/app')) return j({ default_branch: 'main', private: true });
   return j({ message: `sem simulação: ${m} ${u}` }, 599);
 };
-const env = { LILY_ACCESS_KEY: KEY, OPENROUTER_API_KEY: 'or', FAL_KEY: 'fal', TAVILY_API_KEY: 'tv', GITHUB_TOKEN: 'gh', GITHUB_REPOS: 'dono/app', FETCH: providers };
+// Imagem de verdade (PNG 64×64 em degradê) para o Workers AI simulado.
+const { deflateSync } = await import('node:zlib');
+function png(w, hgt) {
+  const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+  const crc = (buf) => { let c = 0xffffffff; for (const b of buf) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+  const chunk = (type, data) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const td = Buffer.concat([Buffer.from(type), data]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([len, td, c]); };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(hgt, 4); ihdr[8] = 8; ihdr[9] = 2;
+  const rows = [];
+  for (let y = 0; y < hgt; y++) { rows.push(0); for (let x = 0; x < w; x++) rows.push(80 + x * 2, 60 + y * 2, 220); }
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(Buffer.from(rows))), chunk('IEND', Buffer.alloc(0))]);
+}
+const AI = { run: async () => ({ image: png(64, 64).toString('base64') }) };
+const env = { LILY_ACCESS_KEY: KEY, OPENROUTER_API_KEY: 'or', FAL_KEY: 'fal', TAVILY_API_KEY: 'tv', GITHUB_TOKEN: 'gh', GITHUB_REPOS: 'dono/app', FETCH: providers, AI };
 
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.md': 'text/markdown; charset=utf-8', '.webmanifest': 'application/manifest+json' };
 const server = http.createServer(async (req, res) => {
@@ -126,13 +144,19 @@ await page.waitForSelector('text=Aprovar e aplicar', { timeout: 20000 });
 await page.waitForTimeout(300);
 await shot('web-04-codex-diff');
 
-step('vídeo');
+step('vídeo e imagem grátis');
 await page.goto(base + '/#/video/' + encodeURIComponent('Uma gota de vidro líquido caindo em câmera lenta'));
 await page.waitForSelector('text=Criar um vídeo');
-await page.waitForSelector('text=Estimativa');
+await page.waitForSelector('text=Grátis · Hugging Face');
+await page.fill('textarea[placeholder^="Ex.: um farol"]', 'um farol de vidro líquido ao pôr do sol');
+await page.click('text=Gerar imagem grátis');
+await page.waitForSelector('img.result');
 await page.click('text=Gerar vídeo');
 await page.waitForSelector('text=Seus vídeos');
-await page.waitForTimeout(11000);
+await page.waitForSelector('.video-card video', { timeout: 20000 });
+const card = await page.textContent('.video-card');
+if (!/grátis/.test(card) || !/Pronto/.test(card)) throw new Error(`vídeo grátis não terminou: ${card}`);
+await page.waitForTimeout(400);
 await shot('web-05-video');
 
 step('termos');

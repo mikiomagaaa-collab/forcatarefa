@@ -149,8 +149,51 @@ export class Gateway {
     return this.request('POST', '/v1/video', req);
   }
 
-  videoStatus(jobId) {
-    return this.request('GET', `/v1/video/${jobId}`);
+  /**
+   * A situação de um vídeo. No vídeo grátis o gateway responde em NDJSON e mantém a conexão aberta até
+   * o fim (o Space cancela se ela cair): cada linha vai para onProgress e volta a última.
+   */
+  async videoStatus(jobId, onProgress = () => {}, signal) {
+    const { url, key } = this.base();
+    let res;
+    try {
+      res = await this.fetch(`${url}/v1/video/${jobId}`, { headers: { authorization: `Bearer ${key}`, accept: 'application/json, application/x-ndjson' }, signal });
+    } catch (e) {
+      throw new GatewayError(0, `Não consegui falar com o gateway: ${e.message}`);
+    }
+    if (!res.ok) throw await this.errorOf(res);
+    if (!/ndjson/.test(res.headers.get('content-type') || '')) return res.json();
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    let last = { status: 'running' };
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let cut;
+      while ((cut = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, cut).trim();
+        buf = buf.slice(cut + 1);
+        if (!line) continue;
+        try {
+          last = JSON.parse(line);
+        } catch {
+          continue;
+        }
+        if (last.status === 'done' || last.status === 'failed') {
+          reader.cancel().catch(() => {});
+          return last;
+        }
+        onProgress(last);
+      }
+    }
+    return last;
+  }
+
+  /** Uma imagem grátis (Workers AI do gateway), 1024×1024, em data URL. */
+  image(prompt, seed) {
+    return this.request('POST', '/v1/image', { prompt, ...(Number.isInteger(seed) ? { seed } : {}) });
   }
 
   videoCancel(jobId) {

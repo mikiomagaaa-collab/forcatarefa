@@ -233,6 +233,8 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
     fun send(text: String = draft, viaVoice: Boolean = false) {
         if (busy || preparing || recordingLevel != null) return
         val clean = text.trim()
+        // Uma pergunta nova cala a leitura da resposta anterior (senão ela "continua respondendo" a outra).
+        stopSpeaking()
         val img = image
         val aud = audio
         val doc = document
@@ -273,6 +275,13 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
 
     /** Prévia do que o roteador escolheria agora para uma mensagem de texto. */
     fun previewPlan(): RoutePlan = graph.tools.plan(TaskKind.CHAT, manualModel, needsImage = image != null, needsAudio = audio != null)
+
+    /** Para a leitura em voz alta desta conversa (ao ouvir de novo ou mandar outra pergunta). */
+    fun stopSpeaking() {
+        if (speakingId == null) return
+        graph.voice.stop()
+        speakingId = null
+    }
 
     /** [then] roda só quando a leitura chega ao fim (não quando é interrompida). */
     fun speak(message: ChatMessage, then: (() -> Unit)? = null) {
@@ -354,7 +363,9 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
             }
             val prompt = withDocument(question, user, contextTokens)
             // O histórico usa o que sobra do contexto depois da pergunta (e do documento).
-            val history = history(contextTokens, user, reserve = prompt.length)
+            // Modelos pequenos do aparelho se perdem com conversa longa (repetem a resposta anterior):
+            // levam só as duas últimas trocas, o bastante para "ele" e "isso".
+            val history = history(contextTokens, user, reserve = prompt.length, maxTurns = if (local != null && contextTokens <= 4096) 4 else Int.MAX_VALUE)
             val started = SystemClock.elapsedRealtime()
             var first = 0L
             var text = ""
@@ -429,12 +440,13 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
      * O histórico que cabe no contexto do modelo (as mensagens mais recentes), alternando pessoa e
      * IA como os modelos esperam. Erros e a mensagem atual ficam de fora.
      */
-    private fun history(contextTokens: Int, current: ChatMessage, reserve: Int = 0): List<Turn> {
+    private fun history(contextTokens: Int, current: ChatMessage, reserve: Int = 0, maxTurns: Int = Int.MAX_VALUE): List<Turn> {
         val budget = (max(512, contextTokens - 1024) * 3 - reserve).coerceAtLeast(0)
         val picked = ArrayList<Turn>()
         var used = 0
         for (m in messages.asReversed()) {
-            if (m.id == current.id || m.status == MsgStatus.ERROR || m.text.isBlank()) continue
+            if (picked.size >= maxTurns) break
+            if (m.id == current.id || m.status == MsgStatus.ERROR || m.status == MsgStatus.STOPPED || m.text.isBlank()) continue
             val text = m.text.take(2_000)
             if (used + text.length > budget) break
             used += text.length

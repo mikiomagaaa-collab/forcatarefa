@@ -82,17 +82,44 @@ fun ImageGenScreen(nav: Nav, route: Route.ImageGen) {
     var style by rememberSaveable { mutableStateOf(ImageStyle.NONE) }
     var seed by rememberSaveable { mutableLongStateOf(Random.nextLong(1, 1_000_000)) }
     val plan = remember(store, device.thermalStatus, device.availableRamBytes / (256L shl 20)) { graph.tools.plan(TaskKind.GENERATE_IMAGE) }
+    val gatewayStatus by graph.gateway.lastStatus.collectAsStateWithLifecycle()
+    val freeImages = gatewayStatus?.free?.image
+    val onlineAvailable = graph.onlineReady() && gatewayStatus?.features?.image == true
+    LaunchedEffect(Unit) { if (graph.onlineReady()) runCatching { graph.gateway.status() } }
+    // Online grátis vem primeiro quando o serviço está pronto (rápido e sem custo); "no aparelho" continua.
+    var useOnline by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    val online = (useOnline ?: true) && onlineAvailable
 
     fun generate(newSeed: Long = seed) {
         seed = newSeed
+        if (online) {
+            graph.imageGen.startOnline(graph.scope, graph.gateway, prompt.trim(), style, newSeed)
+            return
+        }
         // A notificação (Live Update na ilha) mostra o progresso fora do app; a geração roda mesmo sem ela.
         permissions.request(MainActivity.NOTIFICATIONS) { graph.imageGen.start(prompt.trim(), style, newSeed) }
     }
 
     Column(Modifier.fillMaxSize().imePadding()) {
-        TopBar("Gerar imagem", onBack = { nav.back() }, subtitle = "${spec.name} · no aparelho · experimental")
+        TopBar("Gerar imagem", onBack = { nav.back() }, subtitle = if (online) "FLUX.1 [schnell] · online grátis" else "${spec.name} · no aparelho · experimental")
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
-            if (!installed) {
+            SectionHeader("Onde gerar")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Chip("Online grátis", online, { useOnline = true }, enabled = onlineAvailable)
+                Chip("No aparelho", !online, { useOnline = false })
+            }
+            Text(
+                when {
+                    online -> "FLUX.1 [schnell] no Workers AI do seu gateway: 1024 × 1024 em segundos, sem custo. " +
+                        (freeImages?.let { f -> f.usedToday?.let { "Hoje: $it de ${f.perDay} grátis." } ?: "Até ${f.perDay} por dia." } ?: "")
+                    graph.onlineReady() -> "O seu gateway ainda não tem imagens grátis: publique a versão 1.1 ou mais nova (veja docs/GATEWAY.md)."
+                    else -> "Para gerar online de graça, conecte o serviço online em Configurações e permita o processamento externo."
+                },
+                style = Type.caption,
+                color = c.tertiary,
+                modifier = Modifier.padding(top = 6.dp, start = 4.dp),
+            )
+            if (!online && !installed) {
                 val report = Compatibility.evaluate(spec, device)
                 GlassCard(Modifier.fillMaxWidth().padding(top = 8.dp), strong = true) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -118,7 +145,7 @@ fun ImageGenScreen(nav: Nav, route: Route.ImageGen) {
                     BasicTextField(prompt, { prompt = it }, textStyle = Type.body.copy(color = c.content), cursorBrush = SolidColor(c.accent), modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp))
                 }
             }
-            Text("Descrições em inglês costumam dar resultados mais fiéis com este modelo.", style = Type.caption, color = c.tertiary, modifier = Modifier.padding(top = 6.dp, start = 4.dp))
+            Text(if (online) "Descreva em português ou inglês; inglês costuma ser mais fiel." else "Descrições em inglês costumam dar resultados mais fiéis com este modelo.", style = Type.caption, color = c.tertiary, modifier = Modifier.padding(top = 6.dp, start = 4.dp))
 
             SectionHeader("Estilo")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -129,7 +156,7 @@ fun ImageGenScreen(nav: Nav, route: Route.ImageGen) {
             GlassCard(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("1:1 · 768 × 768 px", style = Type.callout, color = c.content)
+                        Text(if (online) "1:1 · 1024 × 1024 px" else "1:1 · 768 × 768 px", style = Type.callout, color = c.content)
                         Text("O único tamanho que o modelo gera. Para outra proporção, recorte depois na Gallery.", style = Type.caption, color = c.secondary)
                     }
                 }
@@ -142,12 +169,14 @@ fun ImageGenScreen(nav: Nav, route: Route.ImageGen) {
                     IconButton(Icons.Rounded.Casino, "Sortear outra semente", { seed = Random.nextLong(1, 1_000_000) })
                 }
                 Spacer(Modifier.height(10.dp))
-                Text("Imagem de referência: o ${spec.name} não aceita (só descrição em texto).", style = Type.caption, color = c.tertiary)
+                Text("Imagem de referência: ${if (online) "o FLUX.1 [schnell]" else "o ${spec.name}"} não aceita (só descrição em texto).", style = Type.caption, color = c.tertiary)
             }
 
             Spacer(Modifier.height(16.dp))
             val running = gen as? GenState.Running
-            if (installed && running == null) {
+            if (online && running == null) {
+                PillButton("Gerar grátis", { generate() }, enabled = prompt.isNotBlank())
+            } else if (installed && running == null) {
                 val blocked = plan.engine as? EngineChoice.Unavailable
                 if (blocked != null) Text(blocked.reason, style = Type.footnote, color = c.warning, modifier = Modifier.padding(bottom = 8.dp))
                 plan.reasons.firstOrNull { it.startsWith("Memória livre") }?.let { Text(it, style = Type.footnote, color = c.warning, modifier = Modifier.padding(bottom = 8.dp)) }
@@ -155,7 +184,7 @@ fun ImageGenScreen(nav: Nav, route: Route.ImageGen) {
             }
 
             when (val g = gen) {
-                is GenState.Running -> RunningCard(g) { graph.imageGen.stop() }
+                is GenState.Running -> RunningCard(g, online) { graph.imageGen.stop() }
                 is GenState.Done -> DoneCard(
                     g,
                     onOpen = { openInGallery(context, g.uri) },
@@ -176,7 +205,7 @@ fun ImageGenScreen(nav: Nav, route: Route.ImageGen) {
 }
 
 @Composable
-private fun RunningCard(g: GenState.Running, onStop: () -> Unit) {
+private fun RunningCard(g: GenState.Running, online: Boolean, onStop: () -> Unit) {
     val c = Lily.colors
     var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     LaunchedEffect(g.startedAt) {
@@ -199,7 +228,7 @@ private fun RunningCard(g: GenState.Running, onStop: () -> Unit) {
             color = c.secondary,
         )
         Spacer(Modifier.height(10.dp))
-        Text("Pode sair do app: a notificação e a Liquid Island mostram o progresso.", style = Type.caption, color = c.tertiary)
+        Text(if (online) "Leva alguns segundos." else "Pode sair do app: a notificação e a Liquid Island mostram o progresso.", style = Type.caption, color = c.tertiary)
         Spacer(Modifier.height(10.dp))
         PillButton("Parar", onStop, kind = ButtonKind.GLASS, height = 38.dp)
     }
@@ -215,7 +244,8 @@ private fun DoneCard(g: GenState.Done, onOpen: () -> Unit, onShare: () -> Unit, 
             Image(bitmap.asImageBitmap(), contentDescription = g.prompt, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(24.dp)))
         }
         Spacer(Modifier.height(8.dp))
-        Text("Salva em Pictures/L.I.L.Y · ${seconds(g.seconds * 1000)} · semente ${g.seed}", style = Type.caption, color = c.secondary)
+        Text(listOfNotNull("Salva em Pictures/L.I.L.Y", g.source.ifBlank { null }, seconds(g.seconds * 1000), "semente ${g.seed}").joinToString(" · "), style = Type.caption, color = c.secondary)
+        g.note?.let { Text(it, style = Type.caption, color = c.tertiary) }
         Spacer(Modifier.height(10.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             PillButton("Abrir na Gallery", onOpen, height = 40.dp)

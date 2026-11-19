@@ -44,14 +44,15 @@ Somente nestes casos, e só quando você usa o recurso:
 | Modelos online na conversa (opcional) | A mensagem, o histórico recente da conversa e as memórias ativas | O seu L.I.L.Y Gateway, que repassa ao OpenRouter e ao fornecedor do modelo escolhido |
 | L.I.L.Y Codex | A tarefa, os trechos de código que o agente lê e os logs de erro | O gateway, o OpenRouter e o fornecedor do modelo; a pesquisa vai ao Tavily ou ao Brave; páginas de documentação são abertas pelo próprio aparelho |
 | Repositórios no Codex | As mudanças aprovadas | O GitHub (pelo token guardado no gateway), num ramo `lily-codex/...` |
-| Video AI | A descrição e, se você escolher, a imagem de referência | O gateway e o fal.ai (que roda o modelo escolhido) |
+| Video AI | A descrição e, se você escolher, a imagem de referência | O gateway e quem roda o modelo: no vídeo **grátis**, o Space público da Lightricks no Hugging Face (LTX-Video); nos pagos, o fal.ai |
+| Imagem online grátis | A descrição da imagem | O gateway e o Workers AI da própria conta Cloudflare do gateway (FLUX.1 [schnell]) |
 | Download de modelos | Pedido de arquivo (seu endereço IP fica visível ao servidor) | Hugging Face ou Google |
 | Tradução do ML Kit | Download do pacote de idioma (a tradução em si é no aparelho) | Google |
 | Clima no Cristal | Latitude e longitude **arredondadas** da cidade escolhida | Open-Meteo |
 | Compartilhar algo | O que você escolheu compartilhar | O app de destino que você escolheu |
 
 Cada provedor tem a própria política de privacidade, que vale para o que ele recebe. Consulte as
-políticas de OpenRouter, do fornecedor do modelo usado, fal.ai, Tavily ou Brave, GitHub e Cloudflare.
+políticas de OpenRouter, do fornecedor do modelo usado, fal.ai, Hugging Face (e do Space da Lightricks, no vídeo grátis), Tavily ou Brave, GitHub e Cloudflare (inclusive o Workers AI).
 
 ### O L.I.L.Y Gateway
 

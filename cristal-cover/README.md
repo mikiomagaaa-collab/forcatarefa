@@ -74,8 +74,8 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 O que **foi verificado** durante o desenvolvimento:
 
 - compila do zero (debug e release com R8) com as versões estáveis atuais das ferramentas;
-- 314 testes automáticos em JVM passam (124 no Cristal, 45 no teclado, 16 no módulo compartilhado, 121 na
-  L.I.L.Y AI e 8 na Gallery), mais 24 do gateway, 9 da L.I.L.Y Web e o teste de ponta a ponta da Web
+- 316 testes automáticos em JVM passam (124 no Cristal, 45 no teclado, 16 no módulo compartilhado, 123 na
+  L.I.L.Y AI e 8 na Gallery), mais 32 do gateway, 10 da L.I.L.Y Web e o teste de ponta a ponta da Web
   num Chromium. No launcher: lógica da grade, detecção da tela externa,
   regras de compatibilidade, segurança dos comandos de shell, backup, papéis de parede por área,
   encaixe e edição da Central de Controle, **compilação real do shader AGSL** e **16 telas montadas e
@@ -199,8 +199,9 @@ depois que você o configura e liga "Permitir processamento externo", e cada res
 | Teste do aparelho | Configurações > **Testar este aparelho**: roda cada modelo de conversa instalado na GPU e na CPU, o OCR, a ampliação e a voz, e mede carregamento, velocidade, memória e temperatura. Gera um relatório para copiar e enviar; o que falha aparece como falha |
 | Serviço online (1.3.0) | Configurações > **Serviço online**: endereço do seu gateway e a chave de acesso (guardada cifrada pelo Android Keystore), o que o gateway oferece, gasto do dia e limite. Três modos: desligado, só quando não há modelo no aparelho, ou preferir online. Nada sai do aparelho sem o consentimento ligado. No roteador, os modelos online aparecem como opção manual com preço; imagem e áudio continuam só no aparelho |
 | L.I.L.Y Codex (1.3.0) | Projeto autorizado (pasta escolhida pelo seletor do Android ou repositório do GitHub liberado no gateway). O agente lê a estrutura e as dependências, procura, lê, cria e edita arquivos em Kotlin, Java, XML, Gradle, JavaScript, TypeScript, HTML, CSS, Python, JSON, YAML e SQL, e pesquisa na internet separando o verificado das hipóteses. As mudanças ficam **preparadas**: diff por arquivo, explicação, riscos, aprovação, ponto de restauração e desfazer. No repositório, grava num ramo `lily-codex/...` e roda os testes no GitHub Actions; se falharem, lê o erro e tenta de novo (até 3 vezes; para se o mesmo erro voltar). Uma revisão final por um modelo de outra empresa. Modo automático opcional só para correções pequenas. "Consertar com o Codex" no Diagnóstico e `/codex` na conversa |
-| Video AI (1.3.0) | Texto ou uma imagem do aparelho (seletor de fotos do Android) para vídeo, continuar o último quadro de um vídeo, movimento de câmera, 16:9, 9:16 ou 1:1, duração e resolução, com o preço estimado antes. Modelos: LTX-2, Wan 2.5, Kling 2.5 Turbo, Veo 3.1 Fast e HunyuanVideo (escolha automática por qualidade e custo ou manual). Roda no fal.ai pelo gateway, com progresso na Liquid Island, histórico, prévia, compartilhar e salvar em Movies/L.I.L.Y (aparece na Gallery). `/video` na conversa |
+| Video AI (1.3.0) | Texto ou uma imagem do aparelho (seletor de fotos do Android) para vídeo, continuar o último quadro de um vídeo, movimento de câmera, 16:9, 9:16 ou 1:1, duração e resolução, com o preço estimado antes. Modelos: LTX-2, Wan 2.5, Kling 2.5 Turbo, Veo 3.1 Fast e HunyuanVideo (escolha automática por qualidade e custo ou manual). Roda no fal.ai pelo gateway, com progresso na Liquid Island, histórico, prévia, compartilhar e salvar em Movies/L.I.L.Y (aparece na Gallery). `/video` na conversa. **Grátis (1.3.2):** LTX-Video pelo Space oficial da Lightricks no Hugging Face (cota diária grátis de GPU, 1 a 2 vídeos por dia, até 8 s) vem escolhido primeiro; os pagos só com a FAL_KEY |
 | L.I.L.Y Avatar (1.3.0) | Personagem original desenhada em código (sem imagens de terceiros), com inspiração cyberpunk e roupa fechada. Respira, pisca, olha, move a boca ao falar e reage ao estado de todos os módulos (voz, conversa, Codex, vídeo, imagem). Estilos Holograma, Vidro e Mínimo; busto, rosto ou orbe; cores, tamanho, transparência e intensidade das animações. Modo flutuante opcional (só com a permissão "Sobrepor a outros apps"; desligado por padrão), compacto na tela externa, arrastável, some com um toque longo. Nunca liga câmera nem microfone |
+| Imagem online grátis (1.3.2) | Gerar imagem > *Online grátis*: FLUX.1 [schnell] pelo Workers AI da conta Cloudflare do gateway, 1024 × 1024 em segundos, até 150 por dia (o gateway para antes de passar da parte grátis); salva em Pictures/L.I.L.Y |
 | Termos e créditos | Configurações > Sobre: termos de uso, privacidade e créditos dentro do app, os mesmos arquivos de `legal/` |
 
 Limitações reais da L.I.L.Y AI:
@@ -233,12 +234,13 @@ L.I.L.Y Web conhecem apenas o endereço e uma chave de acesso sua. Passo a passo
 | `GET /v1/status` | O que está ligado, gasto do dia e limite |
 | `GET /v1/models`, `POST /v1/chat` | Catálogo do OpenRouter lido ao vivo (a versão mais nova de cada família) e conversa em pedaços com o custo real no fim |
 | `POST /v1/search` | Pesquisa (Tavily ou Brave) para o Codex |
-| `/v1/video/...` | Modelos, orçamento, envio, situação e cancelamento na fila do fal.ai |
+| `POST /v1/image` | Imagem grátis (FLUX.1 [schnell] no Workers AI, contador diário) |
+| `/v1/video/...` | Modelos, orçamento, envio, situação e cancelamento: grátis no Space do LTX-Video (Hugging Face, resposta longa em NDJSON) e pagos na fila do fal.ai |
 | `/v1/repos`, `/v1/repo/...` | Árvore, arquivos, gravação em ramos `lily-codex/...` e testes no GitHub Actions, só nos repositórios liberados |
 
 Proteções: recusa tudo sem a chave de acesso (comparação em tempo constante), limite de gasto por dia,
 CORS fechado, identificadores de vídeo conferidos (a chave do fal.ai nunca vai para outro servidor),
-nada grava no ramo principal nem em workflows. 24 testes (`node --test test/*.test.js`).
+nada grava no ramo principal nem em workflows. 32 testes (`node --test test/*.test.js`).
 
 ## L.I.L.Y Web (pasta `web/`)
 
@@ -258,7 +260,7 @@ visual da L.I.L.Y num layout inspirado em assistentes de conversa: barra lateral
 
 O que a Web não tem (só existe no celular): modelos LiteRT, ML Kit (OCR, rótulos, recorte), geração de
 imagem iris, Liquid Island, tela externa e avatar flutuante por cima de outros apps. Continuar um vídeo
-gerado também fica só no app. Testes: 9 de lógica (`node --test test/*.test.js`) e um de ponta a ponta
+gerado também fica só no app. Testes: 10 de lógica (`node --test test/*.test.js`) e um de ponta a ponta
 num Chromium com o código real do gateway (`node test/e2e.mjs`).
 
 ## L.I.L.Y Gallery (pasta `gallery/`)

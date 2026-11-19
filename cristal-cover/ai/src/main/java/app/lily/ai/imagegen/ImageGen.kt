@@ -55,7 +55,7 @@ enum class ImageStyle(val label: String, val suffix: String) {
 sealed interface GenState {
     data object Idle : GenState
     data class Running(val prompt: String, val stage: String, val fraction: Float, val startedAt: Long) : GenState
-    data class Done(val prompt: String, val uri: Uri, val file: File, val seconds: Long, val seed: Long) : GenState
+    data class Done(val prompt: String, val uri: Uri, val file: File, val seconds: Long, val seed: Long, val source: String = "", val note: String? = null) : GenState
     data class Failed(val message: String) : GenState
     data object Stopped : GenState
 }
@@ -81,6 +81,46 @@ class ImageGenJobs(private val context: Context) {
 
     fun stop() {
         stopRequested = true
+        online?.cancel()
+    }
+
+    private var online: kotlinx.coroutines.Job? = null
+
+    /**
+     * Imagem online grátis (FLUX.1 [schnell] no Workers AI do gateway, 1024×1024, alguns segundos):
+     * não precisa de serviço em primeiro plano. Salva em Pictures/L.I.L.Y como a do aparelho.
+     */
+    fun startOnline(scope: kotlinx.coroutines.CoroutineScope, gateway: app.lily.ai.remote.GatewayClient, prompt: String, style: ImageStyle, seed: Long) {
+        if (_state.value is GenState.Running) return
+        stopRequested = false
+        val started = SystemClock.elapsedRealtime()
+        _state.value = GenState.Running(prompt, "Gerando online (grátis)", 0f, started)
+        app.lily.ai.presence.LilyPresence.working(PRESENCE, "Gerando imagem online")
+        online = scope.launch {
+            try {
+                val out = gateway.image(prompt + style.suffix, seed)
+                val bytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    android.util.Base64.decode(out.image.substringAfter("base64,"), android.util.Base64.DEFAULT)
+                }
+                val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: throw IllegalStateException("A imagem online veio ilegível.")
+                val saved = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    app.lily.ai.data.MediaSaver.savePng(context, bitmap, "lily-${System.currentTimeMillis()}", "L.I.L.Y AI · ${out.model} (online, grátis) · $prompt")
+                }
+                val left = out.usedToday?.let { used -> "Hoje: $used de ${out.perDay} imagens grátis." }
+                _state.value = GenState.Done(prompt, saved.uri, saved.file, (SystemClock.elapsedRealtime() - started) / 1000, seed, "${out.model} · online grátis", left)
+                app.lily.ai.presence.LilyPresence.finished(PRESENCE, true, "Imagem pronta")
+            } catch (c: kotlinx.coroutines.CancellationException) {
+                _state.value = GenState.Stopped
+                app.lily.ai.presence.LilyPresence.clear(PRESENCE)
+            } catch (t: Throwable) {
+                _state.value = GenState.Failed(t.message ?: t.javaClass.simpleName)
+                app.lily.ai.presence.LilyPresence.finished(PRESENCE, false, "A imagem falhou")
+            }
+        }
+    }
+
+    private companion object {
+        const val PRESENCE = "imagem-online"
     }
 
     fun clear() {

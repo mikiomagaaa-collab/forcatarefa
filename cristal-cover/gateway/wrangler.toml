@@ -8,9 +8,15 @@ compatibility_date = "2026-11-01"
 [assets]
 directory = "./public"
 
+# Imagens grátis: o Workers AI da própria conta Cloudflare (10.000 "neurons" grátis por dia, sem chave).
+[ai]
+binding = "AI"
+
 # Limite de gasto diário (US$). O KV abaixo guarda o gasto do dia; sem ele o limite não é garantido.
 [vars]
 DAILY_BUDGET_USD = "3"
+# Imagens grátis por dia (o gateway para antes de passar da parte grátis do Workers AI; precisa do KV).
+FREE_IMAGES_PER_DAY = "150"
 # CORS para abrir a L.I.L.Y Web de outro endereço (ex.: "https://meu-site.dev"). Vazio = só o próprio gateway.
 ALLOWED_ORIGINS = ""
 
@@ -22,7 +28,8 @@ ALLOWED_ORIGINS = ""
 # Segredos (nunca neste arquivo): npx wrangler secret put NOME
 #   LILY_ACCESS_KEY      a chave que o app usa (gere uma longa e aleatória)
 #   OPENROUTER_API_KEY   modelos de programação e conversa
-#   FAL_KEY              vídeo
+#   FAL_KEY              vídeo pago (opcional; sem ela, só o vídeo grátis)
+#   HF_TOKEN             (opcional, grátis) token "read" do Hugging Face: o vídeo grátis usa a cota da sua conta
 #   TAVILY_API_KEY       pesquisa (ou BRAVE_API_KEY)
 #   GITHUB_TOKEN         token "fine-grained" só dos repositórios abaixo
 #   GITHUB_REPOS         ex.: dono/repositorio

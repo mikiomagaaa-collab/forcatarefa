@@ -58,6 +58,9 @@ class FakeGateway : AutoCloseable {
     private var lastCi: Pair<Boolean, String>? = null
 
     private var videoPolls = 0
+    /** Inclui o modelo de vídeo grátis (como um gateway 1.1). */
+    @Volatile var freeVideo = false
+    val imagePrompts = ConcurrentLinkedDeque<String>()
 
     val models = """
         {"provider":"openrouter","models":[
@@ -128,13 +131,37 @@ class FakeGateway : AutoCloseable {
             path == "/v1/video/models" -> send(
                 ex,
                 200,
-                """{"provider":"fal","models":[
+                """{"provider":"fal","models":[${if (freeVideo) FREE_MODEL + "," else ""}
                   {"id":"ltx-2","name":"LTX-2","family":"LTX (Lightricks)","summary":"Rápido","modes":["text","image"],"durations":[6,8,10],"resolutions":["1080p"],"aspects":["16:9","9:16"],"audio":true,"quality":3,"speed":"fast","typicalSeconds":45,"fromUsd":0.36,"priceNote":"por segundo"},
                   {"id":"kling-2.5","name":"Kling 2.5 Turbo Pro","family":"Kling","summary":"Coerente","modes":["text","image"],"durations":[5,10],"resolutions":["1080p"],"aspects":["16:9","9:16","1:1"],"audio":false,"quality":4,"speed":"medium","typicalSeconds":100,"fromUsd":0.35,"priceNote":"por segundo"},
                   {"id":"veo-3.1-fast","name":"Veo 3.1 Fast","family":"Veo","summary":"Melhor","modes":["text","image"],"durations":[8],"resolutions":["720p","1080p"],"aspects":["16:9","9:16"],"audio":true,"quality":5,"speed":"medium","typicalSeconds":70,"fromUsd":0.8,"priceNote":"por segundo"}
                 ]}""",
             )
             path == "/v1/video/quote" -> send(ex, 200, """{"model":"ltx-2","estimatedUsd":0.36,"duration":6,"resolution":"1080p"}""")
+            path == "/v1/image" && method == "POST" -> {
+                imagePrompts += obj["prompt"]?.jsonPrimitive?.content.orEmpty()
+                send(ex, 200, """{"image":"data:image/png;base64,${pngBase64()}","model":"FLUX.1 [schnell]","width":1024,"height":1024,"costUsd":0,"free":true,"usedToday":3,"perDay":150}""")
+            }
+            path == "/v1/video" && method == "POST" && obj["model"]?.jsonPrimitive?.content == "ltx-free" -> {
+                videoRequests += obj
+                send(ex, 200, """{"jobId":"free-0123456789abcdef","model":"ltx-free","mode":"text","estimatedUsd":0,"typicalSeconds":90,"free":true,"stream":true,"duration":4,"resolution":"480p","aspect":"9:16"}""")
+            }
+            path == "/v1/video/free-0123456789abcdef" && method == "GET" -> {
+                // Como o gateway: uma resposta longa em NDJSON que só termina com o vídeo pronto.
+                ex.responseHeaders.add("content-type", "application/x-ndjson; charset=utf-8")
+                ex.sendResponseHeaders(200, 0)
+                ex.responseBody.use { out ->
+                    for (line in listOf(
+                        """{"status":"running","elapsed":1,"typicalSeconds":90,"free":true}""",
+                        """{"status":"running","elapsed":30,"typicalSeconds":90,"free":true}""",
+                        """{"status":"done","elapsed":61,"free":true,"video":{"url":"$url/files/out.mp4","contentType":"video/mp4","fileSize":4096}}""",
+                    )) {
+                        out.write((line + "\n").toByteArray())
+                        out.flush()
+                        Thread.sleep(40)
+                    }
+                }
+            }
             path == "/v1/video" && method == "POST" -> {
                 videoRequests += obj
                 videoPolls = 0
@@ -217,6 +244,17 @@ class FakeGateway : AutoCloseable {
     }
 
     companion object {
+        const val FREE_MODEL = """{"id":"ltx-free","name":"LTX-Video (grátis)","family":"LTX (Lightricks)","summary":"Grátis","modes":["text","image"],"durations":[2,4,6,8],"resolutions":["480p"],"aspects":["16:9","9:16","1:1"],"audio":false,"quality":2,"speed":"medium","typicalSeconds":90,"fromUsd":0,"priceNote":"grátis","free":true,"provider":"hf"}"""
+
+        /** Uma imagem PNG de verdade (8×8, azul) para a imagem online. */
+        fun pngBase64(): String {
+            val img = java.awt.image.BufferedImage(8, 8, java.awt.image.BufferedImage.TYPE_INT_RGB)
+            for (x in 0 until 8) for (y in 0 until 8) img.setRGB(x, y, 0x3366FF)
+            val out = java.io.ByteArrayOutputStream()
+            javax.imageio.ImageIO.write(img, "png", out)
+            return java.util.Base64.getEncoder().encodeToString(out.toByteArray())
+        }
+
         /** Uma ação do agente em JSON (como o modelo responderia). */
         fun action(name: String, vararg pairs: Pair<String, Any>): String = buildJsonObject {
             put("action", name)

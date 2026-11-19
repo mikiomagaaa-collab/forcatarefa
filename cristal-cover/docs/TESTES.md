@@ -437,3 +437,26 @@ Segurança:
 - [ ] ⚠️ Tela externa: o mesmo, tocando no orbe para a primeira pergunta
 - [ ] Fechar o painel ou sair do app no meio da resposta: o microfone não liga com a tela fechada
 - [ ] Reabrir o painel em menos de 5 minutos: a conversa continua, mas o microfone só liga com o toque (ou com a ilha)
+
+## 25. L.I.L.Y AI 1.3.2: pergunta anterior, fotos e vídeos grátis
+
+Pergunta anterior (sem gateway):
+
+- [ ] Fazer uma pergunta por voz e, enquanto ela lê a resposta, tocar no microfone: a leitura para na hora e ela responde a pergunta NOVA
+- [ ] Digitar outra pergunta durante a leitura: a leitura para e a resposta é sobre a pergunta nova
+- [ ] Tela externa: a resposta antiga não aparece embaixo da pergunta nova
+- [ ] Com o Qwen3 0.6B, 5 perguntas seguidas sobre assuntos diferentes: cada resposta é sobre a última pergunta
+
+Fotos e vídeos grátis 🌐 (gateway 1.1 publicado, sem FAL_KEY e sem OpenRouter):
+
+- [ ] Gerar imagem > Onde gerar: "Online grátis" vem marcado; gera 1024 × 1024 em segundos e salva em Pictures/L.I.L.Y
+- [ ] A tela mostra "Hoje: N de 150 grátis" e o número sobe a cada imagem (com o KV ligado)
+- [ ] "No aparelho" continua funcionando (iris-3b instalado)
+- [ ] Vídeo: "LTX-Video (grátis)" vem escolhido; a tela diz "Grátis · Hugging Face" e não mostra preço
+- [ ] Gerar um vídeo de 4 s: a Liquid Island mostra o andamento; o vídeo chega em ~1 a 3 minutos e vai para Filmes/L.I.L.Y
+- [ ] Sem FAL_KEY: a lista de modelos só tem o grátis (nada pago aparece)
+- [ ] Gerar até a cota acabar: aparece a mensagem do Hugging Face com o tempo de espera (e a dica do HF_TOKEN)
+- [ ] Desligar o Wi-Fi no meio de um vídeo grátis: o app avisa que a conexão caiu; gerar de novo funciona
+- [ ] Cancelar um vídeo grátis em andamento: some da fila e não chega depois
+- [ ] L.I.L.Y Web: "Criar uma imagem" gera e baixa; o vídeo grátis termina com a aba aberta
+

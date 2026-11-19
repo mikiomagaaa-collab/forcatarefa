@@ -319,7 +319,63 @@ class GatewayClient(private val store: GatewayStore, private val isOnline: () ->
 
     suspend fun videoSubmit(request: JsonObject): VideoSubmitted = call("POST", "/v1/video", request.toString(), decoder(VideoSubmitted.serializer()))
 
-    suspend fun videoStatus(jobId: String): VideoStatus = call("GET", "/v1/video/$jobId", null, decoder(VideoStatus.serializer()))
+    /** Uma imagem grátis (Workers AI do gateway), 1024×1024. */
+    suspend fun image(prompt: String, seed: Long? = null): OnlineImage = call(
+        "POST",
+        "/v1/image",
+        buildJsonObject {
+            put("prompt", prompt)
+            seed?.let { put("seed", it % 2_147_483_647L) }
+        }.toString(),
+        decoder(OnlineImage.serializer()),
+    )
+
+    /**
+     * A situação de um vídeo. No vídeo grátis o gateway responde em NDJSON e mantém a conexão aberta até
+     * o fim (o Space cancela o vídeo se ela cair): cada linha vai para [onProgress] e volta a última.
+     * Cancelar a coroutine fecha a conexão (e, no grátis, cancela o vídeo).
+     */
+    suspend fun videoStatus(jobId: String, onProgress: (VideoStatus) -> Unit = {}): VideoStatus = withContext(Dispatchers.IO) {
+        val conn = try {
+            open("GET", "/v1/video/$jobId", null, readTimeout = 120_000)
+        } catch (e: GatewayException) {
+            throw e
+        } catch (e: java.io.IOException) {
+            throw GatewayException(0, "Não consegui falar com o gateway: ${e.message ?: e.javaClass.simpleName}")
+        }
+        val handle = currentCoroutineContext()[Job]?.invokeOnCompletion { runCatching { conn.disconnect() } }
+        try {
+            val code = try {
+                conn.responseCode
+            } catch (e: java.io.IOException) {
+                throw GatewayException(0, "Não consegui falar com o gateway: ${e.message ?: e.javaClass.simpleName}")
+            }
+            if (code >= 400) throw errorOf(conn, code)
+            val type = conn.contentType.orEmpty()
+            if (!type.contains("ndjson")) return@withContext json.decodeFromString(VideoStatus.serializer(), conn.inputStream.bufferedReader().use { it.readText() })
+            var last: VideoStatus? = null
+            try {
+                conn.inputStream.bufferedReader(Charsets.UTF_8).use { reader ->
+                    while (true) {
+                        currentCoroutineContext().ensureActive()
+                        val line = reader.readLine() ?: break
+                        if (line.isBlank()) continue
+                        val s = runCatching { json.decodeFromString(VideoStatus.serializer(), line) }.getOrNull() ?: continue
+                        last = s
+                        if (s.status == "done" || s.status == "failed") break
+                        onProgress(s)
+                    }
+                }
+            } catch (e: java.io.IOException) {
+                currentCoroutineContext().ensureActive()
+                throw GatewayException(0, "A conexão com o gateway caiu durante o vídeo: ${e.message ?: e.javaClass.simpleName}")
+            }
+            last ?: VideoStatus(status = "running")
+        } finally {
+            handle?.dispose()
+            conn.disconnect()
+        }
+    }
 
     suspend fun videoCancel(jobId: String): Boolean = call("DELETE", "/v1/video/$jobId", null) { text ->
         runCatching { json.parseToJsonElement(text).jsonObject["cancelled"]?.jsonPrimitive?.contentOrNull == "true" }.getOrDefault(false)

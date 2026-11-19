@@ -31,6 +31,12 @@ test('roteadores iguais aos do app', () => {
   ];
   assert.equal(pickVideo(vids, true, false, 'FAST').model.id, 'ltx-2');
   assert.equal(pickVideo(vids, false, false, 'BEST').model.id, 'veo');
+  // Grátis primeiro (como no app): Rápido e Equilibrado ficam no grátis; Máximo e som vão aos pagos.
+  const withFree = [{ id: 'ltx-free', name: 'LTX-Video (grátis)', modes: ['text', 'image'], durations: [2], audio: false, quality: 2, speed: 'medium', fromUsd: 0, free: true }, ...vids];
+  assert.equal(pickVideo(withFree, true, false, 'FAST').model.id, 'ltx-free');
+  assert.match(pickVideo(withFree, false, false, 'BALANCED').reason, /grátis/);
+  assert.equal(pickVideo(withFree, false, false, 'BEST').model.id, 'veo');
+  assert.equal(pickVideo(withFree, false, true, 'FAST').model.id, 'ltx-2');
   assert.equal(usd(0.0105), 'US$ 0,0105');
 });
 
@@ -200,4 +206,22 @@ test('agente recusa caminhos fora do projeto', async () => {
   const ws = new MemoryWorkspace({ 'a.txt': 'x' });
   const agent = new Agent({ workspace: ws, llm: null, emit: () => {} });
   assert.match(await agent.execute({ action: 'read', path: '../etc/passwd' }).catch((e) => e.message), /não permitido/);
+});
+
+test('vídeo grátis: acompanha a resposta longa (NDJSON) até o vídeo e a imagem grátis', async () => {
+  const lines = ['{"status":"running","elapsed":1,"free":true}', '{"status":"running","elapsed":30,"free":true}', '{"status":"done","elapsed":61,"free":true,"video":{"url":"https://x.hf.space/gradio_api/file=/tmp/a.mp4"}}'];
+  const enc = new TextEncoder();
+  const fetchFake = async (url, init) => {
+    if (url.endsWith('/v1/image')) return new Response(JSON.stringify({ image: 'data:image/png;base64,AAAA', perDay: 150, usedToday: 1, free: true }), { headers: { 'content-type': 'application/json' } });
+    const body = new ReadableStream({ start(c) { c.enqueue(enc.encode(lines[0] + '\n' + lines[1].slice(0, 10))); c.enqueue(enc.encode(lines[1].slice(10) + '\n' + lines[2] + '\n')); c.close(); } });
+    return new Response(body, { headers: { 'content-type': 'application/x-ndjson; charset=utf-8' } });
+  };
+  const g = new Gateway(() => ({ url: 'https://g.test', key: 'k-123' }), fetchFake);
+  const seen = [];
+  const last = await g.videoStatus('job123', (p) => seen.push(p.elapsed));
+  assert.deepEqual(seen, [1, 30]);
+  assert.equal(last.status, 'done');
+  assert.match(last.video.url, /hf\.space/);
+  const img = await g.image('um gato', 7);
+  assert.equal(img.free, true);
 });

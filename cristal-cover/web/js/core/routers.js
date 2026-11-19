@@ -103,6 +103,13 @@ function perSecond(m) {
 export function pickVideo(models, needsImage, wantsAudio, quality) {
   const able = models.filter((m) => (needsImage ? m.modes.includes('image') : m.modes.includes('text')) && (!wantsAudio || m.audio));
   if (!able.length) return null;
+  // Um modelo grátis que faz o pedido vem primeiro (Rápido e Equilibrado); o Máximo e o som vão aos pagos.
+  const free = able.filter((m) => m.free);
+  const paid = able.filter((m) => !m.free);
+  if (free.length && (quality !== 'BEST' || !paid.length)) {
+    const pick = [...free].sort((a, b) => b.quality - a.quality)[0];
+    return { model: pick, reason: `${needsImage ? 'Anima a sua imagem' : 'Cria a partir da descrição'} · grátis: ${pick.name}` };
+  }
   let chosen;
   if (quality === 'FAST') chosen = [...able].sort((a, b) => perSecond(a) - perSecond(b) || (a.speed === 'fast' ? -1 : 1))[0];
   else if (quality === 'BEST') chosen = [...able].sort((a, b) => b.quality - a.quality || perSecond(a) - perSecond(b))[0];

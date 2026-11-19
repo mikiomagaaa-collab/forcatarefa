@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FakeKV, OPENROUTER_MODELS, call, callJson, fakeFetch, makeEnv, sse } from './helpers.js';
 import { pickFamilies, costFromTail } from '../src/code.js';
-import { estimateVideo, normalize, VIDEO_MODELS } from '../src/video.js';
+import { estimateVideo, gradioVideo, normalize, VIDEO_MODELS } from '../src/video.js';
 import { logTail } from '../src/repo.js';
 import { fromBase64url } from '../src/http.js';
 
@@ -28,7 +28,9 @@ test('status mostra o que está configurado e o limite de gasto', async () => {
   const env = makeEnv({ FETCH: f, OPENROUTER_API_KEY: 'or', FAL_KEY: 'fal', LILY_USAGE: kv, DAILY_BUDGET_USD: '2' });
   const { status, body } = await callJson(env, 'GET', '/v1/status');
   assert.equal(status, 200);
-  assert.deepEqual(body.features, { code: true, video: true, search: false, repos: false });
+  assert.deepEqual(body.features, { code: true, video: true, videoPaid: true, image: false, search: false, repos: false });
+  assert.equal(body.free.image, null);
+  assert.match(body.free.video.account, /anônima/);
   assert.equal(body.budget.dailyUsd, 2);
   assert.equal(body.budget.enforced, true);
   assert.equal(f.calls[0].headers.authorization, 'Bearer or');
@@ -159,7 +161,11 @@ test('pesquisa pelo Brave quando não há Tavily', async () => {
 test('vídeo: catálogo com modos, durações e preço de referência', async () => {
   const env = makeEnv({ FAL_KEY: 'fal' });
   const { body } = await callJson(env, 'GET', '/v1/video/models');
-  assert.equal(body.provider, 'fal');
+  assert.equal(body.provider, 'hf+fal');
+  const free = body.models.find((m) => m.id === 'ltx-free');
+  assert.equal(free.free, true);
+  assert.equal(free.fromUsd, 0);
+  assert.deepEqual(free.modes, ['text', 'image']);
   const ltx = body.models.find((m) => m.id === 'ltx-2');
   assert.deepEqual(ltx.modes, ['text', 'image']);
   assert.equal(ltx.fromUsd, 0.36);
@@ -179,13 +185,17 @@ test('vídeo: estimativas por modo, resolução e som', () => {
 });
 
 test('vídeo: normaliza parâmetros fora da lista e recusa o que o modelo não faz', () => {
-  const { o, mode } = normalize({ model: 'kling-2.5', prompt: 'um gato', duration: 7, aspect: '4:3' });
+  const paid = { FAL_KEY: 'fal' };
+  const { o, mode } = normalize({ model: 'kling-2.5', prompt: 'um gato', duration: 7, aspect: '4:3' }, paid);
   assert.equal(mode, 'text');
   assert.equal(o.duration, 5);
   assert.equal(o.aspect, '16:9');
-  assert.throws(() => normalize({ model: 'hunyuan', prompt: 'x', image: 'data:image/png;base64,AAAA' }), /não anima imagens/);
-  assert.throws(() => normalize({ model: 'ltx-2', prompt: ' ' }), /Descreva/);
-  assert.throws(() => normalize({ model: 'ltx-2', prompt: 'x', image: 'file:///etc/passwd' }), /JPEG, PNG/);
+  assert.throws(() => normalize({ model: 'hunyuan', prompt: 'x', image: 'data:image/png;base64,AAAA' }, paid), /não anima imagens/);
+  assert.throws(() => normalize({ model: 'ltx-2', prompt: ' ' }, paid), /Descreva/);
+  assert.throws(() => normalize({ model: 'ltx-2', prompt: 'x', image: 'file:///etc/passwd' }, paid), /JPEG, PNG/);
+  // Sem a FAL_KEY, os modelos pagos nem existem: nada pode ser cobrado.
+  assert.throws(() => normalize({ model: 'ltx-2', prompt: 'x' }), /desconhecido/);
+  assert.equal(normalize({ model: 'ltx-free', prompt: 'x', duration: 5 }).o.duration, 2);
 });
 
 test('vídeo: envio à fila, acompanhamento e resultado', async () => {

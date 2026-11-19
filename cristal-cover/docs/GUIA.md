@@ -545,6 +545,20 @@ escolher) sem problemas na verificação; dá para desfazer.
 Se a L.I.L.Y fechar por um erro, o **L.I.L.Y Diagnóstico** tem o botão **Consertar com o Codex**: ele abre o
 Codex com o relatório já preenchido.
 
+### Fotos e vídeos grátis (1.3.2)
+
+Com o gateway publicado (versão 1.1 ou mais nova), dá para criar **sem pagar nada**:
+
+- **Imagens**: na tela inicial, **Gerar imagem** > *Onde gerar*: **Online grátis** (FLUX.1 [schnell],
+  1024 × 1024, em segundos; até 150 por dia) ou **No aparelho** (iris-3b, lento e experimental). A tela
+  mostra quantas grátis ainda restam hoje.
+- **Vídeos**: o modelo **LTX-Video (grátis)** vem escolhido sozinho nos níveis Rápido e Equilibrado.
+  Usa a cota grátis de GPU do Hugging Face: dá **1 a 2 vídeos por dia** (até 8 s, ~736×416). Com um
+  token grátis do Hugging Face no gateway (`HF_TOKEN`), a cota é da sua conta; sem ele, é a cota
+  anônima, menor. Mantenha a internet ligada até o fim: se a conexão cair, o Hugging Face cancela o vídeo.
+- Os modelos pagos (fal.ai) só aparecem se a `FAL_KEY` estiver no gateway, marcados como **pago**. Sem
+  essa chave, nada é cobrado.
+
 ### Video AI
 
 Toque em **Vídeo** ou escreva `/video`. Descreva a cena (ou escolha uma foto para animar, ou continue um

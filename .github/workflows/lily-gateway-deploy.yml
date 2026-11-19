@@ -87,6 +87,7 @@ jobs:
           LILY_ACCESS_KEY: ${{ secrets.LILY_ACCESS_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           FAL_KEY: ${{ secrets.FAL_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
           BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
           GITHUB_TOKEN_CODEX: ${{ secrets.LILY_GITHUB_TOKEN }}
@@ -96,6 +97,7 @@ jobs:
           put LILY_ACCESS_KEY "$LILY_ACCESS_KEY"
           put OPENROUTER_API_KEY "$OPENROUTER_API_KEY"
           put FAL_KEY "$FAL_KEY"
+          put HF_TOKEN "$HF_TOKEN"
           put TAVILY_API_KEY "$TAVILY_API_KEY"
           put BRAVE_API_KEY "$BRAVE_API_KEY"
           put GITHUB_TOKEN "$GITHUB_TOKEN_CODEX"
