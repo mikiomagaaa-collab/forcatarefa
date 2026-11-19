@@ -581,6 +581,13 @@ a porcentagem.
 
 ### L.I.L.Y Web (no computador)
 
+**Como app do computador (recomendado):** abra o endereço do gateway no Chrome ou no Edge e toque em
+**Instalar no computador** (na barra lateral ou em Configurações > App no computador; ou menu ⋮ >
+"Instalar L.I.L.Y"). Ela ganha ícone na área de trabalho e no menu Iniciar e abre em janela própria. Sem
+internet, abre do mesmo jeito e conversa com um modelo baixado no navegador. Quando sair uma versão nova,
+aparece **Atualizar a L.I.L.Y**: ela só troca quando você toca. Atalhos: **Ctrl+K** nova conversa,
+**Alt+1 a 5** telas, **/** escrever, **Esc** parar a resposta.
+
 Abra o endereço do gateway no Chrome ou no Edge: é a L.I.L.Y para o PC, com conversa, Codex (repositório do
 GitHub ou uma pasta do computador), vídeo, ferramentas e a avatar. Em Configurações, cole a chave de acesso.
 Para usar sem internet, escolha um **modelo local** (roda no navegador com WebGPU; o download só começa

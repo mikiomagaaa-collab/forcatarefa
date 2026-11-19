@@ -1,11 +1,28 @@
 {
+  "id": "./",
   "name": "L.I.L.Y",
   "short_name": "L.I.L.Y",
-  "description": "A assistente do PROJECT LIQUID FLIP no computador.",
-  "start_url": "./",
+  "description": "A assistente do PROJECT LIQUID FLIP no computador: conversa, Codex, vídeo, imagens e avatar.",
+  "start_url": "./#/chat",
+  "scope": "./",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
   "background_color": "#0b0a14",
   "theme_color": "#0b0a14",
   "lang": "pt-BR",
-  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+  "dir": "ltr",
+  "categories": ["productivity", "utilities", "education"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Nova conversa", "url": "./#/chat", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Codex", "url": "./#/codex", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Vídeo e imagem", "url": "./#/video", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ],
+  "launch_handler": { "client_mode": "focus-existing" }
 }

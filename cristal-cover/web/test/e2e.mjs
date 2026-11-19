@@ -82,7 +82,7 @@ const AI = {
 };
 const env = { LILY_ACCESS_KEY: KEY, OPENROUTER_API_KEY: 'or', FAL_KEY: 'fal', TAVILY_API_KEY: 'tv', GITHUB_TOKEN: 'gh', GITHUB_REPOS: 'dono/app', FETCH: providers, AI };
 
-const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.md': 'text/markdown; charset=utf-8', '.webmanifest': 'application/manifest+json' };
+const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.md': 'text/markdown; charset=utf-8', '.webmanifest': 'application/manifest+json' };
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://127.0.0.1');
   if (url.pathname.startsWith('/v1/')) {
@@ -174,6 +174,33 @@ step('termos');
 await page.goto(base + '/#/legal/termos');
 await page.waitForSelector('text=Uso aceitável');
 await shot('web-06-termos');
+
+step('app de computador: instalável e abre sem internet');
+await page.goto(base + '/#/settings');
+await page.waitForSelector('text=App no computador');
+const pwa = await page.evaluate(async () => {
+  const reg = await navigator.serviceWorker.ready;
+  const manifest = await (await fetch(document.querySelector('link[rel=manifest]').href)).json();
+  const icon = await fetch(manifest.icons[1].src);
+  return { scope: reg.scope, active: !!reg.active, display: manifest.display, icon: icon.headers.get('content-type'), shortcuts: manifest.shortcuts.length };
+});
+if (!pwa.active || pwa.display !== 'standalone' || pwa.icon !== 'image/png' || pwa.shortcuts < 3) throw new Error(`app não instalável: ${JSON.stringify(pwa)}`);
+await page.reload();
+await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+await page.waitForTimeout(500);
+await page.context().setOffline(true);
+await page.goto(base + '/#/chat');
+await page.waitForSelector('textarea', { timeout: 10000 });
+await page.goto(base + '/#/settings');
+await page.waitForSelector('text=Atalhos de teclado', { timeout: 10000 });
+await page.waitForTimeout(300);
+await shot('web-08-computador-offline');
+await page.context().setOffline(false);
+// Atalhos: Alt+2 abre o Codex; Ctrl+K volta para uma conversa nova.
+await page.keyboard.press('Alt+2');
+await page.waitForSelector('text=Projeto autorizado');
+await page.keyboard.press('Control+k');
+await page.waitForFunction(() => location.hash === '#/chat');
 
 step('celular (tela estreita)');
 await page.setViewportSize({ width: 412, height: 860 });

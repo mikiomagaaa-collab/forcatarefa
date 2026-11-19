@@ -6,6 +6,7 @@ import { usd } from '../core/gateway.js';
 import { label, tierName } from '../core/routers.js';
 import { render } from '../core/markdown.js';
 import { h, clear, toast, chips, field, toggle } from './dom.js';
+import { desktop, SHORTCUTS } from '../core/desktop.js';
 
 export function renderSettings(view, ctx) {
   const { app } = ctx;
@@ -15,6 +16,23 @@ export function renderSettings(view, ctx) {
   const draw = () => {
     clear(col);
     const s = app.settings;
+
+    // App no computador
+    const pc = h('div.card');
+    pc.append(
+      h('h2', 'App no computador'),
+      h(
+        'p.faint',
+        desktop.installed
+          ? 'Instalada: a L.I.L.Y abre em janela própria, pelo ícone da área de trabalho ou do menu Iniciar, e funciona sem internet com um modelo no navegador.'
+          : 'Instale para abrir a L.I.L.Y em janela própria, pelo ícone da área de trabalho ou do menu Iniciar. Sem internet, ela abre e conversa com um modelo do navegador.',
+      ),
+    );
+    if (desktop.updateReady) pc.append(h('button.primary', { type: 'button', onclick: () => desktop.applyUpdate() }, 'Atualizar para a versão nova'));
+    else if (!desktop.installed && desktop.canInstall) pc.append(h('button.primary', { type: 'button', onclick: async () => { if (await desktop.install()) toast('L.I.L.Y instalada no computador.'); draw(); } }, 'Instalar no computador'));
+    else if (!desktop.installed) pc.append(h('p.faint', 'No Chrome ou no Edge: menu (⋮) > "Instalar L.I.L.Y" (ou o ícone de instalar na barra de endereço). No Safari do Mac: Arquivo > Adicionar ao Dock.'));
+    pc.append(h('h3', 'Atalhos de teclado'), h('div.shortcuts', ...SHORTCUTS.map(([k, v]) => h('div.row', h('kbd', k), h('span.faint', v)))));
+    col.append(pc);
 
     // Serviço online
     const url = h('input', { value: s.gatewayUrl, placeholder: location.origin.startsWith('http') ? `Vazio = este site (${location.origin})` : 'https://lily-gateway.seu-nome.workers.dev' });

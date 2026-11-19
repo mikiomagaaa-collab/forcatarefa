@@ -229,3 +229,49 @@ test('vídeo grátis: acompanha a resposta longa (NDJSON) até o vídeo e a imag
   const img = await g.image('um gato', 7);
   assert.equal(img.free, true);
 });
+
+test('app de computador: o service worker guarda todo o app e nunca o serviço online', async () => {
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const { join } = await import('node:path');
+  const web = new URL('..', import.meta.url).pathname;
+  const sw = readFileSync(join(web, 'sw.js'), 'utf8');
+  const shell = [...sw.matchAll(/^  '([^']+)',$/gm)].map((m) => m[1]);
+  // Todo arquivo JavaScript do app está na lista (senão ele não abriria sem internet).
+  const js = ['js', 'js/core', 'js/ui'].flatMap((d) => readdirSync(join(web, d)).filter((f) => f.endsWith('.js')).map((f) => `${d}/${f}`));
+  for (const f of js) assert.ok(shell.includes(f), `falta no service worker: ${f}`);
+  for (const f of shell.filter((p) => !p.startsWith('legal/') && p !== './')) assert.ok(readdirSync(join(web, f.split('/').slice(0, -1).join('/') || '.')).includes(f.split('/').pop()), `arquivo não existe: ${f}`);
+  // O serviço online nunca passa pelo cache.
+  const bypass = new Function(`${sw.match(/function bypass[\s\S]*?\n}/)[0]}; return bypass;`)();
+  const o = 'https://g.test';
+  assert.equal(bypass(new URL('https://g.test/v1/chat'), 'POST', o), true);
+  assert.equal(bypass(new URL('https://g.test/v1/models'), 'GET', o), true);
+  assert.equal(bypass(new URL('https://cdn.jsdelivr.net/npm/x'), 'GET', o), true);
+  assert.equal(bypass(new URL('https://g.test/js/app.js'), 'GET', o), false);
+  // Manifesto instalável: ícones PNG 192 e 512, janela própria e atalhos.
+  const m = JSON.parse(readFileSync(join(web, 'manifest.webmanifest'), 'utf8'));
+  assert.equal(m.display, 'standalone');
+  assert.ok(m.icons.some((i) => i.sizes === '192x192' && i.type === 'image/png'));
+  assert.ok(m.icons.some((i) => i.sizes === '512x512' && i.purpose === 'maskable'));
+  assert.ok(m.shortcuts.length >= 3);
+});
+
+test('atalhos de teclado do app no computador', async () => {
+  const { keyboardShortcuts } = await import('../js/core/desktop.js');
+  const handlers = {};
+  const added = [];
+  globalThis.addEventListener = (type, fn) => added.push(fn);
+  globalThis.removeEventListener = () => {};
+  const calls = [];
+  keyboardShortcuts({ newChat: () => calls.push('nova'), goTo: (i) => calls.push(`tela${i}`), focusInput: () => calls.push('escrever'), stop: () => (calls.push('parar'), true) });
+  const key = (k, o = {}) => added[0]({ key: k, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, target: { tagName: 'BODY' }, preventDefault() {}, ...o });
+  key('k', { ctrlKey: true });
+  key('2', { altKey: true });
+  key('/');
+  key('/', { target: { tagName: 'TEXTAREA' } });
+  key('Escape');
+  assert.deepEqual(calls, ['nova', 'tela1', 'escrever', 'parar']);
+  delete globalThis.addEventListener;
+  delete globalThis.removeEventListener;
+  void handlers;
+});
+

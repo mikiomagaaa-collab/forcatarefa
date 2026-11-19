@@ -11,6 +11,7 @@ import { h, clear, icon, toast } from './ui/dom.js';
 import { renderCodex } from './ui/codex.js';
 import { renderVideo } from './ui/video.js';
 import { renderSettings, renderLegal } from './ui/settings.js';
+import { desktop, keyboardShortcuts, setupDesktop } from './core/desktop.js';
 
 export const app = {
   settings: store.settings(),
@@ -144,6 +145,8 @@ function renderSidebar(current = (location.hash.replace(/^#\/?/, '') || 'chat').
   );
   const foot = clear(document.getElementById('sidebar-foot'));
   const online = app.onlineReady() && app.status && !app.status.error;
+  if (desktop.updateReady) foot.append(h('button.primary.install', { type: 'button', onclick: () => desktop.applyUpdate() }, 'Atualizar a L.I.L.Y'));
+  else if (desktop.canInstall && !desktop.installed) foot.append(h('button.ghost.install', { type: 'button', onclick: () => desktop.install() }, 'Instalar no computador'));
   foot.append(
     h('div.status', online ? `Online · ${app.models.length} modelos` : store.accessKey() ? 'Gateway configurado' : 'Sem serviço online'),
     h('div.status', local.current() ? `No navegador: ${local.current()}` : 'Nenhum modelo no navegador'),
@@ -350,6 +353,7 @@ function renderChat(view, ctx, id) {
     draw();
     const lastEl = () => list.lastElementChild;
     controller = new AbortController();
+    app.stopAnswer = () => (controller ? (controller.abort(), true) : false);
     sendBtn.replaceChildren(icon('stop'));
     app.presence.thinking('conversa', 'Pensando');
     const past = conv.messages.slice(0, -1).filter((m) => m.status !== 'error' && m.status !== 'stopped').slice(-16).map((m) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text.slice(0, 4000) }));
@@ -464,6 +468,20 @@ function start() {
   app.presence.subscribe((s) => floating.classList.toggle('show', app.settings.avatar.enabled && s.mode !== 'IDLE' && !location.hash.startsWith('#/settings')));
   addEventListener('hashchange', route);
   addEventListener('online', () => app.refreshGateway());
+  // App de computador: instalar, funcionar sem internet, versão nova só com o toque, atalhos.
+  document.documentElement.classList.toggle('installed', desktop.installed);
+  desktop.onChange(() => {
+    document.documentElement.classList.toggle('installed', desktop.installed);
+    renderSidebar();
+    if (desktop.updateReady) toast('Nova versão da L.I.L.Y pronta: toque em "Atualizar a L.I.L.Y" quando quiser.');
+  });
+  setupDesktop();
+  keyboardShortcuts({
+    newChat: () => (location.hash === '#/chat' ? route() : go('chat')),
+    goTo: (i) => go(NAV[i][0]),
+    focusInput: () => document.querySelector('.view textarea')?.focus(),
+    stop: () => app.stopAnswer?.() || false,
+  });
   route();
   app.refreshGateway();
 }

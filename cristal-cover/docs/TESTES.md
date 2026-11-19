@@ -479,3 +479,12 @@ Com o gateway 1.2 publicado 🌐:
 - [ ] Perfil Qualidade com OpenRouter configurado: usa um modelo pago (mostra o custo)
 - [ ] Depois de muitas respostas no mesmo dia: aparece "A cota grátis de hoje do Workers AI acabou" (volta à meia-noite UTC)
 
+## 27. L.I.L.Y Web como app de computador
+
+- [ ] Chrome ou Edge no computador: aparece "Instalar no computador" na barra lateral; instalar cria o ícone na área de trabalho/menu Iniciar
+- [ ] O app instalado abre em janela própria, com a barra de título integrada (dá para arrastar a janela pelo topo)
+- [ ] Clique com o botão direito no ícone: atalhos Nova conversa, Codex e Vídeo e imagem
+- [ ] Desligar a internet e abrir o app: ele abre, mostra "Offline" e conversa com um modelo do navegador já baixado
+- [ ] Publicar uma versão nova do gateway: aparece "Atualizar a L.I.L.Y"; nada recarrega sozinho no meio de uma conversa
+- [ ] Atalhos: Ctrl+K, Alt+1 a 5, / e Esc fazem o que a tela de Configurações diz
+

@@ -75,7 +75,7 @@ O que **foi verificado** durante o desenvolvimento:
 
 - compila do zero (debug e release com R8) com as versões estáveis atuais das ferramentas;
 - 319 testes automáticos em JVM passam (124 no Cristal, 45 no teclado, 16 no módulo compartilhado, 126 na
-  L.I.L.Y AI e 8 na Gallery), mais 37 do gateway, 10 da L.I.L.Y Web e o teste de ponta a ponta da Web
+  L.I.L.Y AI e 8 na Gallery), mais 37 do gateway, 12 da L.I.L.Y Web e o teste de ponta a ponta da Web
   num Chromium. No launcher: lógica da grade, detecção da tela externa,
   regras de compatibilidade, segurança dos comandos de shell, backup, papéis de parede por área,
   encaixe e edição da Central de Controle, **compilação real do shader AGSL** e **16 telas montadas e
@@ -259,10 +259,11 @@ visual da L.I.L.Y num layout inspirado em assistentes de conversa: barra lateral
 | Ferramentas | Corrigir, reescrever, resumir, traduzir, explicar e escrever |
 | Avatar | A mesma personagem, desenhada em Canvas, com os mesmos estados |
 | Legal | Termos, privacidade e créditos |
+| App no computador (PWA) | Instalável pelo Chrome e pelo Edge (ícone na área de trabalho e no menu Iniciar, janela própria com a barra de título integrada, atalhos no ícone: Nova conversa, Codex, Vídeo). Abre **sem internet** (service worker com o app guardado; o serviço online nunca fica em cache) e conversa com um modelo do navegador. Versão nova só entra com o toque em "Atualizar". Atalhos: Ctrl+K, Alt+1…5, /, Esc |
 
 O que a Web não tem (só existe no celular): modelos LiteRT, ML Kit (OCR, rótulos, recorte), geração de
 imagem iris, Liquid Island, tela externa e avatar flutuante por cima de outros apps. Continuar um vídeo
-gerado também fica só no app. Testes: 10 de lógica (`node --test test/*.test.js`) e um de ponta a ponta
+gerado também fica só no app. Testes: 12 de lógica (`node --test test/*.test.js`) e um de ponta a ponta
 num Chromium com o código real do gateway (`node test/e2e.mjs`).
 
 ## L.I.L.Y Gallery (pasta `gallery/`)
