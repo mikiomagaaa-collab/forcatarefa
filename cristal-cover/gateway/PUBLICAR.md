@@ -7,4 +7,4 @@ Editar este arquivo publica o gateway na sua conta Cloudflare (workflow "L.I.L.Y
    (por exemplo, a data) e toque em "Commit changes".
 3. Abra a aba Actions: no fim da execução aparece o endereço do seu gateway.
 
-Última publicação pedida: 2026-19-11
+Última publicação pedida: 2026-11-19 (publicada pelo Claude a pedido)
