@@ -137,7 +137,12 @@ workflows que estão no ramo principal, e o projeto fica no ramo dele):
 3. Abra a aba **Actions** > **L.I.L.Y Gateway - publicar**. O workflow roda os testes do gateway e da
    L.I.L.Y Web, publica e copia os segredos. No resumo da execução aparece o endereço, no formato
    `https://lily-gateway.<seu-subdominio>.workers.dev`. Se faltar algum segredo, o resumo diz qual e
-   nada é publicado.
+   nada é publicado. O ID da conta vem do próprio token quando ele só vê uma conta, e o subdomínio
+   workers.dev é criado na primeira publicação (então o segredo `CLOUDFLARE_ACCOUNT_ID` é opcional).
+4. No fim, o passo **Conferir o gateway publicado** faz pedidos de verdade ao endereço novo, com a sua
+   `LILY_ACCESS_KEY`: confere que ele está no ar e que a chave é aceita, faz uma pergunta ao modelo
+   grátis e gera uma imagem grátis (cerca de 1% da cota do dia). O resultado aparece no resumo, item
+   por item. O vídeo não é testado ali porque leva minutos.
 
 Para publicar de novo (chave nova, código novo), edite o `PUBLICAR.md` outra vez. Se um dia o projeto
 for para o ramo principal, o botão *Run workflow* também passa a funcionar.
