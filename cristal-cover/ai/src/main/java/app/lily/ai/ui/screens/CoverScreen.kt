@@ -117,7 +117,7 @@ fun CoverScreen(nav: Nav) {
         Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             when {
                 listening || (lastUser == null && streaming == null) -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.press({ listen() })) { LilyOrb(118.dp, energy = if (listening) 1f else 0f, level = voice.level ?: 0f) }
+                    Box(Modifier.press({ listen() })) { app.lily.ai.avatar.PresenceAvatar(118.dp, presentation = app.lily.ai.avatar.AvatarPresentation.FACE, listeningLevel = voice.level) }
                     Spacer(Modifier.height(6.dp))
                     Text(
                         when {

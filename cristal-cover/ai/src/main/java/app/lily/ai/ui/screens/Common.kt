@@ -196,22 +196,29 @@ fun ListenEffect(state: VoiceInputState, active: Boolean, onFinal: (String) -> U
         if (!active) return@LaunchedEffect
         state.level = 0f
         state.partial = ""
+        // A avatar mostra que está ouvindo só enquanto o microfone (ligado pelo toque) estiver aberto.
         try {
             app.lily.ai.engine.SpeechInput.listen(context).collect { e ->
                 when (e) {
-                    is app.lily.ai.engine.SpeechEvent.Level -> state.level = e.rms
+                    is app.lily.ai.engine.SpeechEvent.Level -> {
+                        state.level = e.rms
+                        app.lily.ai.presence.LilyPresence.listening(MIC, e.rms)
+                    }
                     is app.lily.ai.engine.SpeechEvent.Partial -> state.partial = e.text
                     is app.lily.ai.engine.SpeechEvent.Final -> onFinal(e.text)
                     is app.lily.ai.engine.SpeechEvent.Failed -> onError(e.message)
-                    app.lily.ai.engine.SpeechEvent.Ready -> Unit
+                    app.lily.ai.engine.SpeechEvent.Ready -> app.lily.ai.presence.LilyPresence.listening(MIC, 0f)
                 }
             }
         } finally {
             state.level = null
+            app.lily.ai.presence.LilyPresence.clear(MIC)
             onEnd()
         }
     }
 }
+
+private const val MIC = "microfone"
 
 fun shareText(context: Context, text: String) {
     val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, text)

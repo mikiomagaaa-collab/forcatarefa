@@ -2,6 +2,8 @@ package app.lily.ai.data
 
 import android.content.Context
 import androidx.compose.runtime.Immutable
+import app.lily.ai.avatar.AvatarLook
+import app.lily.ai.core.OnlineMode
 import app.lily.ai.core.Profile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,6 +36,21 @@ data class AiSettings(
     /** Baixar pacotes de tradução e modelos só no Wi-Fi. */
     val wifiOnly: Boolean = true,
     val onboarded: Boolean = false,
+    /** Quando usar modelos online (pelo L.I.L.Y Gateway). Só vale depois do [onlineConsent]. */
+    val online: OnlineMode = OnlineMode.FALLBACK,
+    /** A pessoa leu e aceitou o aviso de processamento externo. */
+    val onlineConsent: Boolean = false,
+    /** Aparência e presença da avatar. */
+    val avatar: AvatarLook = AvatarLook(),
+    /** Codex: aplicar sozinho correções simples (até [codexAutoLines] linhas em um arquivo). */
+    val codexAuto: Boolean = false,
+    val codexAutoLines: Int = 12,
+    /** Codex: pode pesquisar na internet. */
+    val codexWeb: Boolean = true,
+    /** Codex: uma revisão final por um modelo de outro fornecedor. */
+    val codexReview: Boolean = true,
+    /** Vídeo: salvar na Gallery (Filmes/L.I.L.Y) assim que ficar pronto. */
+    val videoAutoSave: Boolean = true,
 )
 
 class SettingsStore(context: Context) {

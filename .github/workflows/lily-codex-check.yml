@@ -1,0 +1,113 @@
+# Testes pedidos pelo L.I.L.Y Codex (pelo L.I.L.Y Gateway) num ramo lily-codex/...
+#
+# O Codex grava a correção num ramo próprio (nunca no principal) e dispara este workflow para validar
+# o comportamento de verdade: compilar não basta, os testes do projeto precisam passar. As entradas são
+# validadas aqui de novo (não confia em quem disparou).
+name: L.I.L.Y Codex - testes
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'gradle, npm ou pytest'
+        default: 'gradle'
+        type: string
+      tasks:
+        description: 'Tarefas (ex.: :app:testDebugUnitTest)'
+        default: 'test'
+        type: string
+      workdir:
+        description: 'Pasta do projeto dentro do repositório'
+        default: '.'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lily-codex-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Testes do Codex
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      RUNNER: ${{ inputs.runner }}
+      TASKS: ${{ inputs.tasks }}
+      WORKDIR: ${{ inputs.workdir }}
+    steps:
+      - name: Conferir o ramo e as entradas
+        run: |
+          case "$GITHUB_REF_NAME" in
+            lily-codex/*) ;;
+            *) echo "O Codex só testa ramos lily-codex/ (recebido: $GITHUB_REF_NAME)"; exit 1 ;;
+          esac
+          [[ "$RUNNER" =~ ^(gradle|npm|pytest)$ ]] || { echo "Executor inválido"; exit 1; }
+          [[ "$TASKS" =~ ^[A-Za-z0-9:_.\ -]{1,300}$ ]] || { echo "Tarefas inválidas"; exit 1; }
+          [[ "$WORKDIR" =~ ^[A-Za-z0-9_./-]{1,100}$ && "$WORKDIR" != *..* ]] || { echo "Pasta inválida"; exit 1; }
+
+      - name: Baixar o código do ramo
+        uses: actions/checkout@v4
+
+      - name: Instalar o Java 21
+        if: env.RUNNER == 'gradle'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Preparar o Gradle
+        if: env.RUNNER == 'gradle'
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Plataforma Android (se o projeto for Android)
+        if: env.RUNNER == 'gradle'
+        working-directory: ${{ inputs.workdir }}
+        run: |
+          if grep -rqs "com.android" build.gradle* settings.gradle* 2>/dev/null; then
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;36.0.0" > /dev/null
+          fi
+
+      - name: Instalar o Node
+        if: env.RUNNER == 'npm'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar o Python
+        if: env.RUNNER == 'pytest'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Rodar os testes
+        working-directory: ${{ inputs.workdir }}
+        env:
+          LC_ALL: C.UTF-8
+          LANG: C.UTF-8
+        run: |
+          read -r -a ARGS <<< "$TASKS"
+          case "$RUNNER" in
+            gradle) chmod +x ./gradlew && ./gradlew --no-daemon --continue "${ARGS[@]}" ;;
+            npm) npm ci && npm "${ARGS[@]}" ;;
+            pytest) pip install -q -r requirements.txt 2>/dev/null || true; pip install -q pytest && python -m pytest -q "${ARGS[@]}" ;;
+          esac
+
+      - name: Resumo das falhas
+        if: failure() && env.RUNNER == 'gradle'
+        working-directory: ${{ inputs.workdir }}
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          n = 0
+          for x in glob.glob('**/build/test-results/**/*.xml', recursive=True):
+              for tc in ET.parse(x).getroot().iter('testcase'):
+                  for f in list(tc.iter('failure')) + list(tc.iter('error')):
+                      n += 1
+                      if n <= 15:
+                          print(f"FALHOU {tc.get('classname')}.{tc.get('name')}: {(f.get('message') or '')[:300]}")
+          print(f"{n} teste(s) falharam")
+          PY

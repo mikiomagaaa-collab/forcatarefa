@@ -218,7 +218,21 @@ fun ChatContent(nav: Nav, session: ChatSession, compact: Boolean = false) {
             Composer(
                 text = session.draft,
                 onText = { session.draft = it },
-                onSend = { session.send() },
+                onSend = {
+                    // Atalhos para os módulos: "/codex tarefa" e "/video descrição".
+                    val d = session.draft.trim()
+                    when {
+                        d.startsWith("/codex", ignoreCase = true) -> {
+                            session.draft = ""
+                            nav.go(Route.Codex(task = d.removeRange(0, 6).trim()))
+                        }
+                        d.startsWith("/video", ignoreCase = true) || d.startsWith("/vídeo", ignoreCase = true) -> {
+                            session.draft = ""
+                            nav.go(Route.Video(prompt = d.substringAfter(' ', "").trim()))
+                        }
+                        else -> session.send()
+                    }
+                },
                 placeholder = if (session.preparing) "Preparando o anexo…" else "Pergunte qualquer coisa",
                 image = session.image?.thumb,
                 audioLabel = session.audio?.let { "${it.label} · ${it.seconds}s" },
@@ -362,7 +376,7 @@ private fun EmptyChat(compact: Boolean, onSuggestion: (String) -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        LilyOrb(if (compact) 96.dp else 150.dp)
+        app.lily.ai.avatar.PresenceAvatar(if (compact) 96.dp else 150.dp)
         Text("Como posso ajudar?", style = Type.title, color = c.content)
         Spacer(Modifier.height(6.dp))
         Text("Tudo roda no aparelho, sem enviar nada para a internet.", style = Type.footnote, color = c.secondary, textAlign = TextAlign.Center)

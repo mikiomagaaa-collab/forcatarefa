@@ -111,6 +111,8 @@ class DiagnosticActivity : Activity() {
         val open = button("Abrir a L.I.L.Y", filled = false) { openLily(safe = false) }
         safeButton = button("", filled = false) { toggleSafe() }
         val clear = button("Apagar histórico", filled = false) { clearHistory() }
+        // O Codex tenta achar a causa e corrigir no código-fonte autorizado (nunca no app instalado).
+        val fix = button("Consertar com o Codex", filled = false) { openCodex() }
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -122,7 +124,7 @@ class DiagnosticActivity : Activity() {
             addView(copy, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(12) })
             addView(row(share, save), LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(8) })
             addView(row(open, safeButton), LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(8) })
-            addView(clear, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(8) })
+            addView(row(fix, clear), LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(8) })
             // O app desenha de ponta a ponta: as barras do sistema viram margem.
             setOnApplyWindowInsetsListener { v, insets ->
                 val bars = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
@@ -188,6 +190,17 @@ class DiagnosticActivity : Activity() {
         }
         startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
         finish()
+    }
+
+    /** Abre o Codex com o relatório como o erro a consertar (no projeto que a pessoa autorizar). */
+    private fun openCodex() {
+        val error = CrashReport.last(this) ?: report
+        startActivity(
+            Intent(this, MainActivity::class.java)
+                .putExtra(MainActivity.EXTRA_ROUTE, "codex")
+                .putExtra(MainActivity.EXTRA_CODEX_ERROR, error.take(40_000))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
     }
 
     private fun toggleSafe() {

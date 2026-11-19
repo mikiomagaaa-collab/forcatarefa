@@ -1,0 +1,29 @@
+# L.I.L.Y Gateway (Cloudflare Worker). Passo a passo em ../docs/GATEWAY.md.
+name = "lily-gateway"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+# A L.I.L.Y Web (cristal-cover/web) e os documentos legais: o mesmo endereço do gateway abre o site.
+# A pasta public/ é montada por "npm run build:web" (o workflow de publicação faz isso).
+[assets]
+directory = "./public"
+
+# Limite de gasto diário (US$). O KV abaixo guarda o gasto do dia; sem ele o limite não é garantido.
+[vars]
+DAILY_BUDGET_USD = "3"
+CODEX_WORKFLOW = "lily-codex-check.yml"
+# CORS para abrir a L.I.L.Y Web de outro endereço (ex.: "https://meu-site.dev"). Vazio = só o próprio gateway.
+ALLOWED_ORIGINS = ""
+
+# Crie o KV com: npx wrangler kv namespace create LILY_USAGE  (e cole o id aqui)
+# [[kv_namespaces]]
+# binding = "LILY_USAGE"
+# id = "COLE_O_ID_AQUI"
+
+# Segredos (nunca neste arquivo): npx wrangler secret put NOME
+#   LILY_ACCESS_KEY      a chave que o app usa (gere uma longa e aleatória)
+#   OPENROUTER_API_KEY   modelos de programação e conversa
+#   FAL_KEY              vídeo
+#   TAVILY_API_KEY       pesquisa (ou BRAVE_API_KEY)
+#   GITHUB_TOKEN         token "fine-grained" só dos repositórios abaixo
+#   GITHUB_REPOS         ex.: dono/repositorio

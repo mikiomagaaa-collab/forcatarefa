@@ -488,6 +488,85 @@ colorido**; intensidade; segunda cor; **Horas e minutos com cores próprias**; *
 prévia muda na hora. Vale para a tela interna e para a externa (cada uma com a sua escolha) e fica guardado
 nas coleções.
 
+## 9.5 L.I.L.Y AI 1.3.0: Codex, Video AI, avatar e serviço online
+
+Instale a 1.3.0 por cima da 1.2.1 (não precisa desinstalar). Sem fazer mais nada, a L.I.L.Y continua
+**inteira no aparelho**: a novidade que aparece sozinha é a **avatar**. O Codex, o Video AI e os modelos
+online usam um serviço seu, o **L.I.L.Y Gateway**, que você cria uma vez (30 a 40 minutos, só pelo celular).
+
+### Avatar
+
+Configurações > **Avatar**: estilo (Holograma, Vidro, Mínimo), forma (busto, rosto, orbe), cor, tamanho,
+transparência e intensidade das animações, com prévia. Ela respira, pisca, olha em volta e mexe a boca ao
+falar; muda conforme o que a L.I.L.Y está fazendo: ouvindo, pensando, falando, trabalhando (Codex, vídeo,
+imagem), sucesso e erro. A avatar **nunca liga a câmera nem o microfone sozinha**.
+
+**Avatar flutuante (opcional):** em Configurações > Avatar, escolha "Durante tarefas" ou "Sempre". O
+Android pede a permissão **Sobrepor a outros apps**; sem ela, o app só explica e nada muda. Arraste para
+mudar de lugar, toque para abrir a L.I.L.Y e segure para esconder. Na tela externa ela aparece pequena.
+No modo "Sempre", o Android pode fechá-la para poupar bateria; ela volta quando você abre a L.I.L.Y.
+
+### Criar o serviço online (uma vez)
+
+Siga o passo a passo de [GATEWAY.md](GATEWAY.md). Em resumo: conta grátis na Cloudflare, uma chave de
+acesso inventada por você, as chaves dos provedores que quiser usar (OpenRouter para o Codex e a conversa
+online, fal.ai para vídeo), guardar tudo como segredos do GitHub e rodar o workflow **L.I.L.Y Gateway -
+publicar**. Depois, na L.I.L.Y AI: Configurações > **Serviço online** > endereço e chave > **Salvar e
+testar** > ligar **Permitir processamento externo**.
+
+Três modos (Serviço online): **Só no aparelho** (nada sai), **Online quando faltar** (usa o modelo online
+só quando não há modelo instalado para a tarefa) e **Online primeiro**. Imagem e áudio nunca vão para fora.
+Cada resposta online mostra o modelo e o custo.
+
+**Custos:** a hospedagem é grátis no plano básico da Cloudflare; os modelos e os vídeos são cobrados pelos
+provedores pelo uso (a tela mostra o preço antes). O gateway tem um limite de gasto por dia (US$ 3 por
+padrão). Quem tiver a sua chave de acesso gasta os seus créditos: guarde-a como uma senha.
+
+### Codex
+
+Toque em **Codex** na tela inicial ou escreva `/codex` na conversa. Escolha o projeto:
+
+- **Repositório do GitHub** (precisa do token e da lista `LILY_GITHUB_REPOS` no gateway): o Codex lê, edita
+  num ramo `lily-codex/...` e roda os testes no GitHub Actions. O ramo principal nunca é tocado.
+- **Pasta do aparelho**: você escolhe a pasta pelo seletor do Android e o Codex só enxerga o que está
+  nela. Aqui ele confere a sintaxe, mas **não roda testes** (o Android não roda Gradle nem Node).
+
+Descreva o problema ou cole um erro. O Codex mostra o plano, lê os arquivos, pesquisa na internet quando
+precisa (com as fontes) e **prepara** as mudanças: você vê o diff e a explicação, e só depois de tocar em
+**Aprovar e aplicar** algo é gravado, com um ponto de restauração e o botão **Desfazer**. Se os testes
+falharem, ele lê o erro e tenta de novo, no máximo 3 vezes, e para se o mesmo erro voltar. No fim ele diz
+o que foi **verificado**, o que é **hipótese** e os riscos, e um segundo modelo (de outra empresa) revisa.
+Compilar não basta para ele considerar a correção boa.
+
+Modo automático (na tela do Codex): aplica sozinho só correções pequenas (até o número de linhas que você
+escolher) sem problemas na verificação; dá para desfazer.
+
+Se a L.I.L.Y fechar por um erro, o **L.I.L.Y Diagnóstico** tem o botão **Consertar com o Codex**: ele abre o
+Codex com o relatório já preenchido.
+
+### Video AI
+
+Toque em **Vídeo** ou escreva `/video`. Descreva a cena (ou escolha uma foto para animar, ou continue um
+vídeo pronto a partir do último quadro), escolha formato, duração, resolução e movimento de câmera. A tela
+mostra o **preço estimado e o modelo** antes de gerar. Enquanto o vídeo é feito, você pode usar o celular
+normalmente: a Liquid Island mostra o progresso e um aviso chega quando termina. Salve em Filmes/L.I.L.Y
+(aparece na Gallery) ou compartilhe. A barra de progresso é uma estimativa pelo tempo; o provedor não informa
+a porcentagem.
+
+### L.I.L.Y Web (no computador)
+
+Abra o endereço do gateway no Chrome ou no Edge: é a L.I.L.Y para o PC, com conversa, Codex (repositório do
+GitHub ou uma pasta do computador), vídeo, ferramentas e a avatar. Em Configurações, cole a chave de acesso.
+Para usar sem internet, escolha um **modelo local** (roda no navegador com WebGPU; o download só começa
+depois que você escolhe e mostra o tamanho). Ela não tem o que só existe no celular (OCR, geração de imagem,
+Liquid Island, avatar por cima de outros apps).
+
+### Termos, privacidade e créditos
+
+Configurações > Sobre > **Termos de uso**, **Privacidade** e **Créditos**. São os mesmos arquivos da pasta
+`legal/` e também ficam na L.I.L.Y Web. Antes de compartilhar o projeto, preencha o seu nome e contato nos
+arquivos (procure por colchetes, como `[nome do autor]` e `[e-mail ou canal de contato]`) e, de preferência, peça uma revisão jurídica.
+
 ## 10. Problemas comuns
 
 **A L.I.L.Y AI abre e fecha (até a 1.2.0).** Era o WorkManager, uma biblioteca do Google que vem junto com o

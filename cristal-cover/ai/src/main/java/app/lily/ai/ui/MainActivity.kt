@@ -149,6 +149,8 @@ class MainActivity : ComponentActivity() {
             "hub" -> nav.go(Route.Hub())
             "imagegen" -> nav.go(Route.ImageGen())
             "chat" -> nav.go(Route.Chat())
+            "video" -> if (nav.current.route !is Route.Video) nav.go(Route.Video())
+            "codex" -> nav.go(Route.Codex(error = intent.getStringExtra(EXTRA_CODEX_ERROR).orEmpty().take(40_000)))
         }
     }
 
@@ -158,6 +160,7 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_ROUTE = "route"
+        const val EXTRA_CODEX_ERROR = "codex_error"
         const val EXTRA_CONVERSATION = "conversation"
         const val ACTION_ASK = "app.lily.ai.action.ASK"
         const val ASK_ENTRY = "app.lily.ai.ui.AskEntry"
@@ -220,6 +223,11 @@ private fun FullApp(nav: Nav) {
             Route.Settings -> SettingsScreen(nav)
             Route.Memory -> MemoryScreen(nav)
             Route.Diagnostics -> app.lily.ai.ui.screens.DiagnosticsScreen(nav, entry.key)
+            Route.Online -> app.lily.ai.ui.screens.OnlineScreen(nav)
+            Route.Avatar -> app.lily.ai.ui.screens.AvatarScreen(nav)
+            is Route.Video -> app.lily.ai.ui.screens.VideoScreen(nav, r)
+            is Route.Codex -> app.lily.ai.ui.screens.CodexScreen(nav, entry.key, r)
+            is Route.Legal -> app.lily.ai.ui.screens.LegalScreen(nav, app.lily.ai.ui.screens.LegalDoc.valueOf(r.doc))
         }
     }
 }

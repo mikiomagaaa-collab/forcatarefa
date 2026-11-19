@@ -21,6 +21,10 @@ import app.lily.ai.models.Catalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.transform
+import app.lily.ai.remote.RemoteChunk
+import app.lily.ai.remote.RemoteMessage
+import app.lily.ai.remote.RemoteUsage
 import kotlinx.coroutines.withContext
 
 /** O que uma ferramenta de imagem devolveu. */
@@ -52,9 +56,32 @@ class AiTools(private val graph: AiGraph) {
         is EngineChoice.Translator -> flow {
             emit(Translator.translate(prompt, targetLanguage ?: "en", graph.settings.value.value.wifiOnly))
         }
+        is EngineChoice.Remote -> remoteText(e.model.id, Prompts.system(graph.activeMemories(), online = true), history, prompt, temperature)
         is EngineChoice.Unavailable -> flow { throw EngineRefused(e.reason) }
         else -> flow { throw EngineRefused("Esta tarefa não é de texto.") }
     }
+
+    /**
+     * Um modelo online (pelo gateway) com o mesmo contrato do motor local: texto acumulado em
+     * pedaços. O custo informado pelo provedor fica em [lastRemoteUsage].
+     */
+    fun remoteText(model: String, system: String?, history: List<Turn>, prompt: String, temperature: Double = 0.7, maxTokens: Int = 4096): Flow<String> {
+        val messages = buildList {
+            system?.let { add(RemoteMessage("system", it)) }
+            history.forEach { add(RemoteMessage(if (it.fromUser) "user" else "assistant", it.text)) }
+            add(RemoteMessage("user", prompt))
+        }
+        return graph.gateway.chat(model, messages, temperature, maxTokens).transform { chunk ->
+            when (chunk) {
+                is RemoteChunk.Text -> emit(chunk.total)
+                is RemoteChunk.Done -> lastRemoteUsage = chunk.usage
+            }
+        }
+    }
+
+    /** O uso da última resposta online (tokens e custo informados pelo provedor). */
+    @Volatile var lastRemoteUsage: RemoteUsage? = null
+        private set
 
     /** Ferramenta de texto pronta: [task] com o texto, o estilo e o tom. */
     fun textTool(

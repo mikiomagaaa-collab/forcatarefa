@@ -39,6 +39,21 @@ sealed interface Route {
     data object Settings : Route
     data object Memory : Route
     data object Diagnostics : Route
+
+    /** Serviço online (conexão com o L.I.L.Y Gateway). */
+    data object Online : Route
+
+    /** Aparência e presença da avatar. */
+    data object Avatar : Route
+
+    /** Video AI (geração online). */
+    data class Video(val prompt: String = "") : Route
+
+    /** L.I.L.Y Codex: [task] já preenchida; [error] = um erro para consertar (do Diagnóstico ou do chat). */
+    data class Codex(val task: String = "", val error: String = "") : Route
+
+    /** Termos de Uso, Privacidade ou Créditos (nome de [app.lily.ai.ui.screens.LegalDoc]). */
+    data class Legal(val doc: String) : Route
 }
 
 /** Uma tela na pilha. A chave não muda quando a rota é trocada no lugar (a conversa ganha um id). */

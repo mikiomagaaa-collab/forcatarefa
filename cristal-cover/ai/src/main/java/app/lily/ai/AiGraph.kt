@@ -20,6 +20,15 @@ import app.lily.ai.imagegen.ImageGenJobs
 import app.lily.ai.models.Downloads
 import app.lily.ai.models.ModelStore
 import app.lily.ai.tools.AiTools
+import app.lily.ai.avatar.AvatarOverlay
+import app.lily.ai.core.OnlineMode
+import app.lily.ai.imagegen.GenState
+import app.lily.ai.presence.LilyPresence
+import app.lily.ai.remote.GatewayClient
+import app.lily.ai.remote.GatewayStore
+import app.lily.ai.ui.screens.Network
+import app.lily.ai.video.VideoJobs
+import app.lily.ai.codex.Projects
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -77,6 +86,20 @@ class AiGraph(val app: Application, val safeMode: Boolean = false, private val f
     val perf = module(PERF, { PerfStore(File(app.cacheDir, "perf-reserva.json")) }) { PerfStore(File(app.filesDir, "perf.json")) }
     val imageGen = module(IMAGE_GEN, { ImageGenJobs(app) }) { ImageGenJobs(app) }
     val tools = module(TOOLS, null) { AiTools(this) }
+
+    /** O serviço online (L.I.L.Y Gateway): só a chave de acesso fica aqui, cifrada pelo Keystore. */
+    var gatewayStore: GatewayStore = module(GATEWAY, { GatewayStore(app, NoKeystoreBox) }) { GatewayStore(app) }
+        @androidx.annotation.VisibleForTesting internal set
+    var gateway: GatewayClient = GatewayClient(gatewayStore) { Network.online(app) }
+        @androidx.annotation.VisibleForTesting internal set
+
+    val overlay: AvatarOverlay by lazy { AvatarOverlay(this, app) }
+
+    /** Codex: os projetos que a pessoa autorizou (pasta do aparelho ou repositório pelo gateway). */
+    val codexProjects = module(CODEX, { Projects(app) }) { Projects(app) }
+
+    /** Video AI: o histórico e o acompanhamento dos vídeos gerados online. */
+    val videos = module(VIDEO, { VideoJobs(app) { gateway } }) { VideoJobs(app) { gateway } }
     val assist: AssistController by lazy { AssistController(this, app) }
     val voice: Voice by lazy { Voice(app) }
 
@@ -92,11 +115,43 @@ class AiGraph(val app: Application, val safeMode: Boolean = false, private val f
         }
         if (safeMode) status += "Modo seguro: interface sem efeitos pesados"
         DiagLog.modules(status)
+        // A avatar acompanha a geração de imagem (as outras tarefas avisam a presença diretamente).
+        scope.launch {
+            var running = false
+            imageGen.state.collect { g ->
+                when (g) {
+                    is GenState.Running -> {
+                        running = true
+                        LilyPresence.working(PRESENCE_IMAGE, "Gerando imagem", g.fraction)
+                    }
+                    is GenState.Done -> if (running) LilyPresence.finished(PRESENCE_IMAGE, true, "Imagem pronta").also { running = false }
+                    is GenState.Failed -> if (running) LilyPresence.finished(PRESENCE_IMAGE, false, "A imagem não saiu").also { running = false }
+                    else -> if (running) LilyPresence.clear(PRESENCE_IMAGE).also { running = false }
+                }
+            }
+        }
+    }
+
+    /** Modelos online podem ser usados agora (gateway configurado, aviso aceito e internet). */
+    fun onlineReady(): Boolean {
+        val s = settings.value.value
+        return s.onlineConsent && s.online != OnlineMode.OFF && gateway.configured && gateway.online()
     }
 
     /** O que o roteador precisa: perfil, instalados, padrões e a escolha manual. */
-    fun routerInput(manual: String? = null): RouterInput =
-        RouterInput(settings.value.value.profile, store.installedIds(), store.defaults(), manual)
+    fun routerInput(manual: String? = null): RouterInput {
+        val s = settings.value.value
+        val ready = onlineReady()
+        return RouterInput(
+            profile = s.profile,
+            installed = store.installedIds(),
+            defaults = store.defaults(),
+            manual = manual,
+            remote = if (ready) gateway.cachedModels() else emptyList(),
+            online = if (s.onlineConsent) s.online else OnlineMode.OFF,
+            connected = ready,
+        )
+    }
 
     /** Memórias que a IA pode usar agora (vazio com a memória desligada). */
     fun activeMemories(): List<String> = if (settings.value.value.memoryEnabled) memory.active() else emptyList()
@@ -129,5 +184,15 @@ class AiGraph(val app: Application, val safeMode: Boolean = false, private val f
         const val PERF = "Medições de desempenho"
         const val IMAGE_GEN = "Geração de imagem"
         const val TOOLS = "Ferramentas"
+        const val GATEWAY = "Serviço online (L.I.L.Y Gateway)"
+        const val VIDEO = "Video AI"
+        const val CODEX = "L.I.L.Y Codex"
+        const val PRESENCE_IMAGE = "imagem"
     }
+}
+
+/** Reserva sem Keystore: não guarda a chave (o app segue só com os modelos do aparelho). */
+private object NoKeystoreBox : app.lily.ai.remote.SecretBox {
+    override fun seal(plain: String): String = throw IllegalStateException("Keystore indisponível neste aparelho")
+    override fun open(sealed: String): String? = null
 }

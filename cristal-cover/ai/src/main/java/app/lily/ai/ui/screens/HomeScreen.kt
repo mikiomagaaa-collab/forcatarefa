@@ -27,6 +27,8 @@ import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Brush
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.ImageSearch
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Settings
@@ -124,7 +126,7 @@ fun HomeScreen(nav: Nav) {
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
             Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
-                LilyOrb(176.dp, energy = if (engine is EngineStatus.Busy || listening) 1f else 0f, level = voice.level ?: 0f)
+                app.lily.ai.avatar.PresenceAvatar(176.dp, listeningLevel = voice.level)
             }
             val status = when (val e = engine) {
                 is EngineStatus.Loading -> "Carregando ${e.model.name}…"
@@ -133,7 +135,9 @@ fun HomeScreen(nav: Nav) {
                 EngineStatus.Idle -> if (chatModels.isEmpty()) "Instale um modelo para conversar sem internet" else
                     "${chatModels.size} ${if (chatModels.size == 1) "modelo" else "modelos"} no aparelho · perfil ${settings.profile.label}"
             }
-            Text(listening.takeIf { it }?.let { "Ouvindo…" } ?: notice ?: status, style = Type.footnote, color = c.secondary, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            val presence by app.lily.ai.presence.LilyPresence.state.collectAsStateWithLifecycle()
+            val doing = presence.takeIf { it.mode != app.lily.ai.presence.PresenceMode.IDLE }?.let { p -> (p.label ?: p.mode.label) + (p.progress?.let { " · ${(it * 100).toInt()}%" } ?: "") }
+            Text(listening.takeIf { it }?.let { "Ouvindo…" } ?: notice ?: doing ?: status, style = Type.footnote, color = c.secondary, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
 
             if (chatModels.isEmpty()) {
                 Spacer(Modifier.height(16.dp))
@@ -148,6 +152,12 @@ fun HomeScreen(nav: Nav) {
                     Spacer(Modifier.height(10.dp))
                     Progress(g.fraction)
                 }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ModuleCard("Codex", "Programar, depurar e revisar projetos", Icons.Rounded.Code, Modifier.weight(1f)) { nav.go(Route.Codex()) }
+                ModuleCard("Vídeo", "Criar vídeos a partir de texto ou imagem", Icons.Rounded.Movie, Modifier.weight(1f)) { nav.go(Route.Video()) }
             }
 
             SectionHeader("Ferramentas", action = "Ver todas", onAction = { nav.go(Route.Tools) })
@@ -211,6 +221,17 @@ fun HomeScreen(nav: Nav) {
                 listening = if (listening) voice.level ?: 0f else null,
             )
         }
+    }
+}
+
+@Composable
+private fun ModuleCard(title: String, text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier, onClick: () -> Unit) {
+    val c = Lily.colors
+    GlassCard(modifier, onClick = onClick) {
+        androidx.compose.material3.Icon(icon, contentDescription = null, tint = c.accent)
+        Spacer(Modifier.height(8.dp))
+        Text(title, style = Type.headline, color = c.content)
+        Text(text, style = Type.caption, color = c.secondary, maxLines = 2)
     }
 }
 

@@ -1,0 +1,11 @@
+{
+  "name": "L.I.L.Y",
+  "short_name": "L.I.L.Y",
+  "description": "A assistente do PROJECT LIQUID FLIP no computador.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b0a14",
+  "theme_color": "#0b0a14",
+  "lang": "pt-BR",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

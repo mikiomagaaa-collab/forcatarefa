@@ -139,7 +139,7 @@ fun AssistPanel(
             Box(Modifier.fillMaxWidth().height(3.dp).background(Brush.horizontalGradient(c.orb)))
             Column(Modifier.padding(start = 16.dp, end = 10.dp, top = 12.dp, bottom = 14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    LilyOrb(40.dp, energy = if (listening || session.busy) 1f else 0f, level = voice.level ?: 0f)
+                    app.lily.ai.avatar.PresenceAvatar(48.dp, presentation = app.lily.ai.avatar.AvatarPresentation.FACE, listeningLevel = voice.level)
                     Spacer(Modifier.width(8.dp))
                     Column(Modifier.weight(1f)) {
                         Text("L.I.L.Y", style = Type.headline, color = Color.White)

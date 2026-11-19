@@ -24,6 +24,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Memory
@@ -110,6 +112,18 @@ fun SettingsScreen(nav: Nav) {
                 Text(settings.profile.description, style = Type.footnote, color = c.secondary)
                 Spacer(Modifier.height(6.dp))
                 Text("Para fixar um modelo numa conversa, toque no nome do modelo no topo dela.", style = Type.caption, color = c.tertiary)
+            }
+
+            SectionHeader("Online e avatar")
+            GlassCard(Modifier.fillMaxWidth()) {
+                val gateway by graph.gatewayStore.config.collectAsStateWithLifecycle()
+                SettingRow(
+                    "Serviço online",
+                    if (gateway == null) "Conecte o L.I.L.Y Gateway para o Codex, o Vídeo e modelos maiores" else "Conectado · ${settings.online.label.lowercase()}",
+                    Icons.Rounded.Cloud,
+                    onClick = { nav.go(Route.Online) },
+                )
+                SettingRow("Avatar", if (settings.avatar.enabled) "${settings.avatar.style.label} · ${settings.avatar.presentation.label.lowercase()}" else "Desligada (esfera)", Icons.Rounded.Face, onClick = { nav.go(Route.Avatar) })
             }
 
             SectionHeader("Aparência")
@@ -230,6 +244,9 @@ fun SettingsScreen(nav: Nav) {
             GlassCard(Modifier.fillMaxWidth()) {
                 SettingRow("L.I.L.Y AI", "Versão ${BuildConfig.VERSION_NAME}", Icons.Rounded.Info)
                 SettingRow("Licenças de terceiros", "Bibliotecas, modelos e fontes", Icons.Rounded.Description, onClick = { licenses = true })
+                SettingRow("Termos de Uso", null, Icons.Rounded.Description, onClick = { nav.go(Route.Legal(LegalDoc.TERMS.name)) })
+                SettingRow("Política de Privacidade", "O que fica no aparelho e o que pode sair", Icons.Rounded.Description, onClick = { nav.go(Route.Legal(LegalDoc.PRIVACY.name)) })
+                SettingRow("Créditos", "Quem fez e o que o projeto usa", Icons.Rounded.Description, onClick = { nav.go(Route.Legal(LegalDoc.CREDITS.name)) })
             }
             Spacer(Modifier.height(24.dp).navigationBarsPadding())
         }

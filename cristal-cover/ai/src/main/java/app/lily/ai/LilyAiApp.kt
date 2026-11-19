@@ -59,6 +59,9 @@ class LilyAiApp : Application(), Configuration.Provider {
             startupError = t
             runCatching { CrashReport.save(this, Thread.currentThread().name, t, fatal = false) }
         }
+        // Avatar flutuante (opcional): só observa; nada aparece sem a pessoa ligar e permitir.
+        runCatching { app.lily.ai.presence.AppVisibility.install(this) }
+        core?.let { graph -> runCatching { DiagLog.step("Avatar flutuante") { graph.overlay.start() } } }
         DiagLog.appReady()
     }
 

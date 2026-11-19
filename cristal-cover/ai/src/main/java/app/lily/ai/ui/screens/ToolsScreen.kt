@@ -103,6 +103,7 @@ fun engineLabel(plan: RoutePlan): Pair<String, Boolean> = when (val e = plan.eng
     EngineChoice.Classic -> "Algoritmo clássico" to true
     EngineChoice.SpeechInput -> "Reconhecimento do Android" to true
     EngineChoice.Voice -> "Voz do Android" to true
+    is EngineChoice.Remote -> "${e.model.label} · online" to true
     is EngineChoice.Unavailable -> "Precisa de um modelo" to false
 }
 

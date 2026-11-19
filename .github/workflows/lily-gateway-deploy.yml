@@ -1,0 +1,68 @@
+# Publica o L.I.L.Y Gateway na sua conta Cloudflare (só quando você dispara, pelo app do GitHub ou
+# pelo site). Os segredos ficam nos "Secrets" do repositório e são copiados para o Worker; nada fica
+# no código nem no APK. Passo a passo: cristal-cover/docs/GATEWAY.md.
+name: L.I.L.Y Gateway - publicar
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Testar e publicar o gateway
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: cristal-cover/gateway
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Testes do gateway
+        run: node --test test/*.test.js
+
+      - name: Conferir a conta Cloudflare
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "Crie os segredos CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID no repositório (docs/GATEWAY.md)."
+            exit 1
+          fi
+
+      - name: Montar a L.I.L.Y Web e os documentos
+        run: node scripts/build-web.mjs
+
+      - name: Testes da L.I.L.Y Web
+        working-directory: cristal-cover/web
+        run: node --test test/*.test.js
+
+      - name: Publicar o Worker
+        run: npx --yes wrangler@4 deploy
+
+      - name: Copiar os segredos para o Worker
+        env:
+          LILY_ACCESS_KEY: ${{ secrets.LILY_ACCESS_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          FAL_KEY: ${{ secrets.FAL_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
+          GITHUB_TOKEN_CODEX: ${{ secrets.LILY_GITHUB_TOKEN }}
+          GITHUB_REPOS: ${{ secrets.LILY_GITHUB_REPOS }}
+        run: |
+          put() { if [ -n "$2" ]; then printf '%s' "$2" | npx --yes wrangler@4 secret put "$1" > /dev/null && echo "segredo $1 atualizado"; fi; }
+          put LILY_ACCESS_KEY "$LILY_ACCESS_KEY"
+          put OPENROUTER_API_KEY "$OPENROUTER_API_KEY"
+          put FAL_KEY "$FAL_KEY"
+          put TAVILY_API_KEY "$TAVILY_API_KEY"
+          put BRAVE_API_KEY "$BRAVE_API_KEY"
+          put GITHUB_TOKEN "$GITHUB_TOKEN_CODEX"
+          put GITHUB_REPOS "$GITHUB_REPOS"
+          if [ -z "$LILY_ACCESS_KEY" ]; then echo "Atenção: sem LILY_ACCESS_KEY o gateway recusa todos os pedidos."; fi

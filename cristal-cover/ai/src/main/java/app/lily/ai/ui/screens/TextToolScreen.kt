@@ -335,7 +335,7 @@ fun TextToolScreen(nav: Nav, key: Int, route: Route.TextTool) {
                 TaskKind.TRANSCRIBE_MIC -> {
                     Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(Modifier.heightIn(min = 150.dp), contentAlignment = Alignment.Center) {
-                            LilyOrb(150.dp, energy = if (listening) 1f else 0f, level = voice.level ?: 0f)
+                            app.lily.ai.avatar.PresenceAvatar(150.dp, listeningLevel = voice.level)
                         }
                         Text(
                             if (listening) voice.partial.ifBlank { "Ouvindo…" } else "Toque no microfone e fale. Ele para sozinho quando você termina.",

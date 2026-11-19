@@ -8,6 +8,7 @@ import app.lily.ai.models.Compatibility
 import app.lily.ai.models.Modality
 import app.lily.ai.models.ModelSpec
 import app.lily.ai.models.Runtime
+import app.lily.ai.remote.RemoteModel
 
 /** Os três perfis do roteador. */
 enum class Profile(val label: String, val description: String) {
@@ -18,6 +19,14 @@ enum class Profile(val label: String, val description: String) {
 
 /** Onde o modelo de linguagem roda. */
 enum class Accel(val label: String) { CPU("CPU"), GPU("GPU") }
+
+/** Quando a L.I.L.Y pode usar modelos online (pelo L.I.L.Y Gateway). */
+@kotlinx.serialization.Serializable
+enum class OnlineMode(val label: String, val description: String) {
+    OFF("Só no aparelho", "Nada sai do celular. Sem modelo instalado, a L.I.L.Y avisa."),
+    FALLBACK("Online quando faltar", "Usa um modelo online só quando não há modelo no aparelho para a tarefa."),
+    PREFER("Online primeiro", "Usa os modelos online sempre que houver internet (mais capazes, com custo)."),
+}
 
 /** O mecanismo escolhido para uma tarefa. */
 sealed interface EngineChoice {
@@ -33,14 +42,18 @@ sealed interface EngineChoice {
     data object LanguageId : EngineChoice
     data object Translator : EngineChoice
 
+    /** Um modelo online, pelo L.I.L.Y Gateway: o texto sai do aparelho (processamento externo). */
+    data class Remote(val model: RemoteModel) : EngineChoice
+
     /** Não há mecanismo instalado/compatível: [reason] diz o que fazer. */
     data class Unavailable(val reason: String, val install: Category? = null) : EngineChoice
 }
 
 /** A decisão do roteador, com os motivos (mostrados ao usuário). */
 data class RoutePlan(val task: TaskKind, val engine: EngineChoice, val reasons: List<String>) {
-    /** Tudo nesta versão roda no aparelho; nada vai para servidores. */
-    val local: Boolean get() = true
+    /** false quando o pedido vai para um modelo online (processamento externo, mostrado na tela). */
+    val local: Boolean get() = engine !is EngineChoice.Remote
+    val remote: RemoteModel? get() = (engine as? EngineChoice.Remote)?.model
     val model: ModelSpec?
         get() = when (val e = engine) {
             is EngineChoice.Llm -> e.model
@@ -58,6 +71,11 @@ data class RouterInput(
     val defaults: Map<Category, String> = emptyMap(),
     /** Escolha manual para esta conversa ou pedido (vence tudo, se servir). */
     val manual: String? = null,
+    /** O catálogo online conhecido (vazio sem o gateway). */
+    val remote: List<RemoteModel> = emptyList(),
+    val online: OnlineMode = OnlineMode.OFF,
+    /** Gateway configurado, permitido pela pessoa e com internet agora. */
+    val connected: Boolean = false,
 )
 
 /**
@@ -124,9 +142,28 @@ object Router {
             needAudio -> "que entenda áudio"
             else -> "de conversa"
         }
+        // Modelos online: só texto, só com o gateway conectado e permitido pela pessoa.
+        val remoteAllowed = input.online != OnlineMode.OFF && input.connected && !needImage && !needAudio
+        val manualRemote = input.manual?.let { id -> input.remote.firstOrNull { it.id == id } }
+        if (manualRemote != null) {
+            if (remoteAllowed) {
+                reasons += "Escolhido por você: ${manualRemote.label} (online, processamento externo)."
+                return EngineChoice.Remote(manualRemote)
+            }
+            reasons += "${manualRemote.label} é online e não está disponível agora."
+        }
+        val remotePick = if (remoteAllowed) pickRemote(task, input.remote, profile, ROLE_CHAT) else null
+        if (remotePick != null && input.online == OnlineMode.PREFER) {
+            reasons += "Online primeiro: ${remotePick.label} (${remotePick.vendor}), processamento externo."
+            return EngineChoice.Remote(remotePick)
+        }
         if (candidates.isEmpty()) {
             val category = if (needImage) Category.VISION else if (needAudio) Category.SPEECH else Category.CHAT
             reasons += "Nenhum modelo $what instalado."
+            if (remotePick != null) {
+                reasons += "Usando ${remotePick.label} (${remotePick.vendor}) online: o texto vai para o gateway e o provedor."
+                return EngineChoice.Remote(remotePick)
+            }
             return EngineChoice.Unavailable("Instale um modelo $what no Model Hub.", category)
         }
         val manual = input.manual?.let { id -> candidates.firstOrNull { it.id == id } }
@@ -157,6 +194,27 @@ object Router {
         reasons += if (accel == Accel.GPU) "Na GPU (mais rápido para textos longos)." else "Na CPU com $threads núcleos."
         return EngineChoice.Llm(model, accel, threads)
     }
+
+    /**
+     * O modelo online para uma tarefa: o papel pedido, o nível que o perfil permite e o menor custo
+     * entre os iguais. Eco = rápidos e baratos; Equilibrado = os fortes do dia a dia; Qualidade = os
+     * de fronteira. Tarefas curtas sempre usam um rápido.
+     */
+    fun pickRemote(task: TaskKind, models: List<RemoteModel>, profile: Profile, role: String): RemoteModel? {
+        val withRole = models.filter { role in it.roles }.ifEmpty { return null }
+        val light = task in setOf(TaskKind.CORRECT, TaskKind.SUMMARIZE, TaskKind.LANGUAGE_ID, TaskKind.REPLY)
+        val order = when {
+            light || profile == Profile.ECO -> listOf("fast", "strong", "frontier")
+            profile == Profile.QUALITY -> listOf("frontier", "strong", "fast")
+            else -> listOf("strong", "fast", "frontier")
+        }
+        for (tier in order) {
+            withRole.filter { it.tier == tier }.minByOrNull { it.typicalUsd }?.let { return it }
+        }
+        return withRole.minByOrNull { it.typicalUsd }
+    }
+
+    const val ROLE_CHAT = "chat"
 
     private fun superResolution(input: RouterInput, device: DeviceSnapshot, reasons: MutableList<String>): EngineChoice {
         val model = Catalog.esrgan
@@ -192,6 +250,9 @@ object Router {
     }
 
     private fun translation(input: RouterInput, device: DeviceSnapshot, profile: Profile, reasons: MutableList<String>): EngineChoice {
+        if (input.online == OnlineMode.PREFER && input.connected && profile == Profile.QUALITY) {
+            return llm(TaskKind.TRANSLATE, input, device, profile, reasons, needImage = false, needAudio = false)
+        }
         if (profile != Profile.QUALITY || Catalog.all.none { it.runtime == Runtime.LITERT_LM && usable(it, input, device) }) {
             reasons += "Tradução no aparelho com o ML Kit (rápida e leve)."
             return EngineChoice.Translator

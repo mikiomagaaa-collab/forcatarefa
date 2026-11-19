@@ -39,7 +39,7 @@ import org.robolectric.annotation.GraphicsMode
 import org.robolectric.util.ReflectionHelpers
 
 /** Sem permissões concedidas (os testes não abrem diálogos). */
-private object NoPermissions : Permissions {
+internal object NoPermissions : Permissions {
     override fun has(permission: String) = false
     override fun request(permission: String, then: (Boolean) -> Unit) = then(false)
 }

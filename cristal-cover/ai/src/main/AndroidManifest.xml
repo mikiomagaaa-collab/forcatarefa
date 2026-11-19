@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROCESSING" />
     <!-- Microfone: só depois de um toque no botão de voz; nunca em segundo plano. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Avatar flutuante (opcional): só com a permissão "Exibir sobre outros apps" dada pela pessoa. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!--
         Ponte com o teclado e a Gallery: só apps com a mesma assinatura do Liquid Flip.
@@ -184,6 +186,10 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <service
+            android:name=".video.VideoService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
         <service
             android:name=".imagegen.ImageGenService"
             android:exported="false"

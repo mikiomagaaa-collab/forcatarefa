@@ -353,3 +353,74 @@ Relógio colorido:
 - [ ] "Data na cor do relógio" acompanha a cor escolhida
 - [ ] Original continua igual ao relógio de vidro de antes
 - [ ] Tela interna e tela externa guardam escolhas separadas; a coleção guarda as duas
+
+## 23. L.I.L.Y AI 1.3.0: serviço online, Codex, Video AI e avatar
+
+Os itens com ⚠️ dependem do comportamento do aparelho (Android e Motorola); os com 🌐 só podem ser testados
+depois de publicar o gateway (veja [GATEWAY.md](GATEWAY.md)) com as chaves reais. Nada disso foi chamado de verdade durante o
+desenvolvimento: o que está aqui é o que falta provar.
+
+Abertura e avatar (sem gateway):
+
+- [ ] Instalar por cima da 1.2.1: a L.I.L.Y AI abre, sem modelos, e continua aberta
+- [ ] A avatar aparece no início, no cabeçalho da conversa e na tela externa (rosto, pequena)
+- [ ] Configurações > Avatar: estilo (Holograma, Vidro, Mínimo), forma (busto, rosto, orbe), cor, tamanho, transparência e animações mudam a prévia na hora; "Desligada" volta à esfera
+- [ ] Estados: ouvindo (microfone), pensando e falando (resposta lida em voz alta), trabalhando (Codex e vídeo), sucesso e erro (voltam ao normal em ~3 s) aparecem na avatar
+- [ ] A avatar não usa câmera nem microfone sozinha (nenhum ícone de câmera ou microfone do Android aparece)
+- [ ] ⚠️ Avatar flutuante: sem a permissão "Sobrepor a outros apps" o app explica e abre a tela certa; com ela, a avatar aparece por cima de outro app, arrasta, toca para abrir a L.I.L.Y e some com um toque longo
+- [ ] ⚠️ Avatar flutuante na tela externa: aparece pequena, sem cobrir a Liquid Island e sem atrapalhar o Cristal
+- [ ] ⚠️ Modo "sempre": depois de alguns minutos em segundo plano a avatar continua (ou some e volta ao abrir a L.I.L.Y, sem erro)
+- [ ] Configurações > Sobre: Termos de uso, Privacidade e Créditos abrem e rolam (tabelas viram listas)
+
+Serviço online 🌐:
+
+- [ ] Configurações > Serviço online: endereço `http://` é recusado ("Endereço inválido. Use o endereço https…"); chave errada mostra "O gateway recusou a chave de acesso."; chave certa mostra o que o gateway oferece, o gasto do dia e o limite
+- [ ] Sem ligar "Permitir processamento externo", nenhuma conversa, vídeo ou tarefa do Codex sai do aparelho
+- [ ] A chave não aparece em nenhuma tela depois de salva ("Guardada") e some ao Remover a conexão
+- [ ] Conversa com "Online quando faltar": sem modelo instalado, responde online e marca "modelo · online" com o custo; com modelo instalado, continua no aparelho
+- [ ] "Online primeiro": usa o modelo online; no avião, volta para o aparelho (ou avisa que não há como responder)
+- [ ] "Só no aparelho": nada sai do celular; sem modelo instalado a L.I.L.Y avisa
+- [ ] Imagem e áudio nunca vão para o serviço online
+- [ ] Sem créditos no OpenRouter: aparece a mensagem do gateway ("sem créditos"), sem travar
+- [ ] No limite diário do gateway: a mensagem diz que o limite do dia acabou
+
+Codex 🌐:
+
+- [ ] `/codex` na conversa e o cartão Codex na tela inicial abrem o Codex; sem gateway, a tela diz o que falta
+- [ ] Repositório do GitHub: lista só os liberados em `LILY_GITHUB_REPOS`; um repositório fora da lista é recusado
+- [ ] Pedir uma correção pequena: o agente lê arquivos, mostra o plano e o **diff** sem gravar nada antes de você aprovar
+- [ ] Aprovar grava num ramo `lily-codex/...` (nunca no principal) e roda os testes no GitHub Actions; o resultado (verde ou vermelho) aparece no Codex
+- [ ] Teste vermelho: o Codex lê o log, tenta de novo (até 3 vezes) e **para** se o mesmo erro voltar, dizendo que não conseguiu
+- [ ] Descartar não grava nada; Desfazer volta o estado anterior
+- [ ] A conclusão separa "verificado" de "hipótese" e lista os riscos; "compilou" sozinho não vira sucesso
+- [ ] Pesquisa na internet: mostra as fontes (links) e marca o que veio delas
+- [ ] Revisão final por um modelo de outra empresa aparece como etapa própria
+- [ ] ⚠️ Pasta do aparelho (seletor do Android): lê e edita só dentro da pasta escolhida; confere só a sintaxe (diz isso na tela); o ponto de restauração permite desfazer
+- [ ] Diagnóstico > "Consertar com o Codex" abre o Codex com o relatório já preenchido
+- [ ] Modo automático (na tela do Codex): só aplica correções de até o número de linhas escolhido, sem problemas na verificação; o resto pede aprovação; Desfazer volta o arquivo
+
+Video AI 🌐:
+
+- [ ] `/video` e o cartão Vídeo abrem a tela; a estimativa de custo e o tempo aparecem **antes** de gerar
+- [ ] Texto para vídeo: o trabalho entra na fila, a Liquid Island mostra o progresso (Live Update) e o vídeo chega com prévia
+- [ ] Imagem para vídeo: escolher uma foto pelo seletor do Android e animar
+- [ ] Continuar um vídeo pronto: usa o último quadro
+- [ ] Formato (16:9, 9:16, 1:1), duração e resolução mudam o preço mostrado
+- [ ] Cancelar um trabalho em andamento; apagar do histórico
+- [ ] Compartilhar e salvar em Filmes/L.I.L.Y: o vídeo aparece na L.I.L.Y Gallery
+- [ ] Fechar a L.I.L.Y durante a geração: o serviço continua e um aviso chega no fim
+- [ ] Modelo que o fal.ai recusa (parâmetro): a L.I.L.Y avisa e tenta só com o essencial
+- [ ] Anotar o preço cobrado no fal.ai e compará-lo com a estimativa mostrada
+
+L.I.L.Y Web 🌐 (no computador, Chrome ou Edge):
+
+- [ ] Abrir o endereço do gateway: a L.I.L.Y Web carrega; em Configurações, colar a chave e "Salvar e testar"
+- [ ] Conversa online, Codex (repositório e pasta do computador), vídeo e termos funcionam como no celular
+- [ ] Modelo local (WebGPU): baixa só depois de escolher, responde sem internet e mostra o tamanho do download antes
+- [ ] No celular, a página abre sem barra de rolagem horizontal
+
+Segurança:
+
+- [ ] Sem a chave de acesso (ou com uma errada), qualquer rota do gateway responde 401
+- [ ] A chave de acesso fica fora de capturas de tela e do relatório do Diagnóstico
+- [ ] PIN e biometria do Android continuam funcionando normalmente

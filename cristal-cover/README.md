@@ -2,15 +2,22 @@
 
 Launcher e tela de bloqueio em **vidro líquido** para o Motorola Razr 40 Ultra (Android 16), na tela
 externa e na interna, e três apps irmãos (instalados separados): o **L.I.L.Y Keyboard** (pasta
-`keyboard/`), a **L.I.L.Y AI**, assistente que roda inteiramente no aparelho (pasta `ai/`), e a
-**L.I.L.Y Gallery**, galeria e editor de fotos (pasta `gallery/`). Kotlin + Jetpack Compose.
+`keyboard/`), a **L.I.L.Y AI**, assistente que roda no aparelho e, se você quiser, usa um serviço online
+seu para o Codex, o Video AI e modelos maiores (pasta `ai/`), e a **L.I.L.Y Gallery**, galeria e editor
+de fotos (pasta `gallery/`). Kotlin + Jetpack Compose. Junto vêm o **L.I.L.Y Gateway** (o serviço
+online, pasta `gateway/`) e a **L.I.L.Y Web**, a versão para o computador em HTML e JavaScript (pasta
+`web/`).
 
 > **Este projeto é independente do site que divide o repositório com ele.** Tudo o que é do app está
 > dentro de `cristal-cover/`; o workflow `build.yml` só roda quando algo nessa pasta muda e não publica
-> nada no GitHub Pages.
+> nada no GitHub Pages. A L.I.L.Y Web é publicada no gateway (Cloudflare), nunca no GitHub Pages.
 
 - Guia de instalação (só com o celular): [docs/GUIA.md](docs/GUIA.md)
 - Checklist de testes no aparelho: [docs/TESTES.md](docs/TESTES.md)
+- Serviço online (hospedagem, chaves e custos): [docs/GATEWAY.md](docs/GATEWAY.md)
+- Planejamento e compatibilidade com outros celulares: [docs/ROADMAP.md](docs/ROADMAP.md)
+- Termos de uso, privacidade e créditos: [legal/](legal/); licença: [LICENSE](LICENSE) (Apache 2.0) e
+  [NOTICE](NOTICE); [segurança](SEGURANCA.md); [como contribuir](CONTRIBUINDO.md)
 
 ## Roteiro "Liquid Flip"
 
@@ -53,6 +60,13 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 | Transição de dobra inspirada no iPhone Duo: desfoque regional que segue o ângulo da dobradiça, gradiente de nitidez a partir da dobra, luminosidade, papel de parede e componentes em ritmos próprios, linha de luz na dobra; respeita "remover animações" | Feito no launcher (Cristal 1.8.0); por cima de outros apps só o fechamento (limite do Android) |
 | Widgets redesenhados no estilo Liquid Glass: relógio, relógio de ponteiros, data, agenda, clima, bateria, música, foto, L.I.L.Y, Info Brief, atalhos e busca, cada um reorganizado em faixa, pequeno, médio, grande e extra grande; composições próprias da tela externa; galeria com prévias reais; página Configurações > Widgets (Liquid Glass, claro, escuro, colorido, monocromático, transparência, desfoque, destaque, cantos e densidade), guardada nas coleções | Feito (Cristal 1.8.0) |
 | Relógio do bloqueio com preenchimento interno: sólido, gradiente, translúcido ou Liquid Glass colorido, segunda cor, horas e minutos com cores próprias, intensidade e data na cor do relógio, com prévia ao vivo, nas telas interna e externa e nas coleções | Feito (Cristal 1.8.0) |
+| L.I.L.Y Codex: agente de programação com catálogo de modelos lido ao vivo, roteador por tipo de tarefa (correção rápida, refatoração, arquitetura, depuração, revisão final por um modelo independente), leitura e edição de projetos autorizados (pasta do aparelho ou repositório do GitHub), diff, aprovação, desfazer, pontos de restauração, pesquisa na internet com fontes, testes no GitHub Actions e auto-reparo de até 3 tentativas que para quando o mesmo erro volta | Feito (L.I.L.Y AI 1.3.0); precisa do serviço online |
+| Video AI: texto para vídeo, imagem para vídeo, animar foto, continuar um vídeo, movimento de câmera, formato, duração e resolução, preço antes de gerar, progresso na Liquid Island, histórico e Movies/L.I.L.Y | Feito (L.I.L.Y AI 1.3.0); precisa do serviço online (fal.ai) |
+| L.I.L.Y Avatar: personagem original desenhada no app, 7 estados (parada, ouvindo, pensando, falando, trabalhando, sucesso, erro) ligados a todos os módulos, aparência, cores, estilo, tamanho, posição, transparência, animações e modo flutuante opcional (também na tela externa) | Feito (L.I.L.Y AI 1.3.0) |
+| L.I.L.Y Gateway: serviço online na sua conta Cloudflare, sem chaves no APK, chave de acesso própria, limite de gasto por dia | Feito; falta você publicar com as suas chaves ([docs/GATEWAY.md](docs/GATEWAY.md)) |
+| L.I.L.Y Web: a L.I.L.Y no computador (conversa, Codex, vídeo, ferramentas, avatar, memória, modelos locais no navegador com WebGPU) | Feito; publicada junto com o gateway |
+| Termos de uso, privacidade (LGPD), créditos, licença Apache 2.0, política de segurança e guia de contribuição | Feito; falta o seu nome e contato e, de preferência, uma revisão jurídica |
+| Compatibilidade com outros celulares (Motorola, Samsung, Xiaomi e outros) | Planejado com dados medidos ([docs/ROADMAP.md](docs/ROADMAP.md)) |
 | Biblioteca de apps, páginas próprias da tela externa | Planejado |
 
 ## Estado real do projeto
@@ -60,8 +74,9 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 O que **foi verificado** durante o desenvolvimento:
 
 - compila do zero (debug e release com R8) com as versões estáveis atuais das ferramentas;
-- 284 testes automáticos em JVM passam (124 no Cristal, 45 no teclado, 16 no módulo compartilhado, 91 na
-  L.I.L.Y AI e 8 na Gallery). No launcher: lógica da grade, detecção da tela externa,
+- 312 testes automáticos em JVM passam (124 no Cristal, 45 no teclado, 16 no módulo compartilhado, 119 na
+  L.I.L.Y AI e 8 na Gallery), mais 23 do gateway, 9 da L.I.L.Y Web e o teste de ponta a ponta da Web
+  num Chromium. No launcher: lógica da grade, detecção da tela externa,
   regras de compatibilidade, segurança dos comandos de shell, backup, papéis de parede por área,
   encaixe e edição da Central de Controle, **compilação real do shader AGSL** e **16 telas montadas e
   desenhadas** pelo pipeline de hardware (incluindo a central e o efeito de profundidade), no tamanho
@@ -108,6 +123,21 @@ O que **foi verificado** durante o desenvolvimento:
   desfocada no meio da transição, tudo nítido no fim), os tamanhos e as cinco aparências dos widgets, a
   galeria com prévias reais, as cores do relógio medidas nos pixels (horas e minutos em cores próprias) e a
   aparência dos widgets e do relógio guardada nas coleções;
+- na L.I.L.Y AI 1.3.0, contra um gateway de teste local que fala o protocolo real (HTTP de verdade,
+  pedaços em SSE, fila de vídeo, GitHub e CI simulados): a chave só vai por https; a conversa online sai
+  marcada com o modelo e o custo; o roteador só usa modelo online com o consentimento e nunca para imagem
+  ou áudio; o vídeo vai do pedido ao arquivo acompanhando a fila; os verificadores de Kotlin, Java, XML,
+  JSON, YAML e outros pegam erros reais sem reclamar de código certo; os erros do compilador viram arquivo
+  e linha; o agente lê, edita e confere **sem gravar antes da aprovação**; descartar não grava nada;
+  aprovar cria o ponto de restauração e desfazer volta o arquivo; o modo automático só aplica correções
+  pequenas; o auto-reparo num repositório falha no CI, lê o log, corrige, roda de novo e confirma, e
+  **para quando o mesmo erro volta**; a presença do avatar segue a prioridade dos módulos; 8 telas novas
+  desenhadas (avatar em todos os estados, estilos e cores, serviço online, vídeo, Codex). No gateway: a
+  chave errada é recusada, o catálogo pega a versão mais nova de cada família, o limite diário recusa
+  antes de gastar, o identificador do vídeo não consegue mandar a chave do fal.ai para outro servidor,
+  só os repositórios liberados são tocados e nunca o ramo principal. A L.I.L.Y Web foi aberta num Chromium
+  contra o código do gateway: configuração, conversa com custo, Codex até o diff, vídeo, termos e tela
+  estreita, sem erros na página;
 - lint sem erros.
 
 O que **não foi verificado**: os apps **nunca rodaram em um Razr de verdade**. Na L.I.L.Y AI, os
@@ -115,7 +145,10 @@ motores nativos (LiteRT-LM e LiteRT, bibliotecas do Google) não rodam nos teste
 a visão, o áudio, a ampliação com Real-ESRGAN e a geração de imagem estão **implementados com as APIs
 oficiais, mas faltam testar no aparelho** (velocidade, memória, temperatura e a GPU do Snapdragon). Tudo o que depende de
 comportamento não documentado da Motorola está marcado com ⚠️ no [checklist](docs/TESTES.md) e precisa
-ser confirmado no aparelho.
+ser confirmado no aparelho. O gateway **nunca foi publicado nem chamou os provedores de verdade**
+(OpenRouter, fal.ai, Tavily, Brave, GitHub): falta você criar as contas e as chaves
+([docs/GATEWAY.md](docs/GATEWAY.md)); os preços mostrados vêm dos provedores (ao vivo no catálogo de
+conversa, das páginas do fal.ai nos vídeos) e podem mudar.
 
 ## L.I.L.Y Keyboard (pasta `keyboard/`)
 
@@ -140,9 +173,11 @@ a L.I.L.Y roda em outro app do aparelho.
 
 ## L.I.L.Y AI (pasta `ai/`)
 
-App próprio (`app.lily.ai`). **Tudo roda no aparelho**: a internet só é usada para baixar modelos (do
-Hugging Face, fixados numa versão e conferidos por SHA-256) e pacotes de tradução do ML Kit, quando
-você pede. Não há nenhum provedor remoto; o indicador de cada conversa diz "No aparelho".
+App próprio (`app.lily.ai`). **Por padrão tudo roda no aparelho**: a internet só é usada para baixar
+modelos (do Hugging Face, fixados numa versão e conferidos por SHA-256) e pacotes de tradução do ML Kit,
+quando você pede. Desde a 1.3.0 há um **serviço online opcional e seu** (o L.I.L.Y Gateway): só é usado
+depois que você o configura e liga "Permitir processamento externo", e cada resposta diz onde rodou
+("No aparelho" ou "modelo · online", com o custo).
 
 | Parte | Como funciona |
 | --- | --- |
@@ -162,6 +197,11 @@ você pede. Não há nenhum provedor remoto; o indicador de cada conversa diz "N
 | Aparência | Orbe em AGSL, fundo aurora, vidro, temas Liquid Glass, AMOLED, Claro, Roxo e Personalizado |
 | Relatório de erro | Se a L.I.L.Y fechar por um erro, abre a tela **A L.I.L.Y AI fechou por um erro** (num processo separado, sem depender do resto do app) com a pilha completa e **Copiar relatório**. Fica só no aparelho e também vai no fim do Teste do aparelho |
 | Teste do aparelho | Configurações > **Testar este aparelho**: roda cada modelo de conversa instalado na GPU e na CPU, o OCR, a ampliação e a voz, e mede carregamento, velocidade, memória e temperatura. Gera um relatório para copiar e enviar; o que falha aparece como falha |
+| Serviço online (1.3.0) | Configurações > **Serviço online**: endereço do seu gateway e a chave de acesso (guardada cifrada pelo Android Keystore), o que o gateway oferece, gasto do dia e limite. Três modos: desligado, só quando não há modelo no aparelho, ou preferir online. Nada sai do aparelho sem o consentimento ligado. No roteador, os modelos online aparecem como opção manual com preço; imagem e áudio continuam só no aparelho |
+| L.I.L.Y Codex (1.3.0) | Projeto autorizado (pasta escolhida pelo seletor do Android ou repositório do GitHub liberado no gateway). O agente lê a estrutura e as dependências, procura, lê, cria e edita arquivos em Kotlin, Java, XML, Gradle, JavaScript, TypeScript, HTML, CSS, Python, JSON, YAML e SQL, e pesquisa na internet separando o verificado das hipóteses. As mudanças ficam **preparadas**: diff por arquivo, explicação, riscos, aprovação, ponto de restauração e desfazer. No repositório, grava num ramo `lily-codex/...` e roda os testes no GitHub Actions; se falharem, lê o erro e tenta de novo (até 3 vezes; para se o mesmo erro voltar). Uma revisão final por um modelo de outra empresa. Modo automático opcional só para correções pequenas. "Consertar com o Codex" no Diagnóstico e `/codex` na conversa |
+| Video AI (1.3.0) | Texto ou uma imagem do aparelho (seletor de fotos do Android) para vídeo, continuar o último quadro de um vídeo, movimento de câmera, 16:9, 9:16 ou 1:1, duração e resolução, com o preço estimado antes. Modelos: LTX-2, Wan 2.5, Kling 2.5 Turbo, Veo 3.1 Fast e HunyuanVideo (escolha automática por qualidade e custo ou manual). Roda no fal.ai pelo gateway, com progresso na Liquid Island, histórico, prévia, compartilhar e salvar em Movies/L.I.L.Y (aparece na Gallery). `/video` na conversa |
+| L.I.L.Y Avatar (1.3.0) | Personagem original desenhada em código (sem imagens de terceiros), com inspiração cyberpunk e roupa fechada. Respira, pisca, olha, move a boca ao falar e reage ao estado de todos os módulos (voz, conversa, Codex, vídeo, imagem). Estilos Holograma, Vidro e Mínimo; busto, rosto ou orbe; cores, tamanho, transparência e intensidade das animações. Modo flutuante opcional (só com a permissão "Sobrepor a outros apps"; desligado por padrão), compacto na tela externa, arrastável, some com um toque longo. Nunca liga câmera nem microfone |
+| Termos e créditos | Configurações > Sobre: termos de uso, privacidade e créditos dentro do app, os mesmos arquivos de `legal/` |
 
 Limitações reais da L.I.L.Y AI:
 
@@ -173,6 +213,53 @@ Limitações reais da L.I.L.Y AI:
 - O SmolVLM2 responde melhor em inglês. O iris-3b gera só 768 × 768 (recorte na Gallery).
 - O APK é grande (as bibliotecas nativas do LiteRT e do ML Kit somam perto de 75 MB); os modelos
   ficam fora dele e somam de 330 MB a 11 GB, conforme o que você instalar.
+- O Codex, o Video AI e os modelos online **dependem do seu gateway e de créditos nos provedores**
+  (OpenRouter e fal.ai). Nenhuma chamada real a esses provedores foi feita no desenvolvimento: tudo foi
+  testado contra simulações com o formato das APIs públicas. O progresso dos vídeos é estimado pelo
+  tempo (a fila do fal.ai não informa porcentagem).
+- Numa pasta do aparelho, o Codex só confere a sintaxe (o Android não roda Gradle nem Node); os testes de
+  verdade rodam quando o projeto é um repositório do GitHub com o CI ligado.
+- O avatar flutuante no modo "sempre" pode ser fechado pelo Android para economizar bateria; ele volta
+  quando a L.I.L.Y é aberta.
+
+## L.I.L.Y Gateway (pasta `gateway/`)
+
+Cloudflare Worker em JavaScript, sem dependências. As chaves dos provedores ficam só nele; o app e a
+L.I.L.Y Web conhecem apenas o endereço e uma chave de acesso sua. Passo a passo, custos e segurança em
+[docs/GATEWAY.md](docs/GATEWAY.md).
+
+| Rota | O que faz |
+| --- | --- |
+| `GET /v1/status` | O que está ligado, gasto do dia e limite |
+| `GET /v1/models`, `POST /v1/chat` | Catálogo do OpenRouter lido ao vivo (a versão mais nova de cada família) e conversa em pedaços com o custo real no fim |
+| `POST /v1/search` | Pesquisa (Tavily ou Brave) para o Codex |
+| `/v1/video/...` | Modelos, orçamento, envio, situação e cancelamento na fila do fal.ai |
+| `/v1/repos`, `/v1/repo/...` | Árvore, arquivos, gravação em ramos `lily-codex/...` e testes no GitHub Actions, só nos repositórios liberados |
+
+Proteções: recusa tudo sem a chave de acesso (comparação em tempo constante), limite de gasto por dia,
+CORS fechado, identificadores de vídeo conferidos (a chave do fal.ai nunca vai para outro servidor),
+nada grava no ramo principal nem em workflows. 23 testes (`node --test test/*.test.js`).
+
+## L.I.L.Y Web (pasta `web/`)
+
+A L.I.L.Y no computador, em HTML, CSS e JavaScript puro (módulos ES, sem etapa de build), com o
+visual da L.I.L.Y num layout inspirado em assistentes de conversa: barra lateral com as conversas e a
+área principal. Publicada no mesmo endereço do gateway.
+
+| Parte | Como funciona |
+| --- | --- |
+| Conversa | Pedaços em tempo real, markdown seguro, histórico com busca, memória que você manda guardar, ditado e leitura em voz alta (Web Speech do navegador) |
+| Modelos | Online pelo gateway (o mesmo roteador do app) ou **no próprio computador** pela WebLLM 0.2.87 com WebGPU (Qwen3, Gemma, Llama 3.2 e Phi; aparecem só os que existem na lista oficial da biblioteca), baixados só quando você pede |
+| Codex | O mesmo agente do app: repositório do GitHub (com CI) ou uma pasta do computador (File System Access, no Chrome e no Edge), diff, aprovação, desfazer e auto-reparo |
+| Vídeo | O mesmo Video AI, com preço antes, histórico e download |
+| Ferramentas | Corrigir, reescrever, resumir, traduzir, explicar e escrever |
+| Avatar | A mesma personagem, desenhada em Canvas, com os mesmos estados |
+| Legal | Termos, privacidade e créditos |
+
+O que a Web não tem (só existe no celular): modelos LiteRT, ML Kit (OCR, rótulos, recorte), geração de
+imagem iris, Liquid Island, tela externa e avatar flutuante por cima de outros apps. Continuar um vídeo
+gerado também fica só no app. Testes: 9 de lógica (`node --test test/*.test.js`) e um de ponta a ponta
+num Chromium com o código real do gateway (`node test/e2e.mjs`).
 
 ## L.I.L.Y Gallery (pasta `gallery/`)
 
@@ -314,7 +401,11 @@ O APK sai em `app/build/outputs/apk/release/`. Requisitos: JDK 21 e Android SDK 
 
 ```
 cristal-cover/
+├── CONTRIBUINDO.md
+├── LICENSE
+├── NOTICE
 ├── README.md
+├── SEGURANCA.md
 ├── ai/
 │   ├── build.gradle.kts
 │   ├── proguard-rules.pro
@@ -325,9 +416,11 @@ cristal-cover/
 │       │   ├── java/app/lily/ai/
 │       │   │   ├── AiGraph.kt
 │       │   │   ├── LilyAiApp.kt
+│       │   │   ├── avatar/          (personagem, poses, avatar flutuante)
 │       │   │   ├── bridge/
 │       │   │   │   ├── AiBridgeService.kt
 │       │   │   │   └── CristalBridge.kt
+│       │   │   ├── codex/           (agente, roteador de código, diff, linguagens, projetos)
 │       │   │   ├── core/
 │       │   │   │   ├── Device.kt
 │       │   │   │   ├── Router.kt
@@ -362,15 +455,20 @@ cristal-cover/
 │       │   │   │   ├── Downloader.kt
 │       │   │   │   ├── Downloads.kt
 │       │   │   │   └── ModelStore.kt
+│       │   │   ├── presence/        (estado global que o avatar mostra)
+│       │   │   ├── remote/          (cliente do gateway, chave no Keystore)
 │       │   │   ├── tools/
 │       │   │   │   └── AiTools.kt
+│       │   │   ├── video/           (fila, serviço em primeiro plano, roteador de vídeo)
 │       │   │   └── ui/
 │       │   │       ├── MainActivity.kt
 │       │   │       ├── Nav.kt
 │       │   │       ├── screens/
+│       │   │       │   ├── AvatarScreen.kt
 │       │   │       │   ├── ChatScreen.kt
 │       │   │       │   ├── ChatSession.kt
 │       │   │       │   ├── ChatViews.kt
+│       │   │       │   ├── CodexScreen.kt
 │       │   │       │   ├── Common.kt
 │       │   │       │   ├── CoverScreen.kt
 │       │   │       │   ├── HistoryScreen.kt
@@ -378,14 +476,17 @@ cristal-cover/
 │       │   │       │   ├── HubScreen.kt
 │       │   │       │   ├── ImageGenScreen.kt
 │       │   │       │   ├── ImageToolScreen.kt
+│       │   │       │   ├── LegalScreen.kt
 │       │   │       │   ├── Markdown.kt
 │       │   │       │   ├── MemoryScreen.kt
 │       │   │       │   ├── ModelScreen.kt
 │       │   │       │   ├── Network.kt
+│       │   │       │   ├── OnlineScreen.kt
 │       │   │       │   ├── SettingsScreen.kt
 │       │   │       │   ├── Shared.kt
 │       │   │       │   ├── TextToolScreen.kt
-│       │   │       │   └── ToolsScreen.kt
+│       │   │       │   ├── ToolsScreen.kt
+│       │   │       │   └── VideoScreen.kt
 │       │   │       └── theme/
 │       │   │           ├── Components.kt
 │       │   │           ├── LilyTheme.kt
@@ -529,8 +630,16 @@ cristal-cover/
 ├── ci/
 │   └── build.yml
 ├── docs/
+│   ├── GATEWAY.md
 │   ├── GUIA.md
+│   ├── ROADMAP.md
 │   └── TESTES.md
+├── gateway/                 (L.I.L.Y Gateway, Cloudflare Worker)
+│   ├── package.json
+│   ├── wrangler.toml
+│   ├── scripts/build-web.mjs
+│   ├── src/                 (index, http, budget, code, search, video, repo)
+│   └── test/
 ├── gradle/
 │   └── libs.versions.toml
 ├── gradle.properties
@@ -615,6 +724,7 @@ cristal-cover/
 │           └── KeyboardScreensTest.kt
 ├── keystore/
 │   └── cristal-ci.jks
+├── legal/                   (termos de uso, privacidade, créditos; também dentro do app)
 ├── settings.gradle.kts
 └── shared/
     ├── build.gradle.kts
@@ -635,6 +745,9 @@ cristal-cover/
 ```
 
 ## Melhorias futuras
+
+O planejamento completo (compatibilidade com outros celulares, versão mínima do Android para a produção,
+distribuição e o gateway público) está em [docs/ROADMAP.md](docs/ROADMAP.md). Pequenas melhorias:
 
 1. Redimensionar widgets arrastando as bordas (hoje: grade e botões de largura/altura).
 2. Extrair uma cor de destaque do papel de parede para botões e seleção.

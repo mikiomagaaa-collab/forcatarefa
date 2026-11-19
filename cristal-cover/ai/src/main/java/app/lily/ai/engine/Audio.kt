@@ -103,10 +103,29 @@ class Voice(context: Context) {
 
     init {
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) = Unit
-            override fun onDone(utteranceId: String?) { onDone?.invoke() }
+            override fun onStart(utteranceId: String?) {
+                app.lily.ai.presence.LilyPresence.speaking(PRESENCE, 0.6f)
+            }
+
+            override fun onDone(utteranceId: String?) {
+                app.lily.ai.presence.LilyPresence.clear(PRESENCE)
+                onDone?.invoke()
+            }
+
             @Deprecated("Deprecated in Java")
-            override fun onError(utteranceId: String?) { onDone?.invoke() }
+            override fun onError(utteranceId: String?) {
+                app.lily.ai.presence.LilyPresence.clear(PRESENCE)
+                onDone?.invoke()
+            }
+
+            /** Cada palavra dita: a boca da avatar acompanha (palavras longas abrem mais). */
+            override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
+                app.lily.ai.presence.LilyPresence.speaking(PRESENCE, (0.45f + (end - start) * 0.06f).coerceAtMost(1f))
+            }
+
+            override fun onStop(utteranceId: String?, interrupted: Boolean) {
+                app.lily.ai.presence.LilyPresence.clear(PRESENCE)
+            }
         })
     }
 
@@ -127,10 +146,15 @@ class Voice(context: Context) {
 
     fun stop() {
         tts.stop()
+        app.lily.ai.presence.LilyPresence.clear(PRESENCE)
     }
 
     fun shutdown() {
         tts.shutdown()
+    }
+
+    companion object {
+        const val PRESENCE = "voz"
     }
 }
 

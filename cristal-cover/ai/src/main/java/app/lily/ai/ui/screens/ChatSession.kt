@@ -34,6 +34,7 @@ import app.lily.ai.models.Category
 import app.lily.ai.models.Modality
 import app.lily.ai.models.ModelSpec
 import app.lily.ai.models.Runtime
+import app.lily.ai.presence.LilyPresence
 import app.lily.ai.ui.Route
 import java.io.File
 import java.io.IOException
@@ -310,7 +311,7 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
             }
             lastPlan = plan
             val engine = plan.engine
-            if (engine !is EngineChoice.Llm) {
+            if (engine !is EngineChoice.Llm && engine !is EngineChoice.Remote) {
                 val unavailable = engine as? EngineChoice.Unavailable
                 val answer = if (ownImage != null && audioFile == null) {
                     visionFallback(answerId, ownImage)
@@ -327,17 +328,22 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
                 finish(id, answer)
                 return@run
             }
-            val model = engine.model
-            streaming = Streaming(answerId, "", model.name, imageFile != null, audioFile != null)
+            val remote = (engine as? EngineChoice.Remote)?.model
+            val local = (engine as? EngineChoice.Llm)?.model
+            val modelName = remote?.let { "${it.label} · online" } ?: local!!.name
+            // Contexto do modelo (o online costuma ser bem maior; limitado para não encarecer).
+            val contextTokens = remote?.let { (it.context.takeIf { c -> c > 0 } ?: 32_000).coerceAtMost(64_000) } ?: (local!!.contextTokens ?: 2048)
+            streaming = Streaming(answerId, "", modelName, imageFile != null, audioFile != null)
+            LilyPresence.thinking(PRESENCE, if (remote != null) "Pensando (online)" else "Pensando")
             val question = when {
                 user.text.isNotBlank() -> user.text
                 audioFile != null -> Prompts.tool(TaskKind.TRANSCRIBE_AUDIO, "")
                 imageFile != null -> Prompts.tool(TaskKind.DESCRIBE_IMAGE, "")
                 else -> "Resuma este documento em português, com os pontos principais."
             }
-            val prompt = withDocument(question, user, model)
+            val prompt = withDocument(question, user, contextTokens)
             // O histórico usa o que sobra do contexto depois da pergunta (e do documento).
-            val history = history(model, user, reserve = prompt.length)
+            val history = history(contextTokens, user, reserve = prompt.length)
             val started = SystemClock.elapsedRealtime()
             var first = 0L
             var text = ""
@@ -346,7 +352,7 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
                 graph.tools.text(plan, prompt, history, Attachments(imageFile, audioFile)).collect { piece ->
                     if (first == 0L && piece.isNotEmpty()) first = SystemClock.elapsedRealtime()
                     text = piece
-                    streaming = Streaming(answerId, piece, model.name, imageFile != null, audioFile != null)
+                    streaming = Streaming(answerId, piece, modelName, imageFile != null, audioFile != null)
                 }
                 if (text.isBlank()) {
                     status = MsgStatus.ERROR
@@ -359,17 +365,23 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
                 text = t.message ?: "A IA não conseguiu responder."
             } finally {
                 val end = SystemClock.elapsedRealtime()
-                val accel = (graph.engines.status.value as? EngineStatus.Ready)?.takeIf { it.model.id == model.id }?.accel?.label
+                val accel = local?.let { m -> (graph.engines.status.value as? EngineStatus.Ready)?.takeIf { it.model.id == m.id }?.accel?.label }
+                val cost = if (remote != null) graph.tools.lastRemoteUsage?.costUsd?.let { usd(it) } else null
                 val answer = ChatMessage(
                     id = answerId,
                     role = Role.ASSISTANT,
                     text = text.trim(),
-                    model = listOfNotNull(model.name, accel).joinToString(" · "),
+                    model = listOfNotNull(modelName, accel, cost).joinToString(" · "),
                     status = status,
                     millis = end - started,
                 )
+                when (status) {
+                    MsgStatus.DONE -> LilyPresence.finished(PRESENCE, true, "Resposta pronta")
+                    MsgStatus.ERROR -> LilyPresence.finished(PRESENCE, false, "Não consegui responder")
+                    else -> LilyPresence.clear(PRESENCE)
+                }
                 withContext(NonCancellable) {
-                    if (status == MsgStatus.DONE && first > 0) graph.perf.recordAnswer(model.id, text.length, end - first)
+                    if (status == MsgStatus.DONE && first > 0 && local != null) graph.perf.recordAnswer(local.id, text.length, end - first)
                     finish(id, answer)
                 }
             }
@@ -402,8 +414,8 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
      * O histórico que cabe no contexto do modelo (as mensagens mais recentes), alternando pessoa e
      * IA como os modelos esperam. Erros e a mensagem atual ficam de fora.
      */
-    private fun history(model: ModelSpec, current: ChatMessage, reserve: Int = 0): List<Turn> {
-        val budget = (max(512, (model.contextTokens ?: 2048) - 1024) * 3 - reserve).coerceAtLeast(0)
+    private fun history(contextTokens: Int, current: ChatMessage, reserve: Int = 0): List<Turn> {
+        val budget = (max(512, contextTokens - 1024) * 3 - reserve).coerceAtLeast(0)
         val picked = ArrayList<Turn>()
         var used = 0
         for (m in messages.asReversed()) {
@@ -428,14 +440,14 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
      * O documento da mensagem (ou o enviado há pouco, para perguntas de acompanhamento) vai junto da
      * pergunta, cortado para caber no contexto do modelo (e o modelo é avisado quando cortou).
      */
-    private suspend fun withDocument(question: String, current: ChatMessage, model: ModelSpec): String {
+    private suspend fun withDocument(question: String, current: ChatMessage, contextTokens: Int): String {
         val index = messages.indexOfFirst { it.id == current.id }
         val doc = current.attachments.firstOrNull { it.kind == "document" }
             ?: messages.subList(max(0, index - 4), max(0, index)).asReversed().firstNotNullOfOrNull { m -> m.attachments.firstOrNull { it.kind == "document" } }
             ?: return question
         val text = withContext(Dispatchers.IO) { runCatching { File(doc.path).readText() }.getOrDefault("") }
         if (text.isBlank()) return question
-        val limit = max(1_500, ((model.contextTokens ?: 2048) - 1_200) * 3 * 2 / 3)
+        val limit = max(1_500, (contextTokens - 1_200) * 3 * 2 / 3)
         val cut = text.length > limit
         return buildString {
             append("Documento “").append(doc.name ?: "documento").append("”")
@@ -490,6 +502,8 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
     }.getOrNull()
 
     companion object {
+        const val PRESENCE = "conversa"
+
         fun wavSeconds(file: File): Int = ((file.length() - 44).coerceAtLeast(0) / (AudioFiles.RATE * 2)).toInt()
 
         fun thumbnail(bitmap: Bitmap, side: Int = 256): Bitmap {

@@ -19,11 +19,15 @@ enum class Tone(val label: String, val instruction: String) {
  * teclado poder trocar o texto direto, e nunca inventar o que não está no texto.
  */
 object Prompts {
-    fun system(memories: List<String>, extra: String? = null): String = buildString {
-        append("Você é a L.I.L.Y, a assistente do Liquid Flip, rodando inteiramente no aparelho da pessoa, sem internet. ")
+    fun system(memories: List<String>, extra: String? = null, online: Boolean = false): String = buildString {
+        if (online) {
+            append("Você é a L.I.L.Y, a assistente do Liquid Flip. Nesta resposta você roda num modelo online, pelo serviço que a pessoa configurou. ")
+        } else {
+            append("Você é a L.I.L.Y, a assistente do Liquid Flip, rodando inteiramente no aparelho da pessoa, sem internet. ")
+        }
         append("Responda em português do Brasil, a menos que peçam outro idioma. Seja clara, gentil e direta. ")
         append("Se faltar contexto ou você não souber, diga isso com honestidade em vez de inventar. ")
-        append("Você não tem acesso à internet, à agenda nem a outros apps, a não ser pelo que a pessoa enviar aqui.")
+        append("Você não navega na internet nem acessa a agenda ou outros apps, a não ser pelo que a pessoa enviar aqui.")
         if (memories.isNotEmpty()) {
             append("\n\nO que a pessoa pediu para você lembrar (use só quando for útil):\n")
             memories.forEach { append("- ").append(it).append('\n') }
