@@ -65,9 +65,32 @@ async function status(env) {
   });
 }
 
+/**
+ * Para aparecer na pesquisa do Google: robots.txt, sitemap.xml e o arquivo de verificação do Search
+ * Console (GOOGLE_SITE_VERIFICATION = o nome do arquivo que o Google dá, ex. "google1a2b3c.html").
+ * SEARCH_INDEXING = "off" tira o site da pesquisa. O serviço online (/v1/) nunca é indexado.
+ */
+export function searchFile(path, origin, env) {
+  const text = (body, type) => new Response(body, { headers: { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'public, max-age=3600' } });
+  const indexing = String(env.SEARCH_INDEXING || 'on') !== 'off';
+  if (path === '/robots.txt') {
+    return text(indexing ? `User-agent: *\nAllow: /\nDisallow: /v1/\n\nSitemap: ${origin}/sitemap.xml\n` : 'User-agent: *\nDisallow: /\n', 'text/plain');
+  }
+  if (path === '/sitemap.xml' && indexing) {
+    return text(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${origin}/</loc><changefreq>weekly</changefreq></url>\n</urlset>\n`, 'application/xml');
+  }
+  const file = String(env.GOOGLE_SITE_VERIFICATION || '').trim();
+  if (file && /^google[0-9a-f]{6,40}\.html$/.test(file) && path === `/${file}`) return text(`google-site-verification: ${file}`, 'text/html');
+  return null;
+}
+
 export async function handle(request, env, ctx) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '') || '/';
+  if (request.method === 'GET') {
+    const seo = searchFile(path, url.origin, env);
+    if (seo) return seo;
+  }
   // A L.I.L.Y Web é servida pelos "assets" do Worker (pasta public/); sem ela, a raiz responde o estado.
   if (path === '/' || path === '/health') return json({ service: 'L.I.L.Y Gateway', version: VERSION, web: 'public/' });
   if (!env.LILY_ACCESS_KEY) throw new GatewayError(503, 'Gateway sem chave de acesso: configure o segredo LILY_ACCESS_KEY.');

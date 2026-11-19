@@ -21,6 +21,10 @@ FREE_IMAGES_PER_DAY = "150"
 FREE_NEURONS_PER_DAY = "9500"
 # Conversa grátis (beta) com o gpt-oss-20b: "on" ou "off".
 FREE_CHAT = "on"
+# Pesquisa do Google: "on" deixa a L.I.L.Y Web aparecer na pesquisa; "off" tira. O serviço (/v1/) nunca aparece.
+SEARCH_INDEXING = "on"
+# Verificação do Google Search Console: cole aqui o NOME do arquivo HTML que o Google der (ex.: "google1a2b3c4d5e.html").
+GOOGLE_SITE_VERIFICATION = ""
 # CORS para abrir a L.I.L.Y Web de outro endereço (ex.: "https://meu-site.dev"). Vazio = só o próprio gateway.
 ALLOWED_ORIGINS = ""
 

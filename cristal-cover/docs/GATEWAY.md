@@ -215,9 +215,33 @@ cotas e pagamento está no plano (`docs/ROADMAP.md`).
 - O Space é de terceiros (Lightricks/Hugging Face): pode ficar lento, mudar ou sair do ar. O gateway
   confere o formato da resposta e só baixa vídeos do próprio Space.
 
+## 7.1 Colocar no Google
+
+**Na pesquisa do Google (o site, a L.I.L.Y Web):**
+
+1. Publique o gateway (passo 3.5). O site fica em `https://lily-gateway.<seu-subdominio>.workers.dev`.
+2. Abra search.google.com/search-console > *Adicionar propriedade* > **Prefixo do URL** > cole o
+   endereço completo do gateway (com `https://` e a barra no fim).
+3. Escolha a verificação por **Arquivo HTML**. Não precisa baixar nem enviar o arquivo: copie só o
+   **nome** dele (ex.: `google1a2b3c4d5e6f.html`).
+4. No GitHub, edite `cristal-cover/gateway/wrangler.toml` e cole o nome em `GOOGLE_SITE_VERIFICATION`.
+   Depois edite o `PUBLICAR.md` (publicar de novo) e, quando terminar, toque em **Verificar** no
+   Search Console. O gateway responde esse arquivo do jeito que o Google pede.
+5. No Search Console, em *Sitemaps*, envie `sitemap.xml`. O `robots.txt` já libera o site e esconde o
+   serviço (`/v1/`), que nunca aparece na pesquisa.
+6. A primeira listagem costuma levar de alguns dias a algumas semanas. Para tirar o site da pesquisa:
+   `SEARCH_INDEXING = "off"` no `wrangler.toml`.
+
+Antes de divulgar, preencha o seu nome e contato nos termos e na privacidade (`[nome do autor]`) e
+lembre que qualquer pessoa vai poder abrir o site: sem a sua chave de acesso ela usa só os modelos do
+próprio navegador, nunca o seu gateway nem os seus créditos.
+
+**Na Google Play (o app do celular):** está em `docs/ROADMAP.md` (seção "Google Play"): exige conta de
+desenvolvedor, teste fechado e alguns ajustes no app antes de enviar.
+
 ## 8. O que já foi conferido e o que não
 
-- Conferido: os 32 testes do gateway (inclui as imagens grátis e o vídeo grátis com o formato real do
+- Conferido: os 38 testes do gateway (inclui as imagens grátis e o vídeo grátis com o formato real do
   Gradio 5.42, lido no código do próprio Gradio e do Space) (provedores simulados com o formato das APIs públicas), o app
   inteiro contra um gateway de teste local (conversa, vídeo do pedido ao arquivo, Codex com CI e
   auto-reparo) e a L.I.L.Y Web num Chromium contra o código real do gateway.

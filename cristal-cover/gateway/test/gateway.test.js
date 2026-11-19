@@ -402,3 +402,22 @@ test('CORS só para origens liberadas; preflight sem liberação é recusado', a
   assert.equal(res.status, 401);
   assert.equal(res.headers.get('access-control-allow-origin'), 'https://meu-site.dev');
 });
+
+test('pesquisa do Google: robots, sitemap e o arquivo de verificação, sem chave e sem expor o serviço', async () => {
+  const env = makeEnv({ GOOGLE_SITE_VERIFICATION: 'google1a2b3c4d5e6f.html' });
+  const robots = await call(env, 'GET', '/robots.txt', undefined, '');
+  assert.equal(robots.res.status, 200);
+  const r = await robots.res.text();
+  assert.match(r, /Disallow: \/v1\//);
+  assert.match(r, /Sitemap: https:\/\/gateway\.test\/sitemap\.xml/);
+  const map = await (await call(env, 'GET', '/sitemap.xml', undefined, '')).res.text();
+  assert.match(map, /<loc>https:\/\/gateway\.test\/<\/loc>/);
+  const ver = await call(env, 'GET', '/google1a2b3c4d5e6f.html', undefined, '');
+  assert.equal(await ver.res.text(), 'google-site-verification: google1a2b3c4d5e6f.html');
+  // Outro nome qualquer não vira página, e sem a chave o serviço continua fechado.
+  assert.equal((await call(env, 'GET', '/google000000.html', undefined, '')).res.status, 401);
+  assert.equal((await call(env, 'GET', '/v1/status', undefined, '')).res.status, 401);
+  const off = await (await call(makeEnv({ SEARCH_INDEXING: 'off' }), 'GET', '/robots.txt', undefined, '')).res.text();
+  assert.match(off, /Disallow: \/\n/);
+});
+

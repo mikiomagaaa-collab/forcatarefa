@@ -86,3 +86,19 @@ L.I.L.Y (pelo gateway) ou a **L.I.L.Y Web**.
 - 📋 Vídeo: modelos que rodem no aparelho quando houver algum compatível com o Snapdragon 8+ Gen 1.
 - 📋 Avatar: widget próprio na tela inicial e versão na Liquid Island do Cristal.
 - 📋 L.I.L.Y Web: instalar como app (PWA) e funcionar sem internet com os modelos do navegador.
+
+## Google Play (publicar a L.I.L.Y AI na loja)
+
+Requisitos conferidos nas páginas da Google em novembro de 2026 (confira de novo antes de começar):
+
+| Passo | Situação |
+| --- | --- |
+| Conta de desenvolvedor no Play Console (taxa única, informada como US$ 25) e verificação de identidade | 📋 você |
+| Conta pessoal nova: **teste fechado com pelo menos 12 testadores por 14 dias seguidos** antes de liberar para todos | 📋 você (amigos, turma) |
+| **Denúncia de conteúdo dentro do app** (política de conteúdo gerado por IA: conversa, imagens e vídeos precisam de um jeito de denunciar respostas ofensivas sem sair do app) | ⏳ falta fazer no app |
+| Pacote **AAB** assinado com uma **chave de envio própria** guardada como segredo do GitHub (a chave de CI que está no repositório não pode ser usada na loja) | ⏳ falta fazer no build |
+| Política de privacidade num endereço público (pode ser `https://<seu-gateway>/legal/PRIVACIDADE.md` com o autor e o contato preenchidos) | 📋 você |
+| Formulário de segurança dos dados e classificação etária no Play Console (usar `legal/PRIVACIDADE.md`) | 📋 você |
+| Declarações de permissões: serviço em primeiro plano (dataSync e mediaProcessing, com vídeo mostrando o uso), sobreposição (avatar flutuante) | 📋 você, com textos prontos a preparar |
+| O launcher **Cristal** usa serviço de acessibilidade e leitor de notificações: a Play tem regras rígidas para isso; publicar primeiro só a L.I.L.Y AI | Recomendado |
+
