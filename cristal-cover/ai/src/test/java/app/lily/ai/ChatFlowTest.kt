@@ -128,6 +128,28 @@ class ChatFlowTest {
     private fun answered(s: ChatSession, count: Int) = waitUntil { s.messages.count { it.role == Role.ASSISTANT } >= count && s.streaming == null }
 
     @Test
+    fun `pergunta nova no meio de uma resposta interrompe a anterior e responde a nova`() {
+        install(Catalog.qwen3Small)
+        val fake = FakeEngine(pieces = List(40) { "palavra$it " }, stepMs = 60)
+        graph.engines = fake
+        val s = session()
+        s.send("Me conte a história do Brasil inteira", viaVoice = true)
+        waitUntil { (s.streaming?.text?.length ?: 0) > 20 }
+        // Antes, esta pergunta era descartada e ela "continuava respondendo" a anterior.
+        s.send("Quanto é 2 + 2?", viaVoice = true)
+        waitUntil { s.messages.count { it.role == Role.ASSISTANT } >= 2 && s.streaming == null && !s.working.value }
+        val roles = s.messages.map { it.role to it.text.take(14) }
+        assertEquals(Role.USER, roles[0].first)
+        assertEquals(MsgStatus.STOPPED, s.messages[1].status)
+        assertEquals("Quanto é 2 + 2?", s.messages[2].text)
+        assertEquals(MsgStatus.DONE, s.messages[3].status)
+        assertEquals("Quanto é 2 + 2?", fake.prompts.last())
+        // A resposta interrompida não volta como contexto (não "continua" a anterior).
+        assertTrue(fake.histories.last().none { it.text.startsWith("palavra") })
+        assertEquals(2, fake.prompts.size)
+    }
+
+    @Test
     fun `pergunta seguida sobre ele leva a conversa junto e a voz volta a ouvir depois de responder`() {
         install(Catalog.qwen3Small)
         val fake = FakeEngine(pieces = listOf("O Neymar é ", "um jogador de futebol brasileiro."), stepMs = 20)

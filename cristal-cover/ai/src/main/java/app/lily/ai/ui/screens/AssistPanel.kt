@@ -95,8 +95,10 @@ fun AssistPanel(
         }
     }
 
+    // Chamar de novo (ilha, widget, assistente) sempre abre o microfone, até com uma resposta saindo:
+    // a pergunta nova interrompe a anterior.
     LaunchedEffect(listenTrigger) {
-        if (listenTrigger > 0 && !session.busy) {
+        if (listenTrigger > 0) {
             permissions.request(MainActivity.MICROPHONE) { ok ->
                 if (ok) listening = true else session.notice = "Permita o microfone para falar com a L.I.L.Y (ou digite)."
             }
@@ -209,19 +211,18 @@ fun AssistPanel(
                 Spacer(Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     IconButton(Icons.Rounded.Keyboard, if (typing) "Fechar o teclado" else "Digitar", { typing = !typing }, size = 40.dp, tint = Color.White)
-                    val mic = when {
-                        session.busy -> Triple(Icons.Rounded.Stop, "Parar a resposta") { session.stop() }
-                        else -> Triple(Icons.Rounded.Mic, if (listening) "Parar de ouvir" else "Falar") {
-                            if (listening) {
-                                listening = false
-                            } else {
-                                permissions.request(MainActivity.MICROPHONE) { ok -> if (ok) listening = true else session.notice = "Permita o microfone para falar com a L.I.L.Y." }
-                            }
+                    // O microfone fica sempre disponível: falar durante uma resposta faz outra pergunta.
+                    val micAction = {
+                        if (listening) {
+                            listening = false
+                        } else {
+                            permissions.request(MainActivity.MICROPHONE) { ok -> if (ok) listening = true else session.notice = "Permita o microfone para falar com a L.I.L.Y." }
                         }
                     }
                     Box(Modifier.size(48.dp).clip(CircleShape).background(Brush.linearGradient(c.orb.take(2)))) {
-                        IconButton(mic.first, mic.second, mic.third, size = 48.dp, tint = Color.White, filled = false)
+                        IconButton(Icons.Rounded.Mic, if (listening) "Parar de ouvir" else if (session.busy) "Fazer outra pergunta" else "Falar", micAction, size = 48.dp, tint = Color.White, filled = false)
                     }
+                    if (session.busy) IconButton(Icons.Rounded.Stop, "Parar a resposta", { session.stop() }, size = 40.dp, tint = Color.White)
                     val answer = lastAnswer?.takeIf { it.status == MsgStatus.DONE }
                     IconButton(
                         Icons.AutoMirrored.Rounded.VolumeUp,

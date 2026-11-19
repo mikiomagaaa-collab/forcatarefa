@@ -6,6 +6,8 @@ do gateway e uma **chave de acesso** que você cria. O gateway:
 
 - lê ao vivo os modelos de programação e conversa no **OpenRouter** (Claude, GPT, Gemini, DeepSeek,
   Qwen e outros com uma só chave) e escolhe sempre a versão mais nova de cada família;
+- responde **qualquer pergunta de graça** (beta) com o gpt-oss-20b pelo Workers AI da sua conta
+  Cloudflare, sem chave nenhuma (cerca de 150 respostas por dia, divididas com as imagens);
 - gera **imagens grátis** pelo Workers AI da sua própria conta Cloudflare (FLUX.1 [schnell], 1024×1024,
   cerca de 150 por dia, sem chave nenhuma);
 - gera **vídeos grátis** pelo Space oficial do LTX-Video (Lightricks) no Hugging Face, dentro da cota
@@ -41,6 +43,7 @@ de gerar um vídeo. Os números abaixo são só para ter uma ideia:
 | Uso | Custo aproximado |
 | --- | --- |
 | Hospedagem (Cloudflare Workers, plano grátis) | US$ 0 (até 100 mil pedidos por dia) |
+| **Conversa online grátis (beta, gpt-oss-20b)** | **US$ 0**: ~55 "neurons" por resposta típica, dentro dos 10.000 grátis do Workers AI por dia (divididos com as imagens; o gateway para em `FREE_NEURONS_PER_DAY` = 9.500) |
 | **Imagem online (FLUX.1 [schnell], 1024×1024)** | **US$ 0**: até `FREE_IMAGES_PER_DAY` (150) por dia, dentro dos 10.000 "neurons" grátis do Workers AI |
 | **Vídeo grátis (LTX-Video, até 8 s, ~736×416)** | **US$ 0**: cota diária grátis de GPU do Hugging Face (cerca de 1 a 2 vídeos por dia por conta; cada vídeo reserva ~1 min de GPU "xlarge", que conta em dobro) |
 | Uma resposta típica de conversa (2 mil tokens de entrada, 800 de saída) com DeepSeek V4 Pro | ~US$ 0,002 |
@@ -76,8 +79,8 @@ gateway recusa novos pedidos até o dia seguinte (horário UTC). Para o limite f
 
 ### 3.3 Chaves dos provedores (todas opcionais)
 
-**Só grátis, sem pagar nada:** pule o OpenRouter e o fal.ai. As imagens grátis já funcionam sozinhas
-(Workers AI) e o vídeo grátis também (Hugging Face). Para mais vídeos grátis por dia, crie uma conta grátis
+**Só grátis, sem pagar nada:** pule o OpenRouter e o fal.ai. A conversa grátis e as imagens grátis já
+funcionam sozinhas (Workers AI) e o vídeo grátis também (Hugging Face). Para mais vídeos grátis por dia, crie uma conta grátis
 no huggingface.co > *Settings* > *Access Tokens* > *Create new token* > tipo **Read**, e salve como o
 segredo `HF_TOKEN`. Ligue o KV `LILY_USAGE` (passo 3.2) para o gateway contar as imagens do dia e parar
 antes de passar da parte grátis.
@@ -185,7 +188,14 @@ Quem usa o seu gateway usa os seus créditos. Para uma turma ou grupo, cada pess
 próprio gateway (é de graça na Cloudflare) com as próprias chaves. Um gateway público com contas,
 cotas e pagamento está no plano (`docs/ROADMAP.md`).
 
-## 7. Fotos e vídeos grátis: como funcionam e os limites reais
+## 7. Conversa, fotos e vídeos grátis: como funcionam e os limites reais
+
+- **Conversa (beta)**: o modelo `free/gpt-oss-20b` aparece primeiro na lista de modelos online do app e da
+  L.I.L.Y Web e é o escolhido na conversa (menos no perfil Qualidade, que vai aos pagos, se houver). O
+  gateway chama `@cf/openai/gpt-oss-20b` (OpenAI, pesos abertos, Apache 2.0) e devolve a resposta em
+  pedaços. Cada resposta gasta neurons pela tabela da Cloudflare (18.182 por milhão de tokens de entrada e
+  27.273 por milhão de saída); o gateway soma no KV e para em `FREE_NEURONS_PER_DAY` (9.500), o que dá
+  cerca de 150 respostas por dia sem imagens. Para desligar: `FREE_CHAT = "off"` no `wrangler.toml`.
 
 - **Imagens**: o gateway chama o modelo `@cf/black-forest-labs/flux-1-schnell` pelo Workers AI da sua
   conta Cloudflare (binding `AI` no `wrangler.toml`, já ligado). A Cloudflare dá 10.000 "neurons" grátis

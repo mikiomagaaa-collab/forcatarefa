@@ -16,10 +16,11 @@ import { dailyLimit, spentToday } from './budget.js';
 import { codeCatalog, handleChat, handleModels } from './code.js';
 import { handleSearch, searchProvider } from './search.js';
 import { handleImage, imageInfo, imagesToday } from './image.js';
+import { freeChatAvailable, freeStatus } from './free.js';
 import { handleVideoCancel, handleVideoModels, handleVideoQuote, handleVideoStatus, handleVideoSubmit } from './video.js';
 import { allowedRepos, handleCheckStart, handleCheckStatus, handleCommit, handleFile, handleRepos, handleTree } from './repo.js';
 
-export const VERSION = '1.1.0';
+export const VERSION = '1.2.0';
 
 function authorized(request, env) {
   const header = request.headers.get('authorization') || '';
@@ -47,6 +48,7 @@ async function status(env) {
       video: true,
       videoPaid: !!env.FAL_KEY,
       image: !!env.AI,
+      chatFree: freeChatAvailable(env),
       search: !!searchProvider(env),
       repos: !!env.GITHUB_TOKEN && allowedRepos(env).length > 0,
     },
@@ -55,6 +57,7 @@ async function status(env) {
     searchProvider: searchProvider(env),
     repos: allowedRepos(env),
     free: {
+      ...(await freeStatus(env)),
       image: images,
       video: { model: 'LTX-Video (Hugging Face)', account: env.HF_TOKEN ? 'sua conta do Hugging Face' : 'cota anônima (menor)' },
     },

@@ -202,6 +202,8 @@ object Router {
      */
     fun pickRemote(task: TaskKind, models: List<RemoteModel>, profile: Profile, role: String): RemoteModel? {
         val withRole = models.filter { role in it.roles }.ifEmpty { return null }
+        // O modelo grátis vem primeiro (sem custo); só o perfil Qualidade vai direto aos pagos.
+        if (profile != Profile.QUALITY) withRole.firstOrNull { it.free }?.let { return it }
         val light = task in setOf(TaskKind.CORRECT, TaskKind.SUMMARIZE, TaskKind.LANGUAGE_ID, TaskKind.REPLY)
         val order = when {
             light || profile == Profile.ECO -> listOf("fast", "strong", "frontier")

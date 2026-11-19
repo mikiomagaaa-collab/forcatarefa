@@ -14,6 +14,8 @@ data class GatewayFeatures(
     val videoPaid: Boolean = false,
     /** Imagens grátis pelo Workers AI. */
     val image: Boolean = false,
+    /** Conversa online grátis (beta) pelo Workers AI. */
+    val chatFree: Boolean = false,
     val search: Boolean = false,
     val repos: Boolean = false,
 )
@@ -44,7 +46,14 @@ data class GatewayStatus(
 /** O que sai de graça neste gateway (e quanto ainda resta hoje). */
 @Immutable
 @Serializable
-data class GatewayFree(val image: FreeImages? = null, val video: FreeVideo? = null)
+data class GatewayFree(
+    val image: FreeImages? = null,
+    val video: FreeVideo? = null,
+    /** Nome do modelo de conversa grátis (null = desligado). */
+    val chat: String? = null,
+    val neuronsToday: Double? = null,
+    val neuronsPerDay: Double = 0.0,
+)
 
 @Immutable
 @Serializable
@@ -87,6 +96,8 @@ data class RemoteModel(
     val priceIn: Double = 0.0,
     val priceOut: Double = 0.0,
     val created: Long = 0,
+    /** Grátis (Workers AI do gateway, dentro da cota diária). */
+    val free: Boolean = false,
 ) {
     val label: String get() = name.substringAfter(": ", name)
 

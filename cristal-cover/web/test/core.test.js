@@ -20,6 +20,10 @@ test('roteadores iguais aos do app', () => {
   assert.equal(pickRemote(MODELS, 'BALANCED').tier, 'strong');
   assert.equal(pickRemote(MODELS, 'ECO').tier, 'fast');
   assert.equal(pickRemote(MODELS, 'QUALITY').tier, 'frontier');
+  // Com a conversa grátis no gateway, ela vem primeiro (menos no perfil Qualidade).
+  const chatFree = [{ id: 'free/gpt-oss-20b', name: 'L.I.L.Y Online (grátis, beta)', vendor: 'OpenAI', tier: 'fast', roles: ['chat'], priceIn: 0, priceOut: 0, free: true }, ...MODELS];
+  assert.equal(pickRemote(chatFree, 'BALANCED').id, 'free/gpt-oss-20b');
+  assert.equal(pickRemote(chatFree, 'QUALITY').tier, 'frontier');
   assert.equal(classify('o app dá crash'), 'DEBUG');
   assert.equal(pickCode('GENERATE', MODELS, 'BALANCED').model.id, 'deepseek/deepseek-v4-pro');
   assert.equal(pickCode('REVIEW', MODELS, 'BALANCED', { avoidVendor: 'Google' }).model.vendor, 'Anthropic');

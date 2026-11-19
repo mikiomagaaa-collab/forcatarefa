@@ -44,6 +44,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -109,7 +110,6 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
 
     private var job: Job? = null
     @Volatile private var stopRecording = false
-    private var voiceTurn = false
 
     val busy: Boolean get() = streaming != null
 
@@ -230,8 +230,12 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
 
     // --- Conversa ------------------------------------------------------------------------------
 
+    /**
+     * Manda uma pergunta. Se ainda houver uma resposta saindo, ela é interrompida (fica guardada como
+     * "parada") e a L.I.L.Y responde a pergunta NOVA: nada de continuar a anterior nem perder a fala.
+     */
     fun send(text: String = draft, viaVoice: Boolean = false) {
-        if (busy || preparing || recordingLevel != null) return
+        if (preparing || recordingLevel != null) return
         val clean = text.trim()
         // Uma pergunta nova cala a leitura da resposta anterior (senão ela "continua respondendo" a outra).
         stopSpeaking()
@@ -243,15 +247,26 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
         image = null
         audio = null
         document = null
-        voiceTurn = viaVoice
         val attachments = buildList {
             img?.let { add(Attachment("image", it.file.path, it.sourceUri)) }
             aud?.let { add(Attachment("audio", it.file.path)) }
             doc?.let { add(Attachment("document", it.file.path, name = it.name)) }
         }
         val user = ChatMessage(role = Role.USER, text = clean, attachments = attachments)
-        messages += user
-        respond(user)
+        val previous = job?.takeIf { it.isActive }
+        if (previous == null) {
+            messages += user
+            respond(user, viaVoice)
+            return
+        }
+        // Interrompe a resposta em andamento; a pergunta nova entra depois que ela foi guardada.
+        previous.cancel()
+        _working.value = true
+        job = graph.scope.launch {
+            previous.join()
+            messages += user
+            runAnswer(user, viaVoice)
+        }
     }
 
     fun stop() {
@@ -307,19 +322,21 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
         if (!busy) removeAttachments()
     }
 
-    private fun respond(user: ChatMessage) {
-        val answerId = UUID.randomUUID().toString()
+    private fun respond(user: ChatMessage, viaVoice: Boolean = false) {
         _working.value = true
-        job = graph.scope.launch {
-            try {
-                answer(user, answerId)
-            } finally {
-                _working.value = false
-            }
+        job = graph.scope.launch { runAnswer(user, viaVoice) }
+    }
+
+    private suspend fun runAnswer(user: ChatMessage, viaVoice: Boolean) {
+        try {
+            answer(user, UUID.randomUUID().toString(), viaVoice)
+        } finally {
+            // Só a resposta mais recente desliga o "trabalhando" (uma interrompida não apaga a nova).
+            if (job == null || job == currentCoroutineContext()[Job]) _working.value = false
         }
     }
 
-    private suspend fun answer(user: ChatMessage, answerId: String) {
+    private suspend fun answer(user: ChatMessage, answerId: String, viaVoice: Boolean = false) {
         run {
             val id = ensureConversation(user)
             graph.conversations.save(id, messages.toList())
@@ -345,7 +362,7 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
                         install = (unavailable?.install ?: Category.CHAT).name,
                     )
                 }
-                finish(id, answer)
+                finish(id, answer, viaVoice)
                 return@run
             }
             val remote = (engine as? EngineChoice.Remote)?.model
@@ -388,7 +405,11 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
             } finally {
                 val end = SystemClock.elapsedRealtime()
                 val accel = local?.let { m -> (graph.engines.status.value as? EngineStatus.Ready)?.takeIf { it.model.id == m.id }?.accel?.label }
-                val cost = if (remote != null) graph.tools.lastRemoteUsage?.costUsd?.let { usd(it) } else null
+                val cost = when {
+                    remote == null -> null
+                    remote.free -> "grátis"
+                    else -> graph.tools.lastRemoteUsage?.costUsd?.let { usd(it) }
+                }
                 val answer = ChatMessage(
                     id = answerId,
                     role = Role.ASSISTANT,
@@ -404,20 +425,18 @@ class ChatSession(private val graph: AiGraph, private val app: Context, start: R
                 }
                 withContext(NonCancellable) {
                     if (status == MsgStatus.DONE && first > 0 && local != null) graph.perf.recordAnswer(local.id, text.length, end - first)
-                    finish(id, answer)
+                    finish(id, answer, viaVoice)
                 }
             }
         }
     }
 
-    private suspend fun finish(conversation: String, answer: ChatMessage) {
+    private suspend fun finish(conversation: String, answer: ChatMessage, viaVoice: Boolean = false) {
         messages += answer
         streaming = null
         graph.conversations.save(conversation, messages.toList())
         val settings = graph.settings.value.value
-        val wasVoice = voiceTurn
-        voiceTurn = false
-        if (!wasVoice || answer.status != MsgStatus.DONE) return
+        if (!viaVoice || answer.status != MsgStatus.DONE) return
         val next: (() -> Unit)? = if (settings.voiceFollowUp) ({ graph.scope.launch(Dispatchers.Main) { followUps++ } }) else null
         if (settings.speakVoiceAnswers) speak(answer, then = next) else next?.invoke()
     }

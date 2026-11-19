@@ -37,7 +37,7 @@ app.refreshGateway = async () => {
   if (!store.accessKey()) return (app.status = null);
   try {
     app.status = await app.gateway.status();
-    app.models = app.status.features.code ? await app.gateway.codeModels(true) : [];
+    app.models = app.status.features.code || app.status.features.chatFree ? await app.gateway.codeModels(true) : [];
   } catch (e) {
     app.status = { error: e.message };
   }
@@ -248,6 +248,7 @@ function renderChat(view, ctx, id) {
   if (id && !conv) return go('chat');
   conv ||= { id: store.uid(), title: 'Nova conversa', messages: [] };
   let controller = null;
+  let running = null;
   let manual = 'auto';
   const col = h('div.column');
   const list = h('div.messages');
@@ -310,7 +311,8 @@ function renderChat(view, ctx, id) {
         send(textarea.value);
       }
     };
-    sendBtn.onclick = () => (controller ? controller.abort() : send(textarea.value));
+    // Com texto, envia (e interrompe a resposta em andamento); sem texto, o botão para a resposta.
+    sendBtn.onclick = () => (controller && !textarea.value.trim() ? controller.abort() : send(textarea.value));
     micBtn.onclick = () => {
       if (recognition) return recognition.stop();
       recognition = listen((text) => send(text, true), (on) => {
@@ -328,9 +330,17 @@ function renderChat(view, ctx, id) {
 
   async function send(text, voice = false) {
     const t = String(text || '').trim();
-    if (!t || controller) return;
+    if (!t) return;
+    // Uma pergunta nova no meio de uma resposta: para a anterior e responde a nova (nada é descartado).
+    if (controller) {
+      controller.abort();
+      globalThis.speechSynthesis?.cancel?.();
+      await running?.catch(() => {});
+    }
     if (/^\/codex\b/i.test(t)) return go('codex/' + encodeURIComponent(t.replace(/^\/codex\s*/i, '')));
     if (/^\/v[ií]deo\b/i.test(t)) return go('video/' + encodeURIComponent(t.replace(/^\/v[ií]deo\s*/i, '')));
+    let finishRun;
+    running = new Promise((r) => (finishRun = r));
     textarea.value = '';
     textarea.style.height = 'auto';
     if (!conv.messages.length) conv.title = t.split(/\s+/).slice(0, 6).join(' ').slice(0, 42) || 'Nova conversa';
@@ -342,7 +352,7 @@ function renderChat(view, ctx, id) {
     controller = new AbortController();
     sendBtn.replaceChildren(icon('stop'));
     app.presence.thinking('conversa', 'Pensando');
-    const past = conv.messages.slice(0, -1).filter((m) => m.status !== 'error').slice(-16).map((m) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text.slice(0, 4000) }));
+    const past = conv.messages.slice(0, -1).filter((m) => m.status !== 'error' && m.status !== 'stopped').slice(-16).map((m) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text.slice(0, 4000) }));
     try {
       const r = await answer(past, {
         manual,
@@ -355,14 +365,14 @@ function renderChat(view, ctx, id) {
         },
       });
       reply.text = r.text.trim() || 'O modelo não devolveu nenhum texto. Tente reformular.';
-      reply.model = r.plan.where === 'online' ? `${r.plan.label} · online` : `${r.plan.label} · no navegador`;
-      reply.cost = r.usage?.costUsd ?? null;
+      reply.model = r.plan.where === 'online' ? `${r.plan.label} · online${r.plan.model?.free ? ' · grátis' : ''}` : `${r.plan.label} · no navegador`;
+      reply.cost = r.plan.model?.free ? null : r.usage?.costUsd ?? null;
       reply.status = 'done';
       app.presence.finished('conversa', true, 'Resposta pronta');
       if (voice || app.settings.speakAnswers) speak(reply.text);
     } catch (e) {
       if (e.name === 'AbortError') {
-        reply.status = 'done';
+        reply.status = 'stopped';
         reply.text ||= '(parado)';
         app.presence.clear('conversa');
       } else {
@@ -372,6 +382,7 @@ function renderChat(view, ctx, id) {
       }
     } finally {
       controller = null;
+      finishRun();
       sendBtn.replaceChildren(icon('send'));
       store.conversations.put(conv);
       if (location.hash !== '#/chat/' + conv.id) history.replaceState?.(null, '', '#/chat/' + conv.id);

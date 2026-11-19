@@ -460,3 +460,22 @@ Fotos e vídeos grátis 🌐 (gateway 1.1 publicado, sem FAL_KEY e sem OpenRoute
 - [ ] Cancelar um vídeo grátis em andamento: some da fila e não chega depois
 - [ ] L.I.L.Y Web: "Criar uma imagem" gera e baixa; o vídeo grátis termina com a aba aberta
 
+## 26. L.I.L.Y AI 1.4.0 beta: qualquer pergunta, a qualquer hora
+
+Sem gateway (modelo do aparelho):
+
+- [ ] Fazer uma pergunta longa por voz ("conte a história do Brasil") e, no meio da resposta, segurar a ilha e perguntar "quanto é 2 + 2?": a resposta longa para e ela responde 4
+- [ ] O mesmo no painel: tocar no microfone durante a resposta (o botão Parar aparece ao lado)
+- [ ] Na conversa: digitar e enviar durante uma resposta: a anterior fica marcada como parada e a nova é respondida
+- [ ] Na tela externa: tocar no microfone durante a resposta e perguntar outra coisa
+- [ ] O botão Parar (quadrado) só para, sem perguntar nada
+
+Com o gateway 1.2 publicado 🌐:
+
+- [ ] Configurações > Serviço online: aparece "Conversa grátis" e o modelo "L.I.L.Y Online (grátis, beta)" com "Grátis (cota diária)"
+- [ ] Ligar "Permitir processamento externo": o modo vai para "Online primeiro"
+- [ ] Perguntas de conhecimento (capitais, história, ciência, contas): respostas corretas, marcadas "· online · grátis"
+- [ ] Sem internet: ela responde com o modelo do aparelho (ou avisa que não há modelo)
+- [ ] Perfil Qualidade com OpenRouter configurado: usa um modelo pago (mostra o custo)
+- [ ] Depois de muitas respostas no mesmo dia: aparece "A cota grátis de hoje do Workers AI acabou" (volta à meia-noite UTC)
+

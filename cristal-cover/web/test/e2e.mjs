@@ -70,7 +70,16 @@ function png(w, hgt) {
   for (let y = 0; y < hgt; y++) { rows.push(0); for (let x = 0; x < w; x++) rows.push(80 + x * 2, 60 + y * 2, 220); }
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(Buffer.from(rows))), chunk('IEND', Buffer.alloc(0))]);
 }
-const AI = { run: async () => ({ image: png(64, 64).toString('base64') }) };
+// Workers AI simulado: imagens (FLUX) e a conversa grátis (gpt-oss-20b) em pedaços SSE, como o real.
+const AI = {
+  run: async (model) => {
+    if (!model.includes('gpt-oss')) return { image: png(64, 64).toString('base64') };
+    const text = replies.shift() || 'Olá! Sou a L.I.L.Y.';
+    const enc = new TextEncoder();
+    const half = Math.floor(text.length / 2);
+    return new ReadableStream({ start(c) { c.enqueue(enc.encode(`data: ${JSON.stringify({ response: text.slice(0, half) })}\n\n`)); c.enqueue(enc.encode(`data: ${JSON.stringify({ response: text.slice(half), usage: { prompt_tokens: 50, completion_tokens: 20 } })}\n\ndata: [DONE]\n\n`)); c.close(); } });
+  },
+};
 const env = { LILY_ACCESS_KEY: KEY, OPENROUTER_API_KEY: 'or', FAL_KEY: 'fal', TAVILY_API_KEY: 'tv', GITHUB_TOKEN: 'gh', GITHUB_REPOS: 'dono/app', FETCH: providers, AI };
 
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.md': 'text/markdown; charset=utf-8', '.webmanifest': 'application/manifest+json' };
@@ -115,7 +124,7 @@ await page.click('text=Permitir processamento externo');
 await page.waitForTimeout(300);
 await shot('web-02-configuracoes');
 
-step('conversa online');
+step('conversa online grátis');
 await page.goto(base + '/#/chat');
 await page.waitForSelector('textarea');
 replies.push('Claro! Aqui vai um plano curto:\n\n1. **Segunda**: células\n2. **Terça**: genética\n\n```js\nconsole.log("estude!")\n```');
@@ -123,7 +132,9 @@ await page.fill('textarea', 'Monte um plano de estudos de biologia');
 await page.keyboard.press('Enter');
 await page.waitForSelector('.msg.assistant .meta');
 const meta = await page.textContent('.msg.assistant .meta');
-if (!/online/.test(meta) || !/US\$ 0,0021/.test(meta)) throw new Error(`resposta sem modelo/custo: ${meta}`);
+if (!/online/.test(meta) || !/grátis/.test(meta) || /US\$/.test(meta)) throw new Error(`resposta sem a marca de grátis: ${meta}`);
+const answerText = await page.textContent('.msg.assistant .rich');
+if (!/plano curto/.test(answerText)) throw new Error(`resposta errada: ${answerText}`);
 await shot('web-03-conversa');
 
 step('Codex até o diff');

@@ -17,8 +17,8 @@ android {
         applicationId = "app.lily.ai"
         minSdk = 33
         targetSdk = 36
-        versionCode = 132 + ciRunNumber
-        versionName = "1.3.2"
+        versionCode = 140 + ciRunNumber
+        versionName = "1.4.0-beta"
         vectorDrawables { useSupportLibrary = true }
         // O Razr 40 Ultra é arm64; sem as outras arquiteturas o APK fica bem menor.
         ndk { abiFilters += "arm64-v8a" }

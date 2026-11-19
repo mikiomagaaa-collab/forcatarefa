@@ -7,6 +7,7 @@
 // no plano pago dos Workers. Sem o KV, no plano grátis a própria Cloudflare recusa depois do limite.
 
 import { GatewayError, json, readJson } from './http.js';
+import { IMAGE_NEURONS, addNeurons, ensureFree } from './free.js';
 
 export const IMAGE_MODEL = {
   id: 'flux-1-schnell',
@@ -86,6 +87,7 @@ export async function handleImage(request, env) {
   if (used != null && used >= limit) {
     throw new GatewayError(429, `As ${limit} imagens grátis de hoje já foram usadas. Elas voltam à meia-noite (horário UTC, 21h em Brasília).`);
   }
+  await ensureFree(env, IMAGE_NEURONS, 'imagens');
   const input = { prompt, steps: IMAGE_MODEL.steps };
   const seed = Number(body.seed);
   if (Number.isInteger(seed) && seed >= 0) input.seed = seed % 2147483647;
@@ -102,6 +104,7 @@ export async function handleImage(request, env) {
   const bytes = await imageBytes(out);
   if (!bytes || bytes.length < 100) throw new GatewayError(502, 'O Workers AI terminou sem devolver uma imagem.');
   await countImage(env);
+  await addNeurons(env, IMAGE_NEURONS);
   return json({
     image: `data:${mimeOf(bytes)};base64,${toBase64(bytes)}`,
     model: IMAGE_MODEL.name,

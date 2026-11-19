@@ -53,6 +53,7 @@ com versões fixadas e conferência de SHA-256.
 | OpenRouter | Acesso aos modelos de programação e conversa (Anthropic, OpenAI, Google, DeepSeek, Qwen e outros) | Termos do OpenRouter e de cada fornecedor de modelo |
 | fal.ai | Geração de vídeo paga (LTX-2 da Lightricks, Wan da Alibaba, Kling da Kuaishou, Veo do Google, HunyuanVideo da Tencent) | Termos do fal.ai e licença de cada modelo |
 | LTX-Video 0.9.8 (Lightricks), Space oficial no Hugging Face | Vídeo grátis (cota diária de GPU do Hugging Face) | Licença LTX-Video Open Weights e termos do Hugging Face |
+| gpt-oss-20b (OpenAI), pelo Cloudflare Workers AI | Conversa online grátis (beta) | Apache 2.0 e termos da Cloudflare |
 | FLUX.1 [schnell] (Black Forest Labs), pelo Cloudflare Workers AI | Imagens online grátis | Apache 2.0 e termos da Cloudflare |
 | Tavily ou Brave Search | Pesquisa técnica do Codex | Termos do provedor |
 | GitHub e GitHub Actions | Repositórios autorizados e testes do Codex | Termos do GitHub |

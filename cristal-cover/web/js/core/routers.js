@@ -14,6 +14,11 @@ export function typicalUsd(m) {
 export function pickRemote(models, profile, role = 'chat', light = false) {
   const withRole = models.filter((m) => (m.roles || []).includes(role));
   if (!withRole.length) return null;
+  // O modelo grátis vem primeiro (sem custo); só o perfil Qualidade vai direto aos pagos.
+  if (profile !== 'QUALITY') {
+    const free = withRole.find((m) => m.free);
+    if (free) return free;
+  }
   const order = light || profile === 'ECO' ? ['fast', 'strong', 'frontier'] : profile === 'QUALITY' ? ['frontier', 'strong', 'fast'] : ['strong', 'fast', 'frontier'];
   for (const tier of order) {
     const inTier = withRole.filter((m) => m.tier === tier);

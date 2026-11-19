@@ -17,6 +17,10 @@ binding = "AI"
 DAILY_BUDGET_USD = "3"
 # Imagens grátis por dia (o gateway para antes de passar da parte grátis do Workers AI; precisa do KV).
 FREE_IMAGES_PER_DAY = "150"
+# Teto diário do Workers AI grátis (conversa + imagens). A Cloudflare dá 10.000; a folga evita passar.
+FREE_NEURONS_PER_DAY = "9500"
+# Conversa grátis (beta) com o gpt-oss-20b: "on" ou "off".
+FREE_CHAT = "on"
 # CORS para abrir a L.I.L.Y Web de outro endereço (ex.: "https://meu-site.dev"). Vazio = só o próprio gateway.
 ALLOWED_ORIGINS = ""
 

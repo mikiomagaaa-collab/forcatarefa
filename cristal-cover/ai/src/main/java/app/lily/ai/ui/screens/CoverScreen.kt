@@ -185,10 +185,9 @@ fun CoverScreen(nav: Nav) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(Icons.Rounded.Keyboard, if (typing) "Fechar o teclado" else "Digitar", { typing = !typing }, size = 42.dp)
-            when {
-                session.busy -> IconButton(Icons.Rounded.Stop, "Parar a resposta", session::stop, size = 54.dp, tint = c.onAccent, filled = false, modifier = Modifier.background(c.accent, CircleShape))
-                else -> IconButton(Icons.Rounded.Mic, if (listening) "Parar de ouvir" else "Falar", { listen() }, size = 54.dp, tint = c.onAccent, filled = false, modifier = Modifier.background(c.accent, CircleShape))
-            }
+            // O microfone fica sempre disponível: falar durante uma resposta faz outra pergunta.
+            IconButton(Icons.Rounded.Mic, if (listening) "Parar de ouvir" else if (session.busy) "Fazer outra pergunta" else "Falar", { listen() }, size = 54.dp, tint = c.onAccent, filled = false, modifier = Modifier.background(c.accent, CircleShape))
+            if (session.busy) IconButton(Icons.Rounded.Stop, "Parar a resposta", session::stop, size = 42.dp)
             val answer = lastAnswer?.takeIf { it.status == MsgStatus.DONE }
             IconButton(
                 Icons.AutoMirrored.Rounded.VolumeUp,

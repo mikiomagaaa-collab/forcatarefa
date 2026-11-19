@@ -74,8 +74,8 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 O que **foi verificado** durante o desenvolvimento:
 
 - compila do zero (debug e release com R8) com as versões estáveis atuais das ferramentas;
-- 316 testes automáticos em JVM passam (124 no Cristal, 45 no teclado, 16 no módulo compartilhado, 123 na
-  L.I.L.Y AI e 8 na Gallery), mais 32 do gateway, 10 da L.I.L.Y Web e o teste de ponta a ponta da Web
+- 318 testes automáticos em JVM passam (124 no Cristal, 45 no teclado, 16 no módulo compartilhado, 125 na
+  L.I.L.Y AI e 8 na Gallery), mais 36 do gateway, 10 da L.I.L.Y Web e o teste de ponta a ponta da Web
   num Chromium. No launcher: lógica da grade, detecção da tela externa,
   regras de compatibilidade, segurança dos comandos de shell, backup, papéis de parede por área,
   encaixe e edição da Central de Controle, **compilação real do shader AGSL** e **16 telas montadas e
@@ -201,6 +201,7 @@ depois que você o configura e liga "Permitir processamento externo", e cada res
 | L.I.L.Y Codex (1.3.0) | Projeto autorizado (pasta escolhida pelo seletor do Android ou repositório do GitHub liberado no gateway). O agente lê a estrutura e as dependências, procura, lê, cria e edita arquivos em Kotlin, Java, XML, Gradle, JavaScript, TypeScript, HTML, CSS, Python, JSON, YAML e SQL, e pesquisa na internet separando o verificado das hipóteses. As mudanças ficam **preparadas**: diff por arquivo, explicação, riscos, aprovação, ponto de restauração e desfazer. No repositório, grava num ramo `lily-codex/...` e roda os testes no GitHub Actions; se falharem, lê o erro e tenta de novo (até 3 vezes; para se o mesmo erro voltar). Uma revisão final por um modelo de outra empresa. Modo automático opcional só para correções pequenas. "Consertar com o Codex" no Diagnóstico e `/codex` na conversa |
 | Video AI (1.3.0) | Texto ou uma imagem do aparelho (seletor de fotos do Android) para vídeo, continuar o último quadro de um vídeo, movimento de câmera, 16:9, 9:16 ou 1:1, duração e resolução, com o preço estimado antes. Modelos: LTX-2, Wan 2.5, Kling 2.5 Turbo, Veo 3.1 Fast e HunyuanVideo (escolha automática por qualidade e custo ou manual). Roda no fal.ai pelo gateway, com progresso na Liquid Island, histórico, prévia, compartilhar e salvar em Movies/L.I.L.Y (aparece na Gallery). `/video` na conversa. **Grátis (1.3.2):** LTX-Video pelo Space oficial da Lightricks no Hugging Face (cota diária grátis de GPU, 1 a 2 vídeos por dia, até 8 s) vem escolhido primeiro; os pagos só com a FAL_KEY |
 | L.I.L.Y Avatar (1.3.0) | Personagem original desenhada em código (sem imagens de terceiros), com inspiração cyberpunk e roupa fechada. Respira, pisca, olha, move a boca ao falar e reage ao estado de todos os módulos (voz, conversa, Codex, vídeo, imagem). Estilos Holograma, Vidro e Mínimo; busto, rosto ou orbe; cores, tamanho, transparência e intensidade das animações. Modo flutuante opcional (só com a permissão "Sobrepor a outros apps"; desligado por padrão), compacto na tela externa, arrastável, some com um toque longo. Nunca liga câmera nem microfone |
+| Conversa grátis e perguntas a qualquer hora (1.4.0 beta) | Uma pergunta nova (falada, pela ilha ou digitada) interrompe a resposta em andamento e é respondida na hora. Modelo **L.I.L.Y Online (grátis, beta)**: gpt-oss-20b pelo Workers AI do gateway, escolhido primeiro na conversa (menos no perfil Qualidade), ~150 respostas grátis por dia divididas com as imagens |
 | Imagem online grátis (1.3.2) | Gerar imagem > *Online grátis*: FLUX.1 [schnell] pelo Workers AI da conta Cloudflare do gateway, 1024 × 1024 em segundos, até 150 por dia (o gateway para antes de passar da parte grátis); salva em Pictures/L.I.L.Y |
 | Termos e créditos | Configurações > Sobre: termos de uso, privacidade e créditos dentro do app, os mesmos arquivos de `legal/` |
 
@@ -235,12 +236,13 @@ L.I.L.Y Web conhecem apenas o endereço e uma chave de acesso sua. Passo a passo
 | `GET /v1/models`, `POST /v1/chat` | Catálogo do OpenRouter lido ao vivo (a versão mais nova de cada família) e conversa em pedaços com o custo real no fim |
 | `POST /v1/search` | Pesquisa (Tavily ou Brave) para o Codex |
 | `POST /v1/image` | Imagem grátis (FLUX.1 [schnell] no Workers AI, contador diário) |
+| `free/gpt-oss-20b` em `/v1/models` e `/v1/chat` | Conversa grátis (beta) no Workers AI, com o mesmo formato de pedaços do OpenRouter e uma cota diária de neurons dividida com as imagens |
 | `/v1/video/...` | Modelos, orçamento, envio, situação e cancelamento: grátis no Space do LTX-Video (Hugging Face, resposta longa em NDJSON) e pagos na fila do fal.ai |
 | `/v1/repos`, `/v1/repo/...` | Árvore, arquivos, gravação em ramos `lily-codex/...` e testes no GitHub Actions, só nos repositórios liberados |
 
 Proteções: recusa tudo sem a chave de acesso (comparação em tempo constante), limite de gasto por dia,
 CORS fechado, identificadores de vídeo conferidos (a chave do fal.ai nunca vai para outro servidor),
-nada grava no ramo principal nem em workflows. 32 testes (`node --test test/*.test.js`).
+nada grava no ramo principal nem em workflows. 36 testes (`node --test test/*.test.js`).
 
 ## L.I.L.Y Web (pasta `web/`)
 

@@ -545,6 +545,17 @@ escolher) sem problemas na verificação; dá para desfazer.
 Se a L.I.L.Y fechar por um erro, o **L.I.L.Y Diagnóstico** tem o botão **Consertar com o Codex**: ele abre o
 Codex com o relatório já preenchido.
 
+### L.I.L.Y 1.4.0 beta: pergunte a qualquer hora, sobre qualquer coisa
+
+- **Pergunta nova a qualquer momento**: se ela ainda estiver respondendo (ou lendo em voz alta), é só
+  falar, segurar a ilha de novo ou digitar: a resposta anterior para na hora e ela responde a pergunta
+  NOVA. O botão quadrado (Parar) só para, sem perguntar nada.
+- **Conversa grátis online (beta)**: com o gateway publicado (versão 1.2 ou mais nova), o modelo
+  **L.I.L.Y Online (grátis, beta)** (gpt-oss-20b) responde perguntas de conhecimento geral muito melhor
+  que os modelos pequenos do aparelho, sem custo, até ~150 respostas por dia. Em Configurações > Serviço
+  online, ao ligar **Permitir processamento externo**, a conversa passa para **Online primeiro**; dá para
+  voltar a **Só no aparelho** quando quiser. Sem internet, ela usa o modelo do aparelho.
+
 ### Fotos e vídeos grátis (1.3.2)
 
 Com o gateway publicado (versão 1.1 ou mais nova), dá para criar **sem pagar nada**:

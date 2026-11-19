@@ -181,6 +181,33 @@ class NewModulesTest {
         s.dispose()
     }
 
+    @Test
+    fun `conversa gratis responde qualquer pergunta online, sem custo, e vem primeiro`() {
+        fake.freeChat = true
+        val graph = app.graph
+        graph.gatewayStore = store
+        graph.gateway = client
+        val models = runBlocking { client.codeModels(refresh = true) }
+        assertEquals("free/gpt-oss-20b", models.first().id)
+        assertTrue(models.first().free)
+        // O grátis vem primeiro; o perfil Qualidade vai aos pagos.
+        assertEquals("free/gpt-oss-20b", Router.pickRemote(TaskKind.CHAT, models, Profile.BALANCED, Router.ROLE_CHAT)!!.id)
+        assertEquals("free/gpt-oss-20b", Router.pickRemote(TaskKind.CHAT, models, Profile.ECO, Router.ROLE_CHAT)!!.id)
+        assertTrue(!Router.pickRemote(TaskKind.CHAT, models, Profile.QUALITY, Router.ROLE_CHAT)!!.free)
+        graph.settings.update { it.copy(onlineConsent = true, online = OnlineMode.PREFER) }
+        fake.replies += "A capital da Austrália é Camberra."
+        val s = ChatSession(graph, app, Route.Chat(draft = "Qual é a capital da Austrália?", send = true))
+        waitFor { s.messages.count { it.role == Role.ASSISTANT } >= 1 && s.streaming == null }
+        val answer = s.messages.last { it.role == Role.ASSISTANT }
+        assertEquals("A capital da Austrália é Camberra.", answer.text)
+        assertTrue(answer.model!!, answer.model!!.contains("grátis"))
+        assertFalse(answer.model!!, answer.model!!.contains("US$"))
+        assertTrue(fake.chatRequests.last().toString().contains("free/gpt-oss-20b"))
+        s.dispose()
+        fake.freeChat = false
+        graph.settings.update { it.copy(online = OnlineMode.FALLBACK) }
+    }
+
     // --- Video AI ------------------------------------------------------------------------------
 
     @Test

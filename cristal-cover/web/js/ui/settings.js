@@ -48,7 +48,8 @@ export function renderSettings(view, ctx) {
       const line = (ok, t, d) => h('div.row', h(`span.${ok ? 'ok' : 'faint'}`, ok ? '✓' : '—'), h('div', h('strong', t), h('div.faint', d)));
       status.append(
         h('h3', 'O que o seu gateway oferece'),
-        line(st.features.code, 'Modelos de programação e conversa', st.features.code ? `${st.codeModels} modelos (OpenRouter)` : st.codeError || 'Falta OPENROUTER_API_KEY'),
+        line(st.features.chatFree, 'Conversa grátis (beta)', st.features.chatFree ? `${st.free?.chat || 'gpt-oss-20b'} pelo Workers AI` : 'Publique o gateway 1.2 ou mais novo'),
+        line(st.features.code, 'Modelos de programação e conversa', st.features.code ? `${st.codeModels} modelos (OpenRouter)` : st.codeError || 'Falta OPENROUTER_API_KEY (opcional, pago)'),
         line(st.features.video, 'Geração de vídeo', st.features.video ? 'fal.ai' : 'Falta FAL_KEY'),
         line(st.features.search, 'Pesquisa na internet (Codex)', st.searchProvider || 'Falta TAVILY_API_KEY ou BRAVE_API_KEY'),
         line(st.features.repos, 'Repositórios do Codex', st.repos.length ? st.repos.join(', ') : 'Falta GITHUB_TOKEN e GITHUB_REPOS'),
@@ -56,7 +57,7 @@ export function renderSettings(view, ctx) {
       );
       if (app.models.length) {
         status.append(h('h3', 'Modelos online (lidos agora no provedor)'));
-        app.models.forEach((m) => status.append(h('div.row', h('div.grow', h('strong', label(m)), h('div.faint', `${m.vendor} · ${tierName(m.tier)} · ${Math.round(m.context / 1000)}k de contexto`)), h('span.faint', `${usd(m.priceIn)} / ${usd(m.priceOut)}`))));
+        app.models.forEach((m) => status.append(h('div.row', h('div.grow', h('strong', label(m)), h('div.faint', `${m.vendor} · ${tierName(m.tier)} · ${Math.round(m.context / 1000)}k de contexto`)), h('span.faint', m.free ? 'Grátis (cota diária)' : `${usd(m.priceIn)} / ${usd(m.priceOut)}`))));
         status.append(h('p.faint', 'Preço por milhão de tokens (entrada / saída), informado pelo provedor.'));
       }
     } else if (st?.error) status.append(h('p.warn', st.error));

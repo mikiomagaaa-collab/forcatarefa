@@ -58,6 +58,9 @@ class FakeGateway : AutoCloseable {
     private var lastCi: Pair<Boolean, String>? = null
 
     private var videoPolls = 0
+    /** Inclui a conversa grátis (como um gateway 1.2). */
+    @Volatile var freeChat = false
+
     /** Inclui o modelo de vídeo grátis (como um gateway 1.1). */
     @Volatile var freeVideo = false
     val imagePrompts = ConcurrentLinkedDeque<String>()
@@ -113,7 +116,7 @@ class FakeGateway : AutoCloseable {
         val obj = if (body.isNotBlank()) json.parseToJsonElement(body).jsonObject else JsonObject(emptyMap())
         when {
             path == "/v1/status" -> send(ex, 200, """{"ok":true,"version":"1.0.0","features":{"code":true,"video":true,"search":true,"repos":true},"codeModels":5,"searchProvider":"tavily","repos":["dono/app"],"budget":{"dailyUsd":3,"spentTodayUsd":0.12,"enforced":true}}""")
-            path == "/v1/models" -> send(ex, 200, models)
+            path == "/v1/models" -> send(ex, 200, if (freeChat) models.replaceFirst("\"models\":[", "\"models\":[$FREE_CHAT_MODEL,") else models)
             path == "/v1/chat" -> {
                 chatRequests += obj
                 val text = replies.pollFirst() ?: """{"action":"finish","summary":"Nada a fazer.","changes":"","verified":[],"hypotheses":[],"risks":[],"sources":[]}"""
@@ -244,6 +247,8 @@ class FakeGateway : AutoCloseable {
     }
 
     companion object {
+        const val FREE_CHAT_MODEL = """{"id":"free/gpt-oss-20b","name":"L.I.L.Y Online (grátis, beta)","vendor":"OpenAI gpt-oss-20b · Workers AI","family":"gpt-oss","tier":"fast","speed":"medium","roles":["chat","quick","explain","docs"],"context":128000,"priceIn":0,"priceOut":0,"created":0,"free":true}"""
+
         const val FREE_MODEL = """{"id":"ltx-free","name":"LTX-Video (grátis)","family":"LTX (Lightricks)","summary":"Grátis","modes":["text","image"],"durations":[2,4,6,8],"resolutions":["480p"],"aspects":["16:9","9:16","1:1"],"audio":false,"quality":2,"speed":"medium","typicalSeconds":90,"fromUsd":0,"priceNote":"grátis","free":true,"provider":"hf"}"""
 
         /** Uma imagem PNG de verdade (8×8, azul) para a imagem online. */

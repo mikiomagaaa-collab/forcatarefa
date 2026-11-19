@@ -1,5 +1,6 @@
 package app.lily.ai
 
+import kotlinx.coroutines.launch
 import android.app.Application
 import android.content.Context
 import androidx.work.Configuration
@@ -62,6 +63,17 @@ class LilyAiApp : Application(), Configuration.Provider {
         // Avatar flutuante (opcional): só observa; nada aparece sem a pessoa ligar e permitir.
         runCatching { app.lily.ai.presence.AppVisibility.install(this) }
         core?.let { graph -> runCatching { DiagLog.step("Avatar flutuante") { graph.overlay.start() } } }
+        // Com o serviço online pronto, atualiza a lista de modelos em segundo plano (o grátis entra no roteador).
+        core?.let { graph ->
+            graph.scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                if (runCatching { graph.onlineReady() }.getOrDefault(false)) {
+                    runCatching {
+                        graph.gateway.status()
+                        graph.gateway.codeModels(refresh = true)
+                    }
+                }
+            }
+        }
         DiagLog.appReady()
     }
 

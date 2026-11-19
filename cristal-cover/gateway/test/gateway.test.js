@@ -28,7 +28,7 @@ test('status mostra o que está configurado e o limite de gasto', async () => {
   const env = makeEnv({ FETCH: f, OPENROUTER_API_KEY: 'or', FAL_KEY: 'fal', LILY_USAGE: kv, DAILY_BUDGET_USD: '2' });
   const { status, body } = await callJson(env, 'GET', '/v1/status');
   assert.equal(status, 200);
-  assert.deepEqual(body.features, { code: true, video: true, videoPaid: true, image: false, search: false, repos: false });
+  assert.deepEqual(body.features, { code: true, video: true, videoPaid: true, image: false, chatFree: false, search: false, repos: false });
   assert.equal(body.free.image, null);
   assert.match(body.free.video.account, /anônima/);
   assert.equal(body.budget.dailyUsd, 2);

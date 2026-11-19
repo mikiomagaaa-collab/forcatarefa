@@ -7,6 +7,7 @@
 
 import { GatewayError, json, providerError, readJson, upstream } from './http.js';
 import { addSpend, ensureBudget } from './budget.js';
+import { freeModels, handleFreeChat } from './free.js';
 
 const OPENROUTER = 'https://openrouter.ai/api/v1';
 
@@ -104,9 +105,19 @@ export function resetCodeCache() {
   memoryCache = null;
 }
 
+/** O grátis (Workers AI) primeiro e, com a chave, o catálogo do OpenRouter. */
 export async function handleModels(env) {
-  const models = await codeCatalog(env);
-  return json({ provider: 'openrouter', models });
+  const free = freeModels(env);
+  if (!env.OPENROUTER_API_KEY) {
+    if (!free.length) throw new GatewayError(501, 'Modelos online não configurados no gateway (falta OPENROUTER_API_KEY ou o Workers AI).');
+    return json({ provider: 'workers-ai', models: free });
+  }
+  try {
+    return json({ provider: free.length ? 'workers-ai+openrouter' : 'openrouter', models: [...free, ...(await codeCatalog(env))] });
+  } catch (e) {
+    if (!free.length) throw e;
+    return json({ provider: 'workers-ai', models: free, openrouterError: e.publicMessage || String(e.message || e) });
+  }
 }
 
 /** Estimativa conservadora (US$) antes de chamar o modelo. */
@@ -136,7 +147,6 @@ export function costFromTail(tail, model) {
 }
 
 export async function handleChat(request, env, ctx) {
-  if (!env.OPENROUTER_API_KEY) throw new GatewayError(501, 'Modelos online não configurados no gateway (falta OPENROUTER_API_KEY).');
   const body = await readJson(request);
   const messages = Array.isArray(body.messages) ? body.messages : [];
   if (!messages.length) throw new GatewayError(400, 'Mande pelo menos uma mensagem.');
@@ -145,6 +155,11 @@ export async function handleChat(request, env, ctx) {
       throw new GatewayError(400, 'Mensagens precisam de role (system, user, assistant) e content (texto).');
     }
   }
+  if (String(body.model || '').startsWith('free/')) {
+    const clean = messages.map((m) => ({ role: m.role, content: m.content }));
+    return handleFreeChat(body, clean, env, ctx);
+  }
+  if (!env.OPENROUTER_API_KEY) throw new GatewayError(501, 'Modelos online pagos não configurados no gateway (falta OPENROUTER_API_KEY). Use o modelo grátis.');
   const catalog = await codeCatalog(env);
   const model = catalog.find((m) => m.id === body.model);
   if (!model) throw new GatewayError(400, `Modelo indisponível neste gateway: ${body.model}. Atualize a lista de modelos.`);

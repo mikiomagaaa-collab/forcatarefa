@@ -2,7 +2,7 @@
 // LTX-Video no Hugging Face (API do Gradio), com o formato que o Gradio 5 usa de verdade.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FakeKV, call, callJson, fakeFetch, makeEnv } from './helpers.js';
+import { FakeKV, OPENROUTER_MODELS, call, callJson, fakeFetch, makeEnv } from './helpers.js';
 import { gradioVideo, ltxData } from '../src/video.js';
 import { fromBase64url } from '../src/http.js';
 
@@ -166,3 +166,93 @@ test('vídeo grátis: identificador adulterado não alcança outro endereço', a
   const r = await callJson(env, 'GET', `/v1/video/${bad}`);
   assert.equal(r.status, 400);
 });
+
+// --- Conversa grátis (beta) ---------------------------------------------------------------------
+
+function sseStream(events) {
+  const enc = new TextEncoder();
+  return new ReadableStream({
+    start(c) {
+      for (const e of events) c.enqueue(enc.encode(`data: ${typeof e === 'string' ? e : JSON.stringify(e)}\n\n`));
+      c.close();
+    },
+  });
+}
+
+async function chatText(res) {
+  const raw = await res.text();
+  let text = '';
+  let usage = null;
+  for (const line of raw.split('\n')) {
+    if (!line.startsWith('data: ') || line === 'data: [DONE]') continue;
+    const o = JSON.parse(line.slice(6));
+    text += o.choices?.[0]?.delta?.content || '';
+    if (o.usage) usage = o.usage;
+  }
+  return { text, usage, raw };
+}
+
+test('conversa grátis: aparece primeiro na lista, com ou sem OpenRouter', async () => {
+  const only = await callJson(makeEnv({ AI: fakeAI({}) }), 'GET', '/v1/models');
+  assert.equal(only.status, 200);
+  assert.deepEqual(only.body.models.map((m) => m.id), ['free/gpt-oss-20b']);
+  assert.equal(only.body.models[0].free, true);
+  assert.equal(only.body.models[0].priceIn, 0);
+  assert.ok(only.body.models[0].roles.includes('chat'));
+  const f = fakeFetch([['GET', /openrouter\.ai\/api\/v1\/models$/, () => OPENROUTER_MODELS]]);
+  const both = await callJson(makeEnv({ AI: fakeAI({}), FETCH: f, OPENROUTER_API_KEY: 'or' }), 'GET', '/v1/models');
+  assert.equal(both.body.models[0].id, 'free/gpt-oss-20b');
+  assert.ok(both.body.models.length > 1);
+  assert.equal((await callJson(makeEnv(), 'GET', '/v1/models')).status, 501);
+});
+
+test('conversa grátis: responde em pedaços no formato do app, custo zero, e conta a cota', async () => {
+  const ai = fakeAI(() => sseStream([{ response: 'Olá! ' }, { response: '2 + 2 = 4.' }, { response: '', usage: { prompt_tokens: 100, completion_tokens: 20 } }, '[DONE]']));
+  const kv = new FakeKV();
+  const env = makeEnv({ AI: ai, LILY_USAGE: kv });
+  const { res } = await call(env, 'POST', '/v1/chat', { model: 'free/gpt-oss-20b', messages: [{ role: 'system', content: 'Seja breve.' }, { role: 'user', content: 'Quanto é 2 + 2?' }] });
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('x-lily-model'), 'free/gpt-oss-20b');
+  const out = await chatText(res);
+  assert.equal(out.text, 'Olá! 2 + 2 = 4.');
+  assert.equal(out.usage.cost, 0);
+  assert.equal(ai.calls[0].model, '@cf/openai/gpt-oss-20b');
+  assert.equal(ai.calls[0].input.stream, true);
+  assert.equal(ai.calls[0].input.messages.at(-1).content, 'Quanto é 2 + 2?');
+  const used = Number(await kv.get(`neurons:${new Date().toISOString().slice(0, 10)}`));
+  assert.ok(used > 2 && used < 3, `neurons: ${used}`);
+  const st = await callJson(env, 'GET', '/v1/status');
+  assert.equal(st.body.features.chatFree, true);
+  assert.equal(st.body.free.chat, 'L.I.L.Y Online (grátis, beta)');
+});
+
+test('conversa grátis: entende o formato OpenAI (choices) e tenta de novo se recusar parâmetros', async () => {
+  let n = 0;
+  const ai = {
+    calls: [],
+    async run(model, input) {
+      this.calls.push(input);
+      if (n++ === 0) throw new Error('AiError: Invalid input: max_tokens is not allowed');
+      return sseStream([{ choices: [{ delta: { reasoning_content: 'pensando…' } }] }, { choices: [{ delta: { content: 'Brasília.' } }] }, '[DONE]']);
+    },
+  };
+  const { res } = await call(makeEnv({ AI: ai }), 'POST', '/v1/chat', { model: 'free/gpt-oss-20b', messages: [{ role: 'user', content: 'Capital do Brasil?' }] });
+  const out = await chatText(res);
+  assert.equal(out.text, 'Brasília.');
+  assert.equal(ai.calls.length, 2);
+  assert.equal(ai.calls[1].max_tokens, undefined);
+});
+
+test('cota grátis compartilhada: perto do limite recusa conversa e imagem antes de chamar o Workers AI', async () => {
+  const kv = new FakeKV();
+  await kv.put(`neurons:${new Date().toISOString().slice(0, 10)}`, '9490');
+  const ai = fakeAI({ image: b64(JPEG) });
+  const env = makeEnv({ AI: ai, LILY_USAGE: kv });
+  const chat = await callJson(env, 'POST', '/v1/chat', { model: 'free/gpt-oss-20b', messages: [{ role: 'user', content: 'oi' }] });
+  assert.equal(chat.status, 429);
+  assert.match(chat.body.error, /cota grátis de hoje/);
+  const img = await callJson(env, 'POST', '/v1/image', { prompt: 'x' });
+  assert.equal(img.status, 429);
+  assert.equal(ai.calls.length, 0);
+});
+

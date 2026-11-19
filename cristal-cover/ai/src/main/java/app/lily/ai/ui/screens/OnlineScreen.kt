@@ -108,7 +108,7 @@ fun OnlineScreen(nav: Nav) {
         scope.launch {
             try {
                 val s = graph.gateway.status()
-                models = if (s.features.code) graph.gateway.codeModels(refresh = true) else emptyList()
+                models = if (s.features.code || s.features.chatFree) graph.gateway.codeModels(refresh = true) else emptyList()
                 message = "Conectado ao gateway ${s.version}."
             } catch (e: GatewayException) {
                 message = e.message
@@ -179,7 +179,14 @@ fun OnlineScreen(nav: Nav) {
                     "Permitir processamento externo",
                     "O que você mandar para um recurso online (texto, código, imagem de referência) sai do aparelho e passa pelo gateway e pelo provedor (OpenRouter, fal.ai, Tavily ou GitHub). Cada tela avisa quando algo é online.",
                     Icons.Rounded.Shield,
-                    trailing = { Toggle(settings.onlineConsent, { on -> graph.settings.update { it.copy(onlineConsent = on) } }) },
+                    trailing = {
+                        Toggle(settings.onlineConsent, { on ->
+                            // Ao permitir, com a conversa grátis no gateway, ela passa a responder primeiro (respostas
+                            // melhores que os modelos pequenos do aparelho, sem custo). Dá para mudar logo abaixo.
+                            val free = graph.gateway.lastStatus.value?.features?.chatFree == true
+                            graph.settings.update { it.copy(onlineConsent = on, online = if (on && free && it.online == OnlineMode.FALLBACK) OnlineMode.PREFER else it.online) }
+                        })
+                    },
                 )
             }
 
@@ -192,6 +199,9 @@ fun OnlineScreen(nav: Nav) {
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(if (settings.onlineConsent) settings.online.description else "Ligue \"Permitir processamento externo\" para usar modelos online.", style = Type.footnote, color = c.secondary)
+                if (status?.features?.chatFree == true) {
+                    Text("Seu gateway tem a conversa grátis (${status?.free?.chat ?: "beta"}): com \"Online primeiro\" ela responde qualquer pergunta, sem custo, até a cota do dia.", style = Type.caption, color = c.success)
+                }
                 Text("O Codex e o Vídeo sempre são online e pedem o mesmo consentimento.", style = Type.caption, color = c.tertiary)
             }
 
@@ -206,7 +216,7 @@ fun OnlineScreen(nav: Nav) {
                                 Text(m.label, style = Type.callout, color = c.content)
                                 Text("${m.vendor} · ${tierLabel(m.tier)} · ${m.context / 1000}k de contexto", style = Type.caption, color = c.secondary)
                             }
-                            Text("${usd(m.priceIn)} / ${usd(m.priceOut)}", style = Type.caption, color = c.tertiary)
+                            Text(if (m.free) "Grátis (cota diária)" else "${usd(m.priceIn)} / ${usd(m.priceOut)}", style = Type.caption, color = if (m.free) c.success else c.tertiary)
                         }
                     }
                     Text("Preço por milhão de tokens (entrada / saída), informado pelo provedor.", style = Type.caption, color = c.tertiary)

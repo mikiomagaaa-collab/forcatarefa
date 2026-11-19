@@ -163,13 +163,14 @@ fun Composer(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
-                if (onMic != null && text.isBlank() && !busy) {
+                // O microfone e o Enviar funcionam até com uma resposta saindo: a pergunta nova a interrompe.
+                if (onMic != null && text.isBlank()) {
                     IconButton(Icons.Rounded.Mic, if (listening != null) "Parar de ouvir" else "Falar", onMic, size = 40.dp, tint = if (listening != null) c.onAccent else c.content, filled = listening == null, modifier = if (listening != null) Modifier.background(c.accent, CircleShape) else Modifier)
                 }
                 when {
-                    busy -> IconButton(Icons.Rounded.Stop, "Parar a resposta", onStop, size = 40.dp, tint = c.onAccent, modifier = Modifier.background(c.accent, CircleShape), filled = false)
                     text.isNotBlank() || image != null || audioLabel != null || fileLabel != null ->
-                        IconButton(Icons.AutoMirrored.Rounded.Send, "Enviar", onSend, size = 40.dp, tint = c.onAccent, modifier = Modifier.background(c.accent, CircleShape), filled = false)
+                        IconButton(Icons.AutoMirrored.Rounded.Send, if (busy) "Enviar (para a resposta atual)" else "Enviar", onSend, size = 40.dp, tint = c.onAccent, modifier = Modifier.background(c.accent, CircleShape), filled = false)
+                    busy -> IconButton(Icons.Rounded.Stop, "Parar a resposta", onStop, size = 40.dp, tint = c.onAccent, modifier = Modifier.background(c.accent, CircleShape), filled = false)
                 }
             }
         }
