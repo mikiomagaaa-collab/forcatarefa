@@ -112,6 +112,7 @@ jobs:
         run: |
           url=$(grep -oE 'https://[A-Za-z0-9.-]+\.workers\.dev' deploy.log | head -1)
           [ -n "$url" ] || url="${SUB:+https://lily-gateway.$SUB.workers.dev}"
+          echo "GATEWAY_URL=$url" >> "$GITHUB_ENV"
           {
             echo "### L.I.L.Y Gateway publicado"
             echo ""
@@ -142,3 +143,10 @@ jobs:
           put GITHUB_TOKEN "$GITHUB_TOKEN_CODEX"
           put GITHUB_REPOS "$GITHUB_REPOS"
           echo "Os segredos vazios foram ignorados; o gateway mostra no app o que falta."
+
+      # Pedidos de verdade ao gateway publicado: no ar, chave aceita, uma pergunta e uma imagem grátis.
+      - name: Conferir o gateway publicado
+        if: steps.conta.outputs.pronto == 'true'
+        env:
+          LILY_ACCESS_KEY: ${{ secrets.LILY_ACCESS_KEY }}
+        run: node scripts/smoke.mjs
