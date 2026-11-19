@@ -25,7 +25,10 @@ async function call(path, init = {}, timeout = 60_000) {
   try { body = JSON.parse(text); } catch { /* SSE ou texto */ }
   return { status: res.status, text, body };
 }
-const why = (r) => r.body?.error?.message || r.body?.error || r.text.slice(0, 200);
+const why = (r) => {
+  const main = r.body?.error?.message || r.body?.error || r.text.slice(0, 200);
+  return r.body?.detail ? `${main} Motivo: ${String(r.body.detail).slice(0, 300)}` : main;
+};
 
 // Junta os pedaços da resposta (formato do OpenRouter e do Workers AI).
 export function sseText(raw) {

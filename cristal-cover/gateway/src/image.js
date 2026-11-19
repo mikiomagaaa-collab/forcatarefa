@@ -91,16 +91,25 @@ export async function handleImage(request, env) {
   const input = { prompt, steps: IMAGE_MODEL.steps };
   const seed = Number(body.seed);
   if (Number.isInteger(seed) && seed >= 0) input.seed = seed % 2147483647;
+  // Se o modelo recusar algum campo (o esquema do Workers AI muda com o tempo), tenta de novo só com o
+  // essencial: primeiro sem a semente, depois só a descrição.
+  const attempts = [input];
+  if ('seed' in input) attempts.push({ prompt, steps: IMAGE_MODEL.steps });
+  attempts.push({ prompt });
   let out;
-  try {
-    out = await env.AI.run(IMAGE_MODEL.run, input);
-  } catch (e) {
-    const msg = String(e?.message || e);
-    if (/neuron|allocation|quota|limit|4006|429/i.test(msg)) {
-      throw new GatewayError(429, 'A cota grátis diária do Workers AI desta conta acabou. Ela volta à meia-noite (UTC).', msg);
+  let lastError = '';
+  for (const attempt of attempts) {
+    try {
+      out = await env.AI.run(IMAGE_MODEL.run, attempt);
+      break;
+    } catch (e) {
+      lastError = String(e?.message || e);
+      if (/neuron|allocation|quota|daily|4006|429/i.test(lastError)) {
+        throw new GatewayError(429, 'A cota grátis diária do Workers AI desta conta acabou. Ela volta à meia-noite (UTC).', lastError);
+      }
     }
-    throw new GatewayError(502, 'O Workers AI não conseguiu gerar a imagem. Tente de novo ou mude a descrição.', msg);
   }
+  if (!out) throw new GatewayError(502, 'O Workers AI não conseguiu gerar a imagem. Tente de novo ou mude a descrição.', lastError);
   // Já em base64 (o formato do FLUX no Workers AI): passa direto, sem decodificar e codificar de novo
   // (economiza CPU, que no plano grátis da Cloudflare é ~10 ms por pedido).
   let dataUrl;

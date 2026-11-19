@@ -67,6 +67,22 @@ test('imagem grátis: sem Workers AI, descrição vazia e cota esgotada viram me
   assert.match(r.body.error, /cota grátis diária/);
 });
 
+test('imagem grátis: se o modelo recusar a semente, tenta de novo só com o essencial', async () => {
+  const ai = fakeAI((input) => {
+    if ('seed' in input) throw new Error('AiError: 5006: Error: additional properties not allowed: seed');
+    return { image: b64(JPEG) };
+  });
+  const r = await callJson(makeEnv({ AI: ai }), 'POST', '/v1/image', { prompt: 'um cristal', seed: 7 });
+  assert.equal(r.status, 200);
+  assert.deepEqual(ai.calls.map((c) => c.input), [{ prompt: 'um cristal', steps: 4, seed: 7 }, { prompt: 'um cristal', steps: 4 }]);
+
+  // Se nada der certo, o motivo real do Workers AI vai junto (detail) para aparecer no diagnóstico.
+  const bad = { run: async () => { throw new Error('AiError: 3010: Invalid or incomplete input'); } };
+  const fail = await callJson(makeEnv({ AI: bad }), 'POST', '/v1/image', { prompt: 'x', seed: 1 });
+  assert.equal(fail.status, 502);
+  assert.match(fail.body.detail, /3010/);
+});
+
 // --- Vídeo grátis ------------------------------------------------------------------------------
 
 const SPACE = 'https://lightricks-ltx-video-distilled.hf.space';

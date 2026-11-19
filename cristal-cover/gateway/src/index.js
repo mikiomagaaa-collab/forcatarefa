@@ -20,7 +20,7 @@ import { freeChatAvailable, freeStatus } from './free.js';
 import { handleVideoCancel, handleVideoModels, handleVideoQuote, handleVideoStatus, handleVideoSubmit } from './video.js';
 import { allowedRepos, handleCheckStart, handleCheckStatus, handleCommit, handleFile, handleRepos, handleTree } from './repo.js';
 
-export const VERSION = '1.2.0';
+export const VERSION = '1.2.1';
 
 function authorized(request, env) {
   const header = request.headers.get('authorization') || '';
