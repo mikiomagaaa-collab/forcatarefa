@@ -81,6 +81,7 @@ struct ChatView: View {
             TextField("Pergunte qualquer coisa", text: $draft, axis: .vertical)
                 .lineLimit(1...6)
                 .focused($typing)
+                .accessibilityIdentifier("pergunta")
                 .padding(.horizontal, 14).padding(.vertical, 10)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22))
                 .onSubmit(sendDraft)

@@ -40,6 +40,7 @@ targets:
     scheme:
       testTargets:
         - LILYTests
+        - LILYUITests
   LILYTests:
     type: bundle.unit-test
     platform: iOS
@@ -51,3 +52,15 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: app.lily.ios.tests
+  LILYUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: LILYUITests
+    dependencies:
+      - target: LILY
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: app.lily.ios.uitests
+        TEST_TARGET_NAME: LILY

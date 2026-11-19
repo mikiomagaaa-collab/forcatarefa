@@ -43,8 +43,15 @@ jobs:
           set -o pipefail
           DEVICE=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k,v in sorted(d.items(), reverse=True) if 'iOS' in k for x in v if x['name'].startswith('iPhone')))")
           echo "Simulador: $DEVICE"
-          xcodebuild test -project LILY.xcodeproj -scheme LILY -destination "id=$DEVICE" CODE_SIGNING_ALLOWED=NO | tee test.log | grep -E "error:|warning: unre|Test Case|Executed|\*\* TEST" || true
+          xcodebuild test -project LILY.xcodeproj -scheme LILY -destination "id=$DEVICE" -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO | tee test.log | grep -E "error:|warning: unre|Test Case|Executed|\*\* TEST" || true
           grep -q "\*\* TEST SUCCEEDED \*\*" test.log
+
+      - name: Capturas de tela do teste de interface
+        if: always()
+        run: |
+          mkdir -p telas
+          xcrun xcresulttool export attachments --path TestResults.xcresult --output-path telas || true
+          ls -la telas | head -20
 
       - name: Compilar para iPhone (sem assinatura)
         run: |
@@ -62,7 +69,7 @@ jobs:
           {
             echo "### L.I.L.Y para iPhone (execução ${{ github.run_number }})"
             echo ""
-            echo "- Testes no simulador: passaram"
+            echo "- Testes no simulador (lógica e interface): passaram; capturas em **lily-iphone-telas**"
             echo "- **lily-iphone-ipa**: \`LILY-iPhone-${{ github.run_number }}-sem-assinatura.ipa\` (instale com o seu Apple ID pelo AltStore, SideStore ou Sideloadly; veja docs/IPHONE.md)"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -72,6 +79,15 @@ jobs:
           name: lily-iphone-ipa
           path: cristal-cover/ios/*.ipa
           retention-days: 30
+
+      - name: Publicar as capturas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lily-iphone-telas
+          path: cristal-cover/ios/telas
+          retention-days: 30
+          if-no-files-found: ignore
 
       - name: Publicar os registros (se falhar)
         if: failure()
