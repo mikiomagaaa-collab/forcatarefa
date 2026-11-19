@@ -1,0 +1,84 @@
+# L.I.L.Y para iPhone: gera o projeto (XcodeGen), roda os testes num simulador e compila para iPhone
+# num Mac do GitHub. Sai um .ipa SEM assinatura (para instalar com o seu Apple ID pelo AltStore,
+# SideStore ou Sideloadly) e, se houver os segredos da Apple, um envio para o TestFlight.
+# Passo a passo: cristal-cover/docs/IPHONE.md. Não toca no site nem no ramo principal.
+name: L.I.L.Y iPhone - compilar
+
+on:
+  push:
+    paths:
+      - 'cristal-cover/ios/**'
+      - 'cristal-cover/legal/**'
+      - '.github/workflows/lily-ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lily-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Testar e compilar para iPhone
+    runs-on: macos-15
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: cristal-cover/ios
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versão do Xcode
+        run: xcodebuild -version
+
+      - name: Gerar o projeto (XcodeGen)
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Testes no simulador de iPhone
+        run: |
+          set -o pipefail
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k,v in sorted(d.items(), reverse=True) if 'iOS' in k for x in v if x['name'].startswith('iPhone')))")
+          echo "Simulador: $DEVICE"
+          xcodebuild test -project LILY.xcodeproj -scheme LILY -destination "id=$DEVICE" CODE_SIGNING_ALLOWED=NO | tee test.log | grep -E "error:|warning: unre|Test Case|Executed|\*\* TEST" || true
+          grep -q "\*\* TEST SUCCEEDED \*\*" test.log
+
+      - name: Compilar para iPhone (sem assinatura)
+        run: |
+          set -o pipefail
+          xcodebuild build -project LILY.xcodeproj -scheme LILY -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" | tee build.log | grep -E "error:|\*\* BUILD" || true
+          grep -q "\*\* BUILD SUCCEEDED \*\*" build.log
+          rm -rf Payload && mkdir Payload
+          cp -R build/Build/Products/Release-iphoneos/LILY.app Payload/
+          zip -qry "LILY-iPhone-${{ github.run_number }}-sem-assinatura.ipa" Payload
+          ls -la *.ipa
+
+      - name: Resumo
+        run: |
+          {
+            echo "### L.I.L.Y para iPhone (execução ${{ github.run_number }})"
+            echo ""
+            echo "- Testes no simulador: passaram"
+            echo "- **lily-iphone-ipa**: \`LILY-iPhone-${{ github.run_number }}-sem-assinatura.ipa\` (instale com o seu Apple ID pelo AltStore, SideStore ou Sideloadly; veja docs/IPHONE.md)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publicar o .ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: lily-iphone-ipa
+          path: cristal-cover/ios/*.ipa
+          retention-days: 30
+
+      - name: Publicar os registros (se falhar)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lily-iphone-logs
+          path: |
+            cristal-cover/ios/test.log
+            cristal-cover/ios/build.log
+          retention-days: 7
