@@ -419,6 +419,22 @@ class NewModulesTest {
     }
 
     @Test
+    fun `ramo sem o workflow de testes vira um aviso claro, sem fingir que testou`() {
+        repo()
+        fake.checkRefusal = "O ramo lily-codex/x não tem o workflow de testes do Codex (.github/workflows/lily-codex-check.yml)."
+        scriptRepoAttempt("foo()", "rotaPadrao()")
+        val ws = RepoWorkspace(client, "dono/app", "main", CodexSession.branchName(), TestPlan("gradle", ":app:testDebugUnitTest", "."))
+        val s = session(ws, CodexMode.REPAIR, "", error = "e: file:///w/app/src/main/java/app/demo/Router.kt:3:14 Unresolved reference 'foo'.")
+        s.start()
+        waitFor { s.phase == Phase.AWAITING_APPROVAL }
+        s.decide(Decision.Approve)
+        waitFor { s.phase == Phase.DONE }
+        assertEquals(Verification.SYNTAX_ONLY, s.verification)
+        assertEquals(0, fake.checks.size)
+        assertTrue(s.events.any { it is CodexEvent.Note && it.text.contains("Não consegui pedir os testes") && it.text.contains("lily-codex-check.yml") })
+    }
+
+    @Test
     fun `auto-reparo para quando o mesmo erro volta (sem ciclo infinito)`() {
         repo()
         val error = "e: file:///w/app/src/main/java/app/demo/Router.kt:3:14 Unresolved reference 'foo'."

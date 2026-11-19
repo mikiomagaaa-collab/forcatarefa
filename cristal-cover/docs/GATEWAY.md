@@ -64,7 +64,7 @@ gateway recusa novos pedidos até o dia seguinte (horário UTC). Para o limite f
 ### 3.2 Limite de gasto (recomendado)
 
 1. No painel da Cloudflare: *Storage & Databases* > *KV* > *Create* com o nome `LILY_USAGE`. Copie o ID.
-2. No GitHub, edite `cristal-cover/gateway/wrangler.toml` (lápis no app do GitHub), tire o `#` das
+2. No GitHub (no ramo do projeto), edite `cristal-cover/gateway/wrangler.toml` pelo lápis, tire o `#` das
    linhas do `[[kv_namespaces]]` e cole o ID no lugar de `COLE_O_ID_AQUI`.
 
 ### 3.3 Chaves dos provedores
@@ -77,10 +77,20 @@ gateway recusa novos pedidos até o dia seguinte (horário UTC). Para o limite f
   que o Codex pode tocar. Permissões: *Contents: Read and write*, *Actions: Read and write*,
   *Metadata: Read*.
 
-### 3.4 A sua chave de acesso
+### 3.4 A sua chave de acesso (você mesmo cria)
 
-Crie uma senha longa e aleatória (40 caracteres ou mais, de um gerador de senhas). Ela é a
-`LILY_ACCESS_KEY`: quem tiver essa chave usa os seus créditos. Guarde num gerenciador de senhas.
+A chave de acesso **não vem de nenhum site**: é uma senha que você inventa e que o gateway passa a
+exigir. Ela é a `LILY_ACCESS_KEY`. Quem tiver essa chave usa os seus créditos, então:
+
+- faça uma senha longa e aleatória, de **40 caracteres ou mais** (o app recusa menos de 16), só com
+  letras e números, para não dar problema ao colar;
+- no celular, o jeito mais fácil é o **gerador de senhas** do seu gerenciador (Gerenciador de Senhas do
+  Google, Samsung Pass, Bitwarden, 1Password…): crie um item "L.I.L.Y Gateway", gere a senha com 40+
+  caracteres e salve. Assim ela fica guardada para colar no GitHub e no app;
+- não mande a chave por mensagem nem a coloque em arquivos do repositório.
+
+A mesma chave vai em dois lugares: no segredo `LILY_ACCESS_KEY` do GitHub (passo 3.5) e no app (passo
+3.6). Para trocar, gere outra, atualize o segredo e publique de novo.
 
 ### 3.5 Segredos no GitHub e publicação
 
@@ -97,9 +107,20 @@ No repositório: *Settings* > *Secrets and variables* > *Actions* > *New reposit
 | `LILY_GITHUB_TOKEN` | (opcional) o token fine-grained |
 | `LILY_GITHUB_REPOS` | (opcional) ex.: `seu-usuario/seu-repositorio` |
 
-Depois: *Actions* > **L.I.L.Y Gateway - publicar** > *Run workflow*. O workflow roda os testes do
-gateway e da L.I.L.Y Web, publica e copia os segredos. O endereço aparece no log, no formato
-`https://lily-gateway.<seu-subdominio>.workers.dev`.
+Depois, **peça a publicação editando um arquivo** (o GitHub só mostra o botão "Run workflow" para
+workflows que estão no ramo principal, e o projeto fica no ramo dele):
+
+1. No navegador do celular, abra o repositório no GitHub e troque para o **ramo do projeto** (o botão
+   com o nome do ramo, acima da lista de arquivos).
+2. Abra `cristal-cover/gateway/PUBLICAR.md`, toque no **lápis** (Edit this file), mude a data da última
+   linha e toque em **Commit changes** (deixe "Commit directly" no mesmo ramo).
+3. Abra a aba **Actions** > **L.I.L.Y Gateway - publicar**. O workflow roda os testes do gateway e da
+   L.I.L.Y Web, publica e copia os segredos. No resumo da execução aparece o endereço, no formato
+   `https://lily-gateway.<seu-subdominio>.workers.dev`. Se faltar algum segredo, o resumo diz qual e
+   nada é publicado.
+
+Para publicar de novo (chave nova, código novo), edite o `PUBLICAR.md` outra vez. Se um dia o projeto
+for para o ramo principal, o botão *Run workflow* também passa a funcionar.
 
 ### 3.6 Conectar
 
@@ -120,9 +141,18 @@ npx wrangler@4 secret put LILY_ACCESS_KEY   # e as outras chaves
 ## 4. Codex com testes no GitHub Actions
 
 O workflow `.github/workflows/lily-codex-check.yml` roda os testes pedidos pelo Codex (Gradle, npm ou
-pytest), **só em ramos `lily-codex/...`**. As entradas são validadas de novo no workflow. O gateway
-nunca grava no ramo principal nem altera arquivos de workflow. Depois de revisar, você junta o ramo
-pelo próprio GitHub (pull request) quando quiser.
+pytest), **só em ramos `lily-codex/...`**. Para pedir os testes, o gateway grava o arquivo
+`.lily-codex/check.json` (executor, tarefas e pasta) no ramo do Codex, e o workflow roda nesse envio;
+assim funciona mesmo que o workflow não esteja no ramo principal. As entradas são validadas de novo no
+workflow. O gateway nunca grava no ramo principal nem altera arquivos de workflow.
+
+**Requisito:** o ramo de origem que você escolhe no Codex precisa ter o arquivo
+`.github/workflows/lily-codex-check.yml` (os ramos `lily-codex/...` nascem dele). Neste repositório, o
+ramo do projeto já tem. Em outro repositório, copie esse arquivo para o ramo de origem. Sem ele, o
+Codex avisa "não tem o workflow de testes do Codex" e a verificação fica só na sintaxe.
+
+Depois de revisar, você junta o ramo pelo próprio GitHub (pull request) quando quiser; o arquivo
+`.lily-codex/check.json` pode ser apagado antes.
 
 ## 5. Segurança
 
@@ -132,8 +162,8 @@ pelo próprio GitHub (pull request) quando quiser.
 - Os identificadores de vídeo são conferidos para a chave do fal.ai nunca ir para outro servidor.
 - CORS fica desligado: a L.I.L.Y Web é servida pelo próprio gateway. Para abrir o site de outro
   endereço, coloque esse endereço em `ALLOWED_ORIGINS` no `wrangler.toml`.
-- **A chave vazou?** Crie outra, atualize o segredo `LILY_ACCESS_KEY` no GitHub e rode a publicação
-  de novo. A antiga para de funcionar na hora.
+- **A chave vazou?** Crie outra, atualize o segredo `LILY_ACCESS_KEY` no GitHub e edite o
+  `PUBLICAR.md` de novo. A antiga para de funcionar assim que a publicação termina.
 
 ## 6. Compartilhar com outras pessoas
 
@@ -143,7 +173,7 @@ cotas e pagamento está no plano (`docs/ROADMAP.md`).
 
 ## 7. O que já foi conferido e o que não
 
-- Conferido: os 23 testes do gateway (provedores simulados com o formato das APIs públicas), o app
+- Conferido: os 24 testes do gateway (provedores simulados com o formato das APIs públicas), o app
   inteiro contra um gateway de teste local (conversa, vídeo do pedido ao arquivo, Codex com CI e
   auto-reparo) e a L.I.L.Y Web num Chromium contra o código real do gateway.
 - **Não conferido**: chamadas reais aos provedores (nenhuma chave foi usada no desenvolvimento). Os

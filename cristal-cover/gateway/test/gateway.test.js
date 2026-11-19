@@ -272,10 +272,6 @@ function githubFake() {
     ['POST', /\/repos\/dono\/app\/git\/trees$/, () => ({ sha: 'tree-new' })],
     ['POST', /\/repos\/dono\/app\/git\/commits$/, () => ({ sha: 'commit-new' })],
     ['POST', /\/repos\/dono\/app\/git\/refs$/, () => ({ ref: 'refs/heads/lily-codex/s1' })],
-    ['POST', /\/actions\/workflows\/lily-codex-check\.yml\/dispatches$/, () => new Response(null, { status: 204 })],
-    ['GET', /\/actions\/workflows\/lily-codex-check\.yml\/runs/, () => ({ workflow_runs: [{ id: 77, status: 'completed', conclusion: 'failure', html_url: 'https://github.com/dono/app/actions/runs/77', created_at: new Date().toISOString() }] })],
-    ['GET', /\/actions\/runs\/77\/jobs$/, () => ({ jobs: [{ id: 5, name: 'Testes', conclusion: 'failure' }] })],
-    ['GET', /\/actions\/jobs\/5\/logs$/, () => new Response('2026-11-19T10:00:00.0000000Z > Task :app:compileDebugKotlin\n2026-11-19T10:00:01.0000000Z e: Router.kt:42 Unresolved reference: foo\n2026-11-19T10:00:02.0000000Z BUILD FAILED in 40s\n', { status: 200 })],
     ['GET', /\/repos\/dono\/app\/contents\/src\/A\.kt/, () => ({ type: 'file', size: 10, sha: 's', content: Buffer.from('package a\n// ação\n').toString('base64') })],
   ]);
 }
@@ -316,21 +312,62 @@ test('repositório: lê arquivo em UTF-8 e grava num ramo novo lily-codex/', asy
   assert.equal(ref.body.sha, 'commit-new');
 });
 
-test('testes no Actions: valida as tarefas, dispara e traz o fim do log da falha', async () => {
-  const f = githubFake();
+function checkFake({ hasWorkflow = true } = {}) {
+  return fakeFetch([
+    ['GET', /\/contents\/\.github\/workflows\/lily-codex-check\.yml\?ref=lily-codex%2Fs1$/, () => (hasWorkflow ? { type: 'file', sha: 'w' } : new Response('{"message":"Not Found"}', { status: 404 }))],
+    ['GET', /\/repos\/dono\/app\/git\/ref\/heads\/lily-codex\/s1$/, () => ({ object: { sha: 'branch-sha' } })],
+    ['GET', /\/repos\/dono\/app\/git\/commits\/branch-sha$/, () => ({ tree: { sha: 'tree-branch' } })],
+    ['POST', /\/repos\/dono\/app\/git\/trees$/, () => ({ sha: 'tree-check' })],
+    ['POST', /\/repos\/dono\/app\/git\/commits$/, () => ({ sha: 'commit-check' })],
+    ['PATCH', /\/repos\/dono\/app\/git\/refs\/heads\/lily-codex\/s1$/, () => ({ ref: 'refs/heads/lily-codex/s1' })],
+    ['GET', /\/repos\/dono\/app\/actions\/runs\?branch=lily-codex%2Fs1/, () => ({
+      workflow_runs: [
+        { id: 9, path: '.github/workflows/build.yml', status: 'completed', conclusion: 'success', created_at: new Date().toISOString() },
+        { id: 77, path: '.github/workflows/lily-codex-check.yml', status: 'completed', conclusion: 'failure', html_url: 'https://github.com/dono/app/actions/runs/77', created_at: new Date().toISOString() },
+      ],
+    })],
+    ['GET', /\/actions\/runs\/77\/jobs$/, () => ({ jobs: [{ id: 5, name: 'Testes', conclusion: 'failure' }] })],
+    ['GET', /\/actions\/jobs\/5\/logs$/, () => new Response('2026-11-19T10:00:00.0000000Z > Task :app:compileDebugKotlin\n2026-11-19T10:00:01.0000000Z e: Router.kt:42 Unresolved reference: foo\n2026-11-19T10:00:02.0000000Z BUILD FAILED in 40s\n', { status: 200 })],
+  ]);
+}
+
+test('testes no Actions: valida, pede por um commit no ramo (sem depender do ramo principal) e traz o fim do log', async () => {
+  const f = checkFake();
   const env = makeEnv({ FETCH: f, GITHUB_TOKEN: 'gh', GITHUB_REPOS: 'dono/app' });
   const bad = await callJson(env, 'POST', '/v1/repo/check', { repo: 'dono/app', branch: 'lily-codex/s1', tasks: ':app:test; rm -rf /' });
   assert.equal(bad.status, 400);
-  const start = await callJson(env, 'POST', '/v1/repo/check', { repo: 'dono/app', branch: 'lily-codex/s1', tasks: ':app:testDebugUnitTest', workdir: 'cristal-cover' });
-  assert.equal(start.status, 200);
-  const dispatch = f.calls.find((c) => c.url.endsWith('/dispatches'));
-  assert.deepEqual(dispatch.body, { ref: 'lily-codex/s1', inputs: { runner: 'gradle', tasks: ':app:testDebugUnitTest', workdir: 'cristal-cover' } });
   const runner = await callJson(env, 'POST', '/v1/repo/check', { repo: 'dono/app', branch: 'lily-codex/s1', runner: 'bash', tasks: 'x' });
   assert.equal(runner.status, 400);
+  const toMain = await callJson(env, 'POST', '/v1/repo/check', { repo: 'dono/app', branch: 'main', tasks: 'test' });
+  assert.equal(toMain.status, 400);
+  assert.equal(f.calls.length, 0);
+  const start = await callJson(env, 'POST', '/v1/repo/check', { repo: 'dono/app', branch: 'lily-codex/s1', tasks: ':app:testDebugUnitTest', workdir: 'cristal-cover' });
+  assert.equal(start.status, 200);
+  assert.equal(start.body.commit, 'commit-check');
+  assert.equal(f.calls.some((c) => c.url.endsWith('/dispatches')), false);
+  const tree = f.calls.find((c) => c.url.endsWith('/git/trees') && c.method === 'POST');
+  assert.equal(tree.body.base_tree, 'tree-branch');
+  assert.equal(tree.body.tree.length, 1);
+  assert.equal(tree.body.tree[0].path, '.lily-codex/check.json');
+  const request = JSON.parse(tree.body.tree[0].content);
+  assert.deepEqual({ runner: request.runner, tasks: request.tasks, workdir: request.workdir }, { runner: 'gradle', tasks: ':app:testDebugUnitTest', workdir: 'cristal-cover' });
+  const patch = f.calls.find((c) => c.method === 'PATCH');
+  assert.deepEqual(patch.body, { sha: 'commit-check', force: false });
+  assert.equal(f.calls.some((c) => c.method === 'POST' && c.url.endsWith('/git/refs')), false);
   const st = await callJson(env, 'GET', `/v1/repo/check?repo=dono/app&branch=lily-codex/s1&since=${encodeURIComponent(start.body.startedAt)}`);
+  assert.equal(st.body.runId, 77);
   assert.equal(st.body.conclusion, 'failure');
   assert.match(st.body.failures[0].log, /Unresolved reference: foo/);
   assert.doesNotMatch(st.body.failures[0].log, /2026-11-19T/);
+});
+
+test('testes no Actions: ramo sem o workflow do Codex vira uma mensagem clara, sem gravar nada', async () => {
+  const f = checkFake({ hasWorkflow: false });
+  const env = makeEnv({ FETCH: f, GITHUB_TOKEN: 'gh', GITHUB_REPOS: 'dono/app' });
+  const start = await callJson(env, 'POST', '/v1/repo/check', { repo: 'dono/app', branch: 'lily-codex/s1', tasks: 'test' });
+  assert.equal(start.status, 409);
+  assert.match(start.body.error, /lily-codex-check\.yml/);
+  assert.equal(f.calls.some((c) => c.method !== 'GET'), false);
 });
 
 test('fim do log começa perto do primeiro erro', () => {

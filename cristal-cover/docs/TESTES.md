@@ -374,7 +374,7 @@ Abertura e avatar (sem gateway):
 
 Serviço online 🌐:
 
-- [ ] Configurações > Serviço online: endereço `http://` é recusado ("Endereço inválido. Use o endereço https…"); chave errada mostra "O gateway recusou a chave de acesso."; chave certa mostra o que o gateway oferece, o gasto do dia e o limite
+- [ ] Configurações > Serviço online: endereço `http://` é recusado ("Endereço inválido. Use o endereço https…"); chave errada mostra "Chave de acesso inválida."; chave certa mostra o que o gateway oferece, o gasto do dia e o limite
 - [ ] Sem ligar "Permitir processamento externo", nenhuma conversa, vídeo ou tarefa do Codex sai do aparelho
 - [ ] A chave não aparece em nenhuma tela depois de salva ("Guardada") e some ao Remover a conexão
 - [ ] Conversa com "Online quando faltar": sem modelo instalado, responde online e marca "modelo · online" com o custo; com modelo instalado, continua no aparelho

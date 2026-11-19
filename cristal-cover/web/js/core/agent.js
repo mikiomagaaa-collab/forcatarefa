@@ -455,10 +455,11 @@ export class Session {
       this.emit({ type: 'note', text: `Aplicado ${result.where}. Ponto de restauração criado.` });
       this.set('VALIDATING');
       if (this.workspace.kind === 'repo' && this.workspace.tests && this.gateway) {
+        this.ciProblem = null;
         const out = await this.runCi();
         if (!out) {
           this.verification = syntaxOk ? 'SYNTAX_ONLY' : 'TESTS_FAILED';
-          this.emit({ type: 'note', text: 'Os testes do projeto não terminaram a tempo: a verificação ficou só na sintaxe.' });
+          this.emit({ type: 'note', text: this.ciProblem ? `Não consegui pedir os testes do projeto: ${this.ciProblem} A verificação ficou só na sintaxe.` : 'Os testes do projeto não terminaram a tempo: a verificação ficou só na sintaxe.' });
           break;
         }
         if (out.ok) {
@@ -491,7 +492,13 @@ export class Session {
 
   async runCi() {
     const ws = this.workspace;
-    const started = await this.gateway.checkStart(ws.repo, ws.branch, ws.tests.runner, ws.tests.tasks, ws.tests.workdir);
+    let started;
+    try {
+      started = await this.gateway.checkStart(ws.repo, ws.branch, ws.tests.runner, ws.tests.tasks, ws.tests.workdir);
+    } catch (e) {
+      this.ciProblem = e.message || String(e);
+      return null;
+    }
     this.emit({ type: 'action', text: 'Rodando os testes do projeto no GitHub Actions', detail: `${ws.tests.runner} ${ws.tests.tasks}` });
     const deadline = Date.now() + this.timeoutMs;
     while (Date.now() < deadline) {

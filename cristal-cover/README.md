@@ -74,8 +74,8 @@ O projeto evoluiu de "launcher da tela externa" para três experiências que com
 O que **foi verificado** durante o desenvolvimento:
 
 - compila do zero (debug e release com R8) com as versões estáveis atuais das ferramentas;
-- 312 testes automáticos em JVM passam (124 no Cristal, 45 no teclado, 16 no módulo compartilhado, 119 na
-  L.I.L.Y AI e 8 na Gallery), mais 23 do gateway, 9 da L.I.L.Y Web e o teste de ponta a ponta da Web
+- 313 testes automáticos em JVM passam (124 no Cristal, 45 no teclado, 16 no módulo compartilhado, 120 na
+  L.I.L.Y AI e 8 na Gallery), mais 24 do gateway, 9 da L.I.L.Y Web e o teste de ponta a ponta da Web
   num Chromium. No launcher: lógica da grade, detecção da tela externa,
   regras de compatibilidade, segurança dos comandos de shell, backup, papéis de parede por área,
   encaixe e edição da Central de Controle, **compilação real do shader AGSL** e **16 telas montadas e
@@ -238,7 +238,7 @@ L.I.L.Y Web conhecem apenas o endereço e uma chave de acesso sua. Passo a passo
 
 Proteções: recusa tudo sem a chave de acesso (comparação em tempo constante), limite de gasto por dia,
 CORS fechado, identificadores de vídeo conferidos (a chave do fal.ai nunca vai para outro servidor),
-nada grava no ramo principal nem em workflows. 23 testes (`node --test test/*.test.js`).
+nada grava no ramo principal nem em workflows. 24 testes (`node --test test/*.test.js`).
 
 ## L.I.L.Y Web (pasta `web/`)
 

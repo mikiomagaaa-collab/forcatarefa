@@ -1,9 +1,13 @@
-# Publica o L.I.L.Y Gateway na sua conta Cloudflare (só quando você dispara, pelo app do GitHub ou
-# pelo site). Os segredos ficam nos "Secrets" do repositório e são copiados para o Worker; nada fica
-# no código nem no APK. Passo a passo: cristal-cover/docs/GATEWAY.md.
+# Publica o L.I.L.Y Gateway na sua conta Cloudflare, só quando você pede: editando o arquivo
+# cristal-cover/gateway/PUBLICAR.md (dá para fazer pelo navegador do celular, em qualquer ramo) ou,
+# se este arquivo estiver no ramo principal, pelo botão "Run workflow". Os segredos ficam nos
+# "Secrets" do repositório e são copiados para o Worker; nada fica no código nem no APK.
+# Passo a passo: cristal-cover/docs/GATEWAY.md.
 name: L.I.L.Y Gateway - publicar
 
 on:
+  push:
+    paths: ['cristal-cover/gateway/PUBLICAR.md']
   workflow_dispatch:
 
 permissions:
@@ -30,13 +34,6 @@ jobs:
       - name: Testes do gateway
         run: node --test test/*.test.js
 
-      - name: Conferir a conta Cloudflare
-        run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
-            echo "Crie os segredos CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID no repositório (docs/GATEWAY.md)."
-            exit 1
-          fi
-
       - name: Montar a L.I.L.Y Web e os documentos
         run: node scripts/build-web.mjs
 
@@ -44,10 +41,48 @@ jobs:
         working-directory: cristal-cover/web
         run: node --test test/*.test.js
 
+      - name: Conferir os segredos
+        id: conta
+        env:
+          LILY_ACCESS_KEY: ${{ secrets.LILY_ACCESS_KEY }}
+        run: |
+          falta=""
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || falta="$falta CLOUDFLARE_API_TOKEN"
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || falta="$falta CLOUDFLARE_ACCOUNT_ID"
+          [ -n "$LILY_ACCESS_KEY" ] || falta="$falta LILY_ACCESS_KEY"
+          if [ -n "$falta" ]; then
+            {
+              echo "### Gateway não publicado: faltam segredos"
+              echo ""
+              echo "Crie em Settings > Secrets and variables > Actions:**${falta}**."
+              echo "Depois edite cristal-cover/gateway/PUBLICAR.md de novo. Passo a passo: cristal-cover/docs/GATEWAY.md."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Faltam os segredos:${falta} (nada foi publicado; os testes passaram)."
+            echo "pronto=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "pronto=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publicar o Worker
-        run: npx --yes wrangler@4 deploy
+        if: steps.conta.outputs.pronto == 'true'
+        run: |
+          set -o pipefail
+          npx --yes wrangler@4 deploy 2>&1 | tee deploy.log
+
+      - name: Mostrar o endereço
+        if: steps.conta.outputs.pronto == 'true'
+        run: |
+          url=$(grep -oE 'https://[A-Za-z0-9.-]+\.workers\.dev' deploy.log | head -1)
+          {
+            echo "### L.I.L.Y Gateway publicado"
+            echo ""
+            echo "Endereço: ${url:-veja o log do passo anterior}"
+            echo ""
+            echo "No app: Configurações > Serviço online > cole o endereço e a sua LILY_ACCESS_KEY. No computador, abra o endereço no navegador."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Copiar os segredos para o Worker
+        if: steps.conta.outputs.pronto == 'true'
         env:
           LILY_ACCESS_KEY: ${{ secrets.LILY_ACCESS_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -65,4 +100,4 @@ jobs:
           put BRAVE_API_KEY "$BRAVE_API_KEY"
           put GITHUB_TOKEN "$GITHUB_TOKEN_CODEX"
           put GITHUB_REPOS "$GITHUB_REPOS"
-          if [ -z "$LILY_ACCESS_KEY" ]; then echo "Atenção: sem LILY_ACCESS_KEY o gateway recusa todos os pedidos."; fi
+          echo "Os segredos vazios foram ignorados; o gateway mostra no app o que falta."

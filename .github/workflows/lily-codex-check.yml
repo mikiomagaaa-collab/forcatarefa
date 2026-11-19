@@ -1,11 +1,16 @@
 # Testes pedidos pelo L.I.L.Y Codex (pelo L.I.L.Y Gateway) num ramo lily-codex/...
 #
-# O Codex grava a correção num ramo próprio (nunca no principal) e dispara este workflow para validar
-# o comportamento de verdade: compilar não basta, os testes do projeto precisam passar. As entradas são
-# validadas aqui de novo (não confia em quem disparou).
+# O Codex grava a correção num ramo próprio (nunca no principal) e pede os testes gravando o arquivo
+# .lily-codex/check.json no mesmo ramo: este workflow roda nesse push (o GitHub só deixa disparar à
+# mão um workflow que esteja no ramo principal, e este pode estar só no ramo do projeto). Compilar não
+# basta: os testes do projeto precisam passar. As entradas são validadas aqui de novo (não confia em
+# quem pediu). Para o Codex testar um repositório, este arquivo precisa estar no ramo de origem.
 name: L.I.L.Y Codex - testes
 
 on:
+  push:
+    branches: ['lily-codex/**']
+    paths: ['.lily-codex/check.json']
   workflow_dispatch:
     inputs:
       runner:
@@ -33,23 +38,38 @@ jobs:
     name: Testes do Codex
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      RUNNER: ${{ inputs.runner }}
-      TASKS: ${{ inputs.tasks }}
-      WORKDIR: ${{ inputs.workdir }}
     steps:
-      - name: Conferir o ramo e as entradas
+      - name: Conferir o ramo
         run: |
           case "$GITHUB_REF_NAME" in
             lily-codex/*) ;;
             *) echo "O Codex só testa ramos lily-codex/ (recebido: $GITHUB_REF_NAME)"; exit 1 ;;
           esac
-          [[ "$RUNNER" =~ ^(gradle|npm|pytest)$ ]] || { echo "Executor inválido"; exit 1; }
-          [[ "$TASKS" =~ ^[A-Za-z0-9:_.\ -]{1,300}$ ]] || { echo "Tarefas inválidas"; exit 1; }
-          [[ "$WORKDIR" =~ ^[A-Za-z0-9_./-]{1,100}$ && "$WORKDIR" != *..* ]] || { echo "Pasta inválida"; exit 1; }
 
       - name: Baixar o código do ramo
         uses: actions/checkout@v4
+
+      - name: Ler e conferir o pedido
+        env:
+          IN_RUNNER: ${{ inputs.runner }}
+          IN_TASKS: ${{ inputs.tasks }}
+          IN_WORKDIR: ${{ inputs.workdir }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, sys
+          if os.environ['GITHUB_EVENT_NAME'] == 'push':
+              with open('.lily-codex/check.json', encoding='utf-8') as f:
+                  req = json.load(f)
+          else:
+              req = {'runner': os.environ.get('IN_RUNNER'), 'tasks': os.environ.get('IN_TASKS'), 'workdir': os.environ.get('IN_WORKDIR')}
+          runner, tasks, workdir = (str(req.get(k) or d) for k, d in (('runner', 'gradle'), ('tasks', 'test'), ('workdir', '.')))
+          if runner not in ('gradle', 'npm', 'pytest'): sys.exit('Executor inválido')
+          if not re.fullmatch(r'[A-Za-z0-9:_. -]{1,300}', tasks): sys.exit('Tarefas inválidas')
+          if not re.fullmatch(r'[A-Za-z0-9_./-]{1,100}', workdir) or '..' in workdir: sys.exit('Pasta inválida')
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as env:
+              env.write(f'RUNNER={runner}\nTASKS={tasks}\nWORKDIR={workdir}\n')
+          print(f'Executor: {runner} · tarefas: {tasks} · pasta: {workdir}')
+          PY
 
       - name: Instalar o Java 21
         if: env.RUNNER == 'gradle'
@@ -64,7 +84,7 @@ jobs:
 
       - name: Plataforma Android (se o projeto for Android)
         if: env.RUNNER == 'gradle'
-        working-directory: ${{ inputs.workdir }}
+        working-directory: ${{ env.WORKDIR }}
         run: |
           if grep -rqs "com.android" build.gradle* settings.gradle* 2>/dev/null; then
             yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
@@ -84,7 +104,7 @@ jobs:
           python-version: '3.12'
 
       - name: Rodar os testes
-        working-directory: ${{ inputs.workdir }}
+        working-directory: ${{ env.WORKDIR }}
         env:
           LC_ALL: C.UTF-8
           LANG: C.UTF-8
@@ -98,7 +118,7 @@ jobs:
 
       - name: Resumo das falhas
         if: failure() && env.RUNNER == 'gradle'
-        working-directory: ${{ inputs.workdir }}
+        working-directory: ${{ env.WORKDIR }}
         run: |
           python3 - <<'PY'
           import glob, xml.etree.ElementTree as ET

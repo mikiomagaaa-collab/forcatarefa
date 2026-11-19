@@ -293,10 +293,11 @@ class CodexSession(
             set(Phase.VALIDATING)
             val tests = workspace.tests
             if (workspace is RepoWorkspace && tests != null && gateway != null) {
+                ciProblem = null
                 val outcome = runCi(workspace, tests)
                 if (outcome == null) {
                     withContext(Dispatchers.Main.immediate) { verification = if (syntaxOk) Verification.SYNTAX_ONLY else Verification.TESTS_FAILED }
-                    emit(CodexEvent.Note("Os testes do projeto não terminaram a tempo: a verificação ficou só na sintaxe."))
+                    emit(CodexEvent.Note(ciProblem?.let { "Não consegui pedir os testes do projeto: $it A verificação ficou só na sintaxe." } ?: "Os testes do projeto não terminaram a tempo: a verificação ficou só na sintaxe."))
                     break
                 }
                 if (outcome.first) {
@@ -338,10 +339,20 @@ class CodexSession(
         set(Phase.DONE)
     }
 
+    /** Por que os testes não puderam ser pedidos (ex.: o ramo não tem o workflow do Codex). */
+    private var ciProblem: String? = null
+
     /** Roda os testes no GitHub Actions do ramo e espera o resultado. (passou, log) ou null se não terminou. */
     private suspend fun runCi(ws: RepoWorkspace, tests: TestPlan): Pair<Boolean, String>? {
         val g = gateway ?: return null
-        val started = g.checkStart(ws.repo, ws.branch, tests.runner, tests.tasks, tests.workdir)
+        val started = try {
+            g.checkStart(ws.repo, ws.branch, tests.runner, tests.tasks, tests.workdir)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            ciProblem = e.message ?: e.javaClass.simpleName
+            return null
+        }
         emit(CodexEvent.Action("Rodando os testes do projeto no GitHub Actions", "${tests.runner} ${tests.tasks}"))
         val deadline = System.currentTimeMillis() + checkTimeoutMs
         while (System.currentTimeMillis() < deadline) {

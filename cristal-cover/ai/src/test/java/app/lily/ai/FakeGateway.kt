@@ -53,6 +53,8 @@ class FakeGateway : AutoCloseable {
 
     /** Resultados do CI, em ordem: (passou, log). */
     val ciResults = ConcurrentLinkedDeque<Pair<Boolean, String>>()
+    /** Quando não é nulo, o pedido de testes é recusado com esta mensagem (como o gateway real faz com 409). */
+    @Volatile var checkRefusal: String? = null
     private var lastCi: Pair<Boolean, String>? = null
 
     private var videoPolls = 0
@@ -188,6 +190,9 @@ class FakeGateway : AutoCloseable {
                     if (c == null || c is JsonNull) branch.remove(p) else branch[p] = c.jsonPrimitive.content
                 }
                 send(ex, 200, """{"repo":"dono/app","branch":"$name","commit":"c${commits.size}abcdef","parent":"p","created":${commits.size == 1},"url":"https://github.com/dono/app/tree/$name"}""")
+            }
+            path == "/v1/repo/check" && method == "POST" && checkRefusal != null -> {
+                send(ex, 409, buildJsonObject { put("error", checkRefusal) }.toString())
             }
             path == "/v1/repo/check" && method == "POST" -> {
                 checks += obj

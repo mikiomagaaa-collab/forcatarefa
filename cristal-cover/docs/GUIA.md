@@ -509,9 +509,10 @@ No modo "Sempre", o Android pode fechá-la para poupar bateria; ela volta quando
 ### Criar o serviço online (uma vez)
 
 Siga o passo a passo de [GATEWAY.md](GATEWAY.md). Em resumo: conta grátis na Cloudflare, uma chave de
-acesso inventada por você, as chaves dos provedores que quiser usar (OpenRouter para o Codex e a conversa
-online, fal.ai para vídeo), guardar tudo como segredos do GitHub e rodar o workflow **L.I.L.Y Gateway -
-publicar**. Depois, na L.I.L.Y AI: Configurações > **Serviço online** > endereço e chave > **Salvar e
+acesso inventada por você (uma senha de 40+ caracteres do seu gerador de senhas; não vem de nenhum site), as chaves dos provedores que quiser usar (OpenRouter para o Codex e a conversa
+online, fal.ai para vídeo), guardar tudo como segredos do GitHub e pedir a publicação editando o arquivo
+`cristal-cover/gateway/PUBLICAR.md` pelo navegador (o GitHub não mostra o botão "Run workflow" fora do
+ramo principal). Depois, na L.I.L.Y AI: Configurações > **Serviço online** > endereço e chave > **Salvar e
 testar** > ligar **Permitir processamento externo**.
 
 Três modos (Serviço online): **Só no aparelho** (nada sai), **Online quando faltar** (usa o modelo online

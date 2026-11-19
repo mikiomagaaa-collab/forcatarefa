@@ -67,7 +67,7 @@ export async function handleRepos(env) {
     const r = await res.json();
     repos.push({ repo: name, available: true, defaultBranch: r.default_branch, private: !!r.private });
   }
-  return json({ repos, workflow: env.CODEX_WORKFLOW || 'lily-codex-check.yml' });
+  return json({ repos, workflow: CHECK_WORKFLOW.split('/').pop() });
 }
 
 export async function handleTree(url, env) {
@@ -114,6 +114,11 @@ export async function handleCommit(request, env) {
     if (/^\.github\/workflows\//.test(f.path)) throw new GatewayError(403, 'O Codex não altera workflows do GitHub Actions.');
   }
   const message = String(body.message || 'L.I.L.Y Codex').slice(0, 2000);
+  return json(await commitFiles(env, repo, branch, String(body.base || ''), files, `${message}\n\nFeito pelo L.I.L.Y Codex (aprovado no aparelho).`));
+}
+
+/** Um commit no ramo lily-codex/... (criado a partir de [base] se ainda não existir). */
+async function commitFiles(env, repo, branch, base, files, message) {
   const call = gh(env);
   const existing = await call(`/repos/${repo}/git/ref/heads/${branch}`);
   let parent;
@@ -121,7 +126,6 @@ export async function handleCommit(request, env) {
   if (existing.ok) {
     parent = (await existing.json()).object.sha;
   } else if (existing.status === 404) {
-    const base = String(body.base || '');
     if (!base) throw new GatewayError(400, 'Informe o ramo de origem (base).');
     parent = (await ok(await call(`/repos/${repo}/git/ref/heads/${encodeURIComponent(base)}`))).object.sha;
     created = true;
@@ -141,7 +145,7 @@ export async function handleCommit(request, env) {
   const next = await ok(
     await call(`/repos/${repo}/git/commits`, {
       method: 'POST',
-      body: JSON.stringify({ message: `${message}\n\nFeito pelo L.I.L.Y Codex (aprovado no aparelho).`, tree: tree.sha, parents: [parent] }),
+      body: JSON.stringify({ message, tree: tree.sha, parents: [parent] }),
     }),
   );
   if (created) {
@@ -149,10 +153,18 @@ export async function handleCommit(request, env) {
   } else {
     await ok(await call(`/repos/${repo}/git/refs/heads/${branch}`, { method: 'PATCH', body: JSON.stringify({ sha: next.sha, force: false }) }));
   }
-  return json({ repo, branch, commit: next.sha, parent, created, url: `https://github.com/${repo}/tree/${branch}` });
+  return { repo, branch, commit: next.sha, parent, created, url: `https://github.com/${repo}/tree/${branch}` };
 }
 
-/** Dispara os testes do projeto no ramo (workflow_dispatch). */
+/** Onde o workflow de testes do Codex fica e o arquivo de pedido que o dispara. */
+const CHECK_WORKFLOW = '.github/workflows/lily-codex-check.yml';
+const CHECK_REQUEST = '.lily-codex/check.json';
+
+/**
+ * Pede os testes do projeto no ramo. O GitHub só deixa disparar à mão (workflow_dispatch) um workflow
+ * que esteja no ramo principal; por isso o pedido vira um commit do arquivo .lily-codex/check.json no
+ * próprio ramo lily-codex/..., e o workflow roda nesse push (validando as entradas de novo).
+ */
 export async function handleCheckStart(request, env) {
   const body = await readJson(request);
   const repo = repoOf(env, body.repo);
@@ -164,15 +176,19 @@ export async function handleCheckStart(request, env) {
   if (!TASKS.test(tasks)) throw new GatewayError(400, 'Tarefas de teste inválidas (use nomes como :app:testDebugUnitTest).');
   const workdir = String(body.workdir || '.');
   if (!/^[\w./-]{1,100}$/.test(workdir) || workdir.includes('..')) throw new GatewayError(400, 'Pasta de trabalho inválida.');
-  const workflow = env.CODEX_WORKFLOW || 'lily-codex-check.yml';
+  const call = gh(env);
+  const wf = await call(`/repos/${repo}/contents/${CHECK_WORKFLOW}?ref=${encodeURIComponent(branch)}`);
+  if (wf.status === 404) {
+    throw new GatewayError(
+      409,
+      `O ramo ${branch} não tem o workflow de testes do Codex (${CHECK_WORKFLOW}). Copie esse arquivo para o ramo de origem do projeto e comece de novo.`,
+    );
+  }
+  if (!wf.ok) throw await providerError('GitHub', wf);
   const startedAt = new Date().toISOString();
-  await ok(
-    await gh(env)(`/repos/${repo}/actions/workflows/${workflow}/dispatches`, {
-      method: 'POST',
-      body: JSON.stringify({ ref: branch, inputs: { runner, tasks, workdir } }),
-    }),
-  );
-  return json({ repo, branch, workflow, runner, startedAt });
+  const request_ = { runner, tasks, workdir, requestedAt: startedAt };
+  const done = await commitFiles(env, repo, branch, '', [{ path: CHECK_REQUEST, content: `${JSON.stringify(request_, null, 2)}\n` }], `L.I.L.Y Codex: pedir os testes (${tasks})`);
+  return json({ repo, branch, workflow: CHECK_WORKFLOW, runner, startedAt, commit: done.commit });
 }
 
 /** Só as linhas úteis do fim do log (sem os carimbos de hora do Actions). */
@@ -191,10 +207,9 @@ export async function handleCheckStatus(url, env) {
   const branch = String(url.searchParams.get('branch') || '');
   if (!BRANCH.test(branch)) throw new GatewayError(400, 'Ramo inválido.');
   const since = Date.parse(url.searchParams.get('since') || '') || 0;
-  const workflow = env.CODEX_WORKFLOW || 'lily-codex-check.yml';
   const call = gh(env);
-  const runs = await ok(await call(`/repos/${repo}/actions/workflows/${workflow}/runs?branch=${encodeURIComponent(branch)}&event=workflow_dispatch&per_page=5`));
-  const run = (runs.workflow_runs || []).find((r) => Date.parse(r.created_at) >= since - 60_000);
+  const runs = await ok(await call(`/repos/${repo}/actions/runs?branch=${encodeURIComponent(branch)}&per_page=20`));
+  const run = (runs.workflow_runs || []).find((r) => r.path === CHECK_WORKFLOW && Date.parse(r.created_at) >= since - 60_000);
   if (!run) return json({ status: 'waiting' });
   if (run.status !== 'completed') return json({ status: run.status === 'queued' ? 'queued' : 'running', url: run.html_url, runId: run.id });
   const result = { status: 'completed', conclusion: run.conclusion, url: run.html_url, runId: run.id, failures: [] };
