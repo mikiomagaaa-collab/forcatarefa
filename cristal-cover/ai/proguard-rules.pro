@@ -16,6 +16,13 @@
 -keep class com.google.android.datatransport.** { *; }
 -dontwarn com.google.mlkit.**
 
+# WorkManager (vem com o LiteRT) e Room: o banco interno do WorkManager (WorkDatabase_Impl) e os
+# InputMergers são criados por reflexão pelo construtor vazio. No modo estrito do R8 esse construtor era
+# removido e a L.I.L.Y fechava na partida (erro visto no Razr com o L.I.L.Y Diagnóstico).
+-keepclassmembers class * extends androidx.room.RoomDatabase { <init>(); }
+-keepclassmembers class * extends androidx.work.InputMerger { public <init>(); }
+-keepclassmembers class * extends androidx.startup.Initializer { public <init>(); }
+
 # Relatório de erro legível no próprio aparelho (a pessoa copia e manda): nomes originais de
 # classes e métodos e as linhas. O código continua encolhido e otimizado; só não é renomeado.
 -dontobfuscate

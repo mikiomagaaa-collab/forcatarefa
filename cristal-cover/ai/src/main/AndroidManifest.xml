@@ -163,6 +163,22 @@
             android:authorities="${applicationId}.mlkitinitprovider"
             tools:node="remove" />
 
+        <!--
+            O WorkManager (vem com o LiteRT; a L.I.L.Y não agenda trabalhos) também não inicia mais na
+            partida: era ele que fechava o app antes de abrir. Se alguma biblioteca precisar dele, ele
+            inicia na hora pelo LilyAiApp (Configuration.Provider). As outras inicializações ficam.
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
         <service
             android:name=".models.DownloadService"
             android:exported="false"

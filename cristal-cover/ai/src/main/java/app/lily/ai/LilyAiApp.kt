@@ -2,12 +2,23 @@ package app.lily.ai
 
 import android.app.Application
 import android.content.Context
+import androidx.work.Configuration
 import app.lily.ai.diagnostics.CrashReport
 import app.lily.ai.diagnostics.DiagLog
 import app.lily.ai.engine.MlKit
 
-class LilyAiApp : Application() {
+class LilyAiApp : Application(), Configuration.Provider {
     private var core: AiGraph? = null
+
+    /**
+     * O WorkManager inicia sob demanda (não na partida): só se uma biblioteca pedir. Registra no
+     * diagnóstico quando isso acontece.
+     */
+    override val workManagerConfiguration: Configuration
+        get() {
+            runCatching { DiagLog.line("WorkManager iniciado sob demanda") }
+            return Configuration.Builder().build()
+        }
 
     /** O núcleo (as telas conferem [graphOrNull] antes; os serviços só rodam depois dele). */
     val graph: AiGraph get() = core ?: error("O núcleo da L.I.L.Y não iniciou: ${startupError?.message}")

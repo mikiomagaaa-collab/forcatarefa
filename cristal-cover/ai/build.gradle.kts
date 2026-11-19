@@ -17,8 +17,8 @@ android {
         applicationId = "app.lily.ai"
         minSdk = 33
         targetSdk = 36
-        versionCode = 120 + ciRunNumber
-        versionName = "1.2.0"
+        versionCode = 121 + ciRunNumber
+        versionName = "1.2.1"
         vectorDrawables { useSupportLibrary = true }
         // O Razr 40 Ultra é arm64; sem as outras arquiteturas o APK fica bem menor.
         ndk { abiFilters += "arm64-v8a" }
@@ -106,6 +106,8 @@ dependencies {
     // Motores de IA no aparelho (bibliotecas oficiais do Google).
     implementation(libs.litertlm.android)
     implementation(libs.litert)
+    // Só para o WorkManager iniciar sob demanda (Configuration.Provider no LilyAiApp).
+    implementation(libs.androidx.work.runtime)
     implementation(libs.mlkit.text)
     implementation(libs.mlkit.labels)
     implementation(libs.mlkit.language.id)

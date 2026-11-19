@@ -44,25 +44,35 @@ object DiagnosticReport {
         val failed = main?.reason in BAD
         val lastCrash = CrashReport.last(context)
         val safe = DiagLog.isForcedSafe(context) || DiagLog.savedFailures(context) >= DiagLog.SAFE_AFTER
+        // A L.I.L.Y abriu bem depois do último problema (por exemplo, depois de uma atualização que corrige):
+        // os problemas listados ficam como histórico, não como a situação de agora.
+        val okAt = DiagLog.lastOk(context)
+        val crashAt = CrashReport.lastTime(context)
+        val recovered = okAt != null && (main == null || !failed || okAt > main.time) && (crashAt == null || okAt > crashAt)
+        val hadProblem = failed || lastCrash != null
         val headline = when {
+            hadProblem && recovered -> "a última abertura terminou bem (${stamp(okAt!!)}); os problemas abaixo são de antes"
             main != null && failed -> "a última vez, a L.I.L.Y terminou por: ${ExitHistory.reasonName(main.reason)}"
             lastCrash != null -> "há um erro guardado"
             else -> "nenhum problema registrado"
         }
         val detail = buildString {
-            if (main != null && failed) {
+            if (!recovered && main != null && failed) {
                 main.step?.let { append("Etapa em andamento: ").append(it.removePrefix("etapa: ")).append('\n') }
                 main.trace?.lineSequence()?.firstOrNull { it.startsWith("Sinal") || it.startsWith("Abort") || it.startsWith("  #00") }
                     ?.let { append(it.trim()).append('\n') }
             }
-            lastCrash?.lineSequence()?.let { lines ->
+            lastCrash?.takeIf { !recovered }?.lineSequence()?.let { lines ->
                 lines.firstOrNull { it.startsWith("Módulo provável") }?.let { append(it).append('\n') }
                 lines.firstOrNull { it.contains("Exception") || it.contains("Error:") }?.let { append(it.trim().take(200)).append('\n') }
             }
             if (safe) append("Modo seguro ligado: a próxima abertura vem sem efeitos e módulos opcionais.\n")
         }.trimEnd()
-        return Summary(headline, detail, failed || lastCrash != null)
+        return Summary(headline, detail, hadProblem && !recovered)
     }
+
+    private fun stamp(millis: Long): String =
+        DateTimeFormatter.ofPattern("dd/MM HH:mm", Locale.forLanguageTag("pt-BR")).format(Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()))
 
     private val BAD = setOf(
         ApplicationExitInfo.REASON_CRASH,

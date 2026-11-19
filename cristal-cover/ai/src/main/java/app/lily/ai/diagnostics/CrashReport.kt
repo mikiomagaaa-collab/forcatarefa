@@ -93,6 +93,9 @@ object CrashReport {
     /** O último relatório guardado, se houver. */
     fun last(context: Context): String? = history(context).firstOrNull()
 
+    /** Quando o erro guardado mais novo aconteceu (null se não há nenhum). */
+    fun lastTime(context: Context): Long? = all(dir(context)).firstOrNull()?.name?.removePrefix("erro-")?.removeSuffix(".txt")?.toLongOrNull()
+
     /** Todos os relatórios guardados, do mais novo para o mais antigo. */
     fun history(context: Context): List<String> = all(dir(context)).mapNotNull { runCatching { it.readText() }.getOrNull()?.takeIf(String::isNotBlank) }
 
@@ -111,8 +114,17 @@ object CrashReport {
      * diferente, a parte do app que a chamou.
      */
     fun module(error: Throwable): String {
-        var root = error
-        while (root.cause != null && root.cause !== root) root = root.cause!!
+        val chain = generateSequence(error) { t -> t.cause?.takeIf { it !== t } }.take(20).toList()
+        val root = chain.last()
+        // Erro ao instalar um provider no começo do processo: é a partida de uma biblioteca, antes de
+        // qualquer código da L.I.L.Y (o R8 às vezes junta o código dela numa classe nossa, o que
+        // apontaria o módulo errado).
+        val atStartup = chain.any { t -> t.stackTrace.any { it.className == "android.app.ActivityThread" && it.methodName == "installProvider" } }
+        if (atStartup) {
+            val text = chain.joinToString(" ") { it.message.orEmpty() }
+            val lib = libraryIn(text) ?: chain.asReversed().firstNotNullOfOrNull { t -> t.stackTrace.firstNotNullOfOrNull { libraryIn(it.className) } }
+            return "Partida das bibliotecas, antes do código da L.I.L.Y" + (lib?.let { " ($it)" } ?: "")
+        }
         val frames = root.stackTrace.map { it.className }
         val first = frames.firstNotNullOfOrNull(::moduleOf)
         val caller = frames.firstOrNull { it.startsWith("app.lily.ai.") }?.let(::moduleOf)
@@ -121,6 +133,18 @@ object CrashReport {
             caller == null || caller == first -> first
             else -> "$first · chamado por: $caller"
         }
+    }
+
+    /** A biblioteca citada num nome de classe ou numa mensagem de erro. */
+    private fun libraryIn(text: String): String? = when {
+        "androidx.work" in text -> "WorkManager, que vem com o LiteRT"
+        "androidx.room" in text -> "banco de dados Room"
+        "mlkit" in text || "firebase.components" in text -> "ML Kit"
+        "androidx.emoji2" in text -> "emojis"
+        "androidx.lifecycle" in text -> "ciclo de vida"
+        "androidx.profileinstaller" in text -> "perfil de desempenho"
+        "litert" in text -> "LiteRT"
+        else -> null
     }
 
     private fun moduleOf(cls: String): String? = when {
@@ -144,6 +168,8 @@ object CrashReport {
         cls.startsWith("com.google.ai.edge.litertlm") -> "LiteRT-LM (Google)"
         cls.startsWith("com.google.ai.edge.litert") -> "LiteRT (Google)"
         cls.startsWith("com.google.firebase.components") -> "ML Kit (componentes)"
+        cls.startsWith("androidx.work") -> "WorkManager (vem com o LiteRT)"
+        cls.startsWith("androidx.room") -> "Banco de dados (Room)"
         cls.startsWith("androidx.compose") -> "Interface (Jetpack Compose)"
         cls.startsWith("kotlinx.serialization") -> "Leitura de dados salvos"
         cls.startsWith("kotlinx.coroutines") -> null

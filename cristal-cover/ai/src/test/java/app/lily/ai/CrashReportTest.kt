@@ -106,6 +106,28 @@ class CrashReportTest {
         assertTrue(CrashReport.module(system).startsWith("Sistema Android"))
     }
 
+    /** O erro visto no Razr com a 1.2.0: o WorkManager quebrando ao instalar o provider da partida. */
+    @Test
+    fun `erro na partida das bibliotecas aponta a biblioteca, não o núcleo`() {
+        val db = RuntimeException("Failed to create an instance of class androidx.work.impl.WorkDatabase.canonicalName").apply {
+            stackTrace = arrayOf(
+                // O R8 juntou o código do WorkManager numa classe nossa.
+                StackTraceElement("app.lily.ai.core.Router", "createWorkManager", "r8-map-id", 1465),
+                StackTraceElement("androidx.work.WorkManagerInitializer", "create", "r8-map-id", 92),
+            )
+        }
+        val startup = RuntimeException("androidx.startup.StartupException: x", db).apply {
+            stackTrace = arrayOf(StackTraceElement("androidx.startup.AppInitializer", "doInitialize", "r8-map-id", 96))
+        }
+        val crash = RuntimeException("Unable to get provider androidx.startup.InitializationProvider", startup).apply {
+            stackTrace = arrayOf(
+                StackTraceElement("android.app.ActivityThread", "installProvider", "ActivityThread.java", 8918),
+                StackTraceElement("android.app.ActivityThread", "handleBindApplication", "ActivityThread.java", 8043),
+            )
+        }
+        assertEquals("Partida das bibliotecas, antes do código da L.I.L.Y (WorkManager, que vem com o LiteRT)", CrashReport.module(crash))
+    }
+
     @Test
     fun `guarda um histórico dos últimos 10 erros, do mais novo ao mais antigo`() {
         assertNull(CrashReport.last(app))
@@ -281,6 +303,25 @@ class CrashReportTest {
         assertTrue(report.contains("O motor não iniciou"))
         assertTrue(report.contains("== Registro da partida (últimas linhas) =="))
         assertTrue(report.contains("Processo iniciado: L.I.L.Y AI"))
+    }
+
+    /** Depois de uma atualização que corrige, o diagnóstico não pode continuar dizendo que a L.I.L.Y fecha. */
+    @Test
+    fun `depois de abrir bem, os erros antigos ficam como histórico`() {
+        val before = System.currentTimeMillis() - 60_000
+        val crash = ExitHistory.Exit(before, 1, app.packageName, android.app.ApplicationExitInfo.REASON_CRASH, 0, "crash", 100, 0, 0, null, null)
+        CrashReport.save(app, "main", error)
+        val broken = DiagnosticReport.summary(app, listOf(crash))
+        assertTrue(broken.problem)
+        assertTrue(broken.headline.startsWith("a última vez, a L.I.L.Y terminou por"))
+        Thread.sleep(5)
+        DiagLog.uiReady("principal")
+        val fixed = DiagnosticReport.summary(app, listOf(crash))
+        assertFalse(fixed.problem)
+        assertTrue(fixed.headline, fixed.headline.startsWith("a última abertura terminou bem"))
+        assertTrue(fixed.headline.endsWith("os problemas abaixo são de antes"))
+        // O histórico continua no relatório completo.
+        assertTrue(DiagnosticReport.build(app, listOf(crash)).contains("== Erros guardados (1) =="))
     }
 
     @Test

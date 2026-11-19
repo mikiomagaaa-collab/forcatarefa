@@ -5,6 +5,8 @@ ksp = "2.3.14"
 hilt = "2.60.1"
 composeBom = "2026.09.00"
 room = "2.8.5"
+# O mesmo WorkManager que o LiteRT já traz (via Play AI Delivery); direto só para a partida sob demanda.
+work = "2.9.1"
 datastore = "1.3.0"
 lifecycle = "2.11.0"
 activity = "1.13.0"
@@ -29,6 +31,7 @@ mlkitTranslate = "17.0.3"
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 androidx-window = { module = "androidx.window:window", version.ref = "windowManager" }
+androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "work" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }

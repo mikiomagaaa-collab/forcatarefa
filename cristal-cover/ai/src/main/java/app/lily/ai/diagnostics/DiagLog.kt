@@ -94,10 +94,14 @@ object DiagLog {
         runCatching {
             file(MARKER)?.delete()
             if (failedStarts != 0) file(COUNT)?.writeText("0")
+            file(LAST_OK)?.writeText(System.currentTimeMillis().toString())
         }
         failedStarts = 0
         line("Tela aberta: $screen")
     }
+
+    /** Quando a interface abriu bem pela última vez (null se nunca abriu). */
+    fun lastOk(context: Context): Long? = runCatching { File(dir(context), LAST_OK).readText().trim().toLong() }.getOrNull()
 
     /** Sair do modo seguro (botão do diagnóstico): zera a contagem e o modo escolhido. */
     fun leaveSafeMode(context: Context) {
@@ -204,4 +208,5 @@ object DiagLog {
     private const val COUNT = "partidas-com-falha"
     private const val FORCED_SAFE = "modo-seguro"
     private const val MODULES = "modulos.txt"
+    private const val LAST_OK = "ultima-abertura-ok"
 }

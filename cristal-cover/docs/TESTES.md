@@ -311,9 +311,10 @@ estão implementados com as APIs oficiais e precisam ser confirmados no Razr.
 
 ## 22. Cristal 1.8.0 e L.I.L.Y AI 1.2.0
 
-L.I.L.Y AI (prioridade):
+L.I.L.Y AI (prioridade; a 1.2.1 corrige o fechamento na partida visto na 1.2.0):
 
-- [ ] A L.I.L.Y AI abre pelo ícone na tela interna, sem nenhum modelo instalado, e continua aberta
+- [ ] Instalar a 1.2.1 por cima: a L.I.L.Y AI abre pelo ícone na tela interna, sem nenhum modelo instalado, e continua aberta
+- [ ] No Diagnóstico, depois de abrir: a Situação diz que a última abertura terminou bem e o Registro mostra "✓ Interface pronta (principal)"
 - [ ] O ícone **L.I.L.Y Diagnóstico** abre e mostra Situação, Módulos, Como o app terminou, Erros guardados e Registro
 - [ ] No Diagnóstico: Copiar relatório, Compartilhar e Salvar em Downloads funcionam
 - [ ] Abrir em modo seguro: a L.I.L.Y abre com o aviso "Modo seguro"; Sair do modo seguro volta ao normal

@@ -68,6 +68,25 @@ class LaunchTest {
         )
     }
 
+    /**
+     * O erro visto no Razr com a 1.2.0: o WorkManager (vem com o LiteRT) iniciava na partida, antes de
+     * qualquer código da L.I.L.Y, e fechava o app. Agora ele não está entre as inicializações da partida
+     * e, se alguma biblioteca pedir, inicia sob demanda pelo LilyAiApp.
+     */
+    @Test
+    fun `o WorkManager não inicia na partida, só sob demanda`() {
+        val pm = app.packageManager
+        val provider = pm.getProviderInfo(
+            android.content.ComponentName(app, androidx.startup.InitializationProvider::class.java),
+            android.content.pm.PackageManager.GET_META_DATA,
+        )
+        val initializers = provider.metaData?.keySet().orEmpty()
+        assertFalse("o WorkManager ainda inicia na partida", "androidx.work.WorkManagerInitializer" in initializers)
+        org.junit.Assert.assertTrue("as outras inicializações sumiram", "androidx.lifecycle.ProcessLifecycleInitializer" in initializers)
+        val work = androidx.work.WorkManager.getInstance(app)
+        org.junit.Assert.assertNotNull(work)
+    }
+
     private companion object {
         const val AiVoiceAction = "app.lily.ai.action.VOICE"
     }

@@ -424,7 +424,7 @@ Se mesmo assim ela não aparecer, o Cristal avisa "L.I.L.Y AI não abriu nesta t
 O microfone só liga quando você chama a L.I.L.Y (segurar a ilha, tocar no microfone ou no assistente) e
 para sozinho no fim da fala.
 
-## 9.4 Novidades do Cristal 1.8.0 e da L.I.L.Y AI 1.2.0
+## 9.4 Novidades do Cristal 1.8.0 e da L.I.L.Y AI 1.2.0 (e 1.2.1)
 
 ### L.I.L.Y Diagnóstico (novo ícone)
 
@@ -490,7 +490,12 @@ nas coleções.
 
 ## 10. Problemas comuns
 
-**A L.I.L.Y AI abre e fecha.** Na tela externa, é a Motorola bloqueando um app não liberado: veja o começo
+**A L.I.L.Y AI abre e fecha (até a 1.2.0).** Era o WorkManager, uma biblioteca do Google que vem junto com o
+LiteRT: ele iniciava antes da L.I.L.Y e quebrava porque o encolhimento do APK final apagava uma parte dele
+(o Diagnóstico mostrou "Failed to create an instance of class androidx.work.impl.WorkDatabase"). A
+**1.2.1** corrige: instale por cima, sem desinstalar.
+
+**A L.I.L.Y AI abre e fecha (outro motivo).** Na tela externa, é a Motorola bloqueando um app não liberado: veja o começo
 da parte 9.3. Na tela interna, abra o ícone **L.I.L.Y Diagnóstico** (parte 9.4) e toque em **Copiar
 relatório** ou **Compartilhar**: o relatório diz em qual etapa a abertura parou e como o Android encerrou o
 app. Tente também **Abrir em modo seguro**. Na 1.1.0, o texto das fotos (OCR), os rótulos, a
